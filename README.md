@@ -1,36 +1,236 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Job Tracker
 
-## Getting Started
+A personal job-application tracking webapp. Log applications, track progress
+through a 5-step default timeline (extendable), and view a lightweight
+dashboard with stats.
 
-First, run the development server:
+Built from a full technical specification — see
+[Spec decisions & definitions](#spec-decisions--definitions) for how ambiguous
+points were resolved.
+
+## Tech Stack
+
+| Layer          | Choice                                             |
+| -------------- | -------------------------------------------------- |
+| Framework      | Next.js 14 (App Router)                            |
+| ORM            | Drizzle + drizzle-kit (SQL migrations, no auto-sync in prod) |
+| Database       | PostgreSQL 16 (local Docker; Neon/Supabase-ready)  |
+| Auth           | Auth.js v5 (email/password + Google/LinkedIn OAuth, stubbed) |
+| UI             | shadcn/ui-style components + Tailwind CSS          |
+| Client state   | TanStack Query (caching + optimistic updates)      |
+| Validation     | Zod v4                                             |
+| Logging        | pino (structured JSON)                             |
+| Testing        | Vitest + React Testing Library + Playwright        |
+
+## Quick Start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1. Install dependencies
+pnpm install
+
+# 2. Start Postgres and create the test database
+docker compose up -d
+pnpm db:create-test
+
+# 3. Configure environment
+cp .env.example .env
+#    - set AUTH_SECRET (openssl rand -base64 32)
+#    - optionally set TEST_DATABASE_URL
+
+# 4. Apply migrations (dev + test databases)
+pnpm db:migrate
+DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
+
+# 5. Run the dev server
+pnpm dev            # http://localhost:3000  (JSON logs)
+pnpm dev:pretty     # same, piped through pino-pretty
+
+# 6. (Optional) seed demo data
+pnpm db:seed        # demo@example.com / password123
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+> Note: in this sandbox environment port 3000 is occupied by a system nginx,
+> so e2e tests run the app on port 3100 (see `playwright.config.ts`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See `.env.example` for the full annotated list:
 
-## Learn More
+```
+DATABASE_URL=            # main Postgres connection string
+DATABASE_URL_REPLICA=    # optional read-only replica for analytics
+TEST_DATABASE_URL=       # used by Vitest integration tests and Playwright
+AUTH_SECRET=             # openssl rand -base64 32
+AUTH_GOOGLE_ID/SECRET=   # optional – enables the Google button
+AUTH_LINKEDIN_ID/SECRET= # optional – enables the LinkedIn button
+NODE_ENV=                # production | development
+NEXT_PUBLIC_APP_URL=     # used in password-reset links
+RATE_LIMIT_MAX=          # default 5
+RATE_LIMIT_WINDOW_MINUTES= # default 15
+PASSWORD_RESET_TTL_MINUTES= # default 60
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/
+  (auth)/                 # login, register, forgot/reset password
+  (dashboard)/            # protected shell: stats + list + application detail
+  api/
+    applications/         # GET (list w/ filters) + POST
+    applications/[id]/    # GET / PATCH / DELETE (soft)
+    applications/[id]/milestones/  # POST (insert w/ reorder)
+    milestones/[id]/      # PATCH / DELETE (reorder)
+    dashboard/stats/      # GET
+    auth/                 # [...nextauth], login, register, forgot/reset-password
+components/
+  ui/                     # shadcn-style primitives (button, dialog, card, …)
+  ApplicationCard / ApplicationList / AddApplicationModal
+  MilestoneTimeline / AddMilestoneModal / EditApplicationForm
+  Dashboard / DashboardStats / StatusBadge
+lib/
+  auth.ts                 # Auth.js v5 config (JWT, bcrypt, OAuth stubs)
+  api.ts                  # typed client-side API + error handling
+  db/                     # Drizzle schema + client
+  services/applications.ts# transactional business logic (the core)
+  utils/                  # progress, reorder, status, sanitize, validation,
+                          # rate-limit, api error helpers, logger
+scripts/                  # create-test-db, seed
+tests/
+  unit/                   # progress, reorder, validation, status
+  integration/            # route-handler tests against real Postgres
+  component/              # RTL render tests
+  e2e/                    # Playwright critical paths
+drizzle/                  # committed SQL migrations
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API
 
-## Deploy on Vercel
+All routes are under `/api/`, require an authenticated session, scope every
+query to `session.user.id`, and validate input with Zod. Errors always use the
+shape `{ "error": string, "code": string, "details"?: unknown }`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Method | Path                                | Description                                        |
+| ------ | ----------------------------------- | -------------------------------------------------- |
+| GET    | `/applications`                     | List (search, status filter, sort, pagination)     |
+| POST   | `/applications`                     | Create (company, role, url? + default timeline)    |
+| GET    | `/applications/:id`                 | Single app + milestones                            |
+| PATCH  | `/applications/:id`                 | Update fields / status                             |
+| DELETE | `/applications/:id`                 | Soft delete (→ archived)                           |
+| POST   | `/applications/:id/milestones`      | Add milestone (insert at position, reorder)        |
+| PATCH  | `/milestones/:id`                   | Update title/status/comment/date                   |
+| DELETE | `/milestones/:id`                   | Remove milestone, reorder rest                     |
+| GET    | `/dashboard/stats`                  | total / active / interviewing / offers / rejected / needsAction |
+| POST   | `/api/auth/login`                   | Email+password sign-in (rate limited)              |
+| POST   | `/api/auth/register`                | Create account (rate limited, auto sign-in)        |
+| POST   | `/api/auth/forgot-password`         | Issue 1h reset token (no account enumeration)      |
+| POST   | `/api/auth/reset-password`          | Redeem token, change password                      |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**List filters:** `status`, `search` (company/role, case-insensitive partial),
+`sort` (`company | status | updated_at`, default `updated_at desc`),
+`page` & `limit` (default `1` / `20`, max 100).
+
+## Spec Decisions & Definitions
+
+Points the spec left ambiguous, and how this implementation resolves them:
+
+- **Schema gap**: `contact` and `notes` columns were added to `applications`
+  (the detail view requires them).
+- **Status is auto-derived from milestones** (your choice): completing
+  milestones advances `applied → interviewing → offer`.
+  - `rejected` and `archived` are manual terminal states; milestone changes
+    never overwrite them.
+  - Rule: final milestone (highest `step_order`) `done` → `offer`; any
+    `done` milestone at `step_order >= 2` (Technical Interview stage or
+    later) → `interviewing`; otherwise `applied`.
+  - You can still set status manually via PATCH (e.g. mark `rejected`); the
+    next milestone change recomputes it unless the status is manual.
+- **Progress**: `offer`/`rejected` → 100%. Otherwise
+  `round(doneCount / totalSteps * 100)`, doneCount capped at `totalSteps`.
+  `totalSteps` always equals the current milestone count (min 1), so inserting
+  a step at any position grows the denominator.
+- **Needs action** (your choice — the simpler variant): status is
+  `applied | interviewing` **and** `updated_at` is older than 7 days.
+  Any application edit or milestone change refreshes `updated_at`.
+- **Stats**: `total` counts non-archived applications (consistent with the
+  default list view); `active` = applied + interviewing; `interviewing`,
+  `offers`, `rejected` by status; archived apps count nowhere.
+- **Soft delete**: DELETE sets `status = 'archived'`. Archived apps are hidden
+  from the default list and from every stat, but remain in the database and
+  are visible via the `status=archived` filter.
+- **Insert milestone at position n**: shift `step_order >= n` up by 1, insert
+  at `n` (positions beyond the end are clamped to append). Delete shifts
+  `step_order > deleted` down by 1, keeping the sequence dense 0..n-1.
+- **"Current round"** on list cards = title of the highest-`step_order` done
+  milestone, falling back to the first milestone's title.
+- **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
+  30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
+  `iat + 7d`). Google/LinkedIn providers are only registered when their env
+  vars are set — buttons are hidden otherwise (stubbed in dev).
+- **Password reset** is stubbed for the MVP: the reset link (containing a
+  random 64-char token, stored as a SHA-256 hash) is printed to the server
+  log instead of emailed. Tokens expire after 1 hour and are single-use.
+- **Rate limiting** (5 attempts / 15 min / IP) uses an in-memory sliding
+  window — fine for a single-user app, but it resets on restart and does not
+  scale horizontally; back it with Redis for production multi-instance.
+- **CSP**: `default-src 'self'` with `'unsafe-inline'`/`'unsafe-eval'` for
+  scripts (required by the Next.js runtime); tighten for production if you
+  don't use Next dev tools. No shadcn CDN is used.
+
+## Security
+
+- Every API route calls `requireSession()` and filters all queries by
+  `user_id`; cross-user access returns 404 (no existence leak).
+- Zod validates every endpoint; URLs must be `http(s)` (no `javascript:` /
+  `data:`); free-text fields are sanitized (whole `<script>` elements removed)
+  on input, and React escapes on render (defense in depth).
+- Headers via `next.config.mjs`: `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  CSP, `Permissions-Policy`.
+- Errors never leak stack traces in production (`NODE_ENV=production`);
+  DB-unavailable maps to 503 with `Retry-After`, rate-limit to 429.
+- Migrations run only via `drizzle-kit migrate`; prepared statements by default
+  (postgres-js). Never `db:push` in production.
+- Pre-launch audit checklist is in the spec — the automated parts are covered
+  by the test suite (auth guards, cross-user isolation, XSS sanitization,
+  SQL-injection via parameterized search).
+
+## Testing
+
+```bash
+pnpm test                 # unit + integration (Vitest, needs Postgres + TEST_DATABASE_URL)
+pnpm test:e2e             # Playwright critical paths (starts the app on :3100)
+```
+
+- **Unit** (Vitest + RTL): `progress.ts` edge cases, `reorder.ts` insert/delete
+  shifts, `status.ts` auto-advance + needs-action, Zod schemas, one component
+  render test.
+- **Integration** (Vitest, real Postgres): route handlers with a mocked Auth.js
+  session — auth guards (401), CRUD, filtering/pagination, milestone
+  reordering, auto-advance, manual-status override, soft delete, stats,
+  rate limiting, password reset lifecycle, XSS sanitization, cross-user 404s.
+- **E2E** (Playwright): ① register → create app → add milestone → detail,
+  ② stats update after milestone-driven status change, ③ search/filter results,
+  ④ delete → app no longer visible, ⑤ register/sign-out/login + auth redirect.
+
+## CI/CD
+
+`.github/workflows/ci.yml` runs on PRs to `main` and pushes:
+
+1. **Lint & typecheck** (`pnpm lint`, `tsc --noEmit`)
+2. **Unit + integration tests** against a Postgres service container
+3. **Playwright e2e** (Chromium installed with system deps; report artifact
+   uploaded on failure)
+
+Deployment itself is out of scope for this MVP — wire a green-build deploy
+(e.g. Vercel/Neon) on top of the same workflow.
+
+## MVP Scope
+
+**Included:** full CRUD for applications, milestone timeline (add/update/delete
+with reordering), 5-step default + extra steps, progress bar, dashboard stats,
+search + filter + sort, OAuth + email/password auth, responsive UI.
+
+**Explicitly out (v2 candidates):** job-description auto-fetch from URL,
+email notifications, public profiles/sharing, calendar integrations,
+CSV import/export.
