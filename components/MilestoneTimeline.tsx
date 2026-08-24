@@ -292,7 +292,7 @@ export function MilestoneTimeline({
                     const Icon = MILESTONE_STATUS_ICONS[s];
                     return (
                       <SelectItem key={s} value={s} className="capitalize">
-                        <Icon className="h-4 w-4" />
+                        <Icon className="mr-2 h-4 w-4" />
                         {s}
                       </SelectItem>
                     );

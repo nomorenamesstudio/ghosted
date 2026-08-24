@@ -217,7 +217,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
             <SelectContent>
               {STATUS_OPTIONS.map((s) => (
                 <SelectItem key={s} value={s} className="capitalize">
-                  <StatusIcon status={s} className="h-4 w-4" />
+                  <StatusIcon status={s} className="mr-2 h-4 w-4" />
                   {s}
                 </SelectItem>
               ))}

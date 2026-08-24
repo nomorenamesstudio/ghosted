@@ -103,7 +103,7 @@ export function ApplicationList() {
               <SelectItem value={ALL}>All statuses</SelectItem>
               {SECTION_ORDER.map((s) => (
                 <SelectItem key={s} value={s} className="capitalize">
-                  <StatusIcon status={s} className="h-4 w-4" />
+                  <StatusIcon status={s} className="mr-2 h-4 w-4" />
                   {SECTION_TITLES[s]}
                 </SelectItem>
               ))}
