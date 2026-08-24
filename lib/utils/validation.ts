@@ -82,7 +82,9 @@ export const updateApplicationSchema = z
   });
 
 export const listApplicationsQuerySchema = z.object({
-  status: z.enum(applicationStatusEnum.enumValues).optional(),
+  status: z
+    .enum([...applicationStatusEnum.enumValues, "ghosted"])
+    .optional(),
   search: z.string().trim().max(200).optional(),
   sort: z.enum(["company", "status", "updated_at"]).optional(),
   page: z.coerce.number().int().min(1).default(1),

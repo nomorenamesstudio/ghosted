@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Clock, Files } from "lucide-react";
+import { Activity, Files, Ghost } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -66,10 +66,10 @@ export function DashboardStats({ stats }: { stats?: Stats }) {
         icon={<StatusIcon status="rejected" />}
       />
       <StatCard
-        label="Cold"
-        value={stats?.needsAction ?? null}
-        icon={<Clock className="h-4 w-4" />}
-        highlight={Boolean(stats && stats.needsAction > 0)}
+        label="Ghosted"
+        value={stats?.ghosted ?? null}
+        icon={<Ghost className="h-4 w-4" />}
+        highlight={Boolean(stats && stats.ghosted > 0)}
       />
     </div>
   );

@@ -27,18 +27,34 @@ export function deriveStatus(
   return "applied";
 }
 
-export const NEEDS_ACTION_DAYS = 7;
+/** The displayed status set — includes the time-derived "ghosted" overlay. */
+export type DisplayStatus = ApplicationStatus | "ghosted";
+
+/** Applications untouched for this many days (applied|interviewing) are shown
+ *  as "ghosted". Default 14 days (2 weeks); override with GHOSTED_AFTER_DAYS. */
+export const GHOSTED_AFTER_DAYS = Number(
+  process.env.GHOSTED_AFTER_DAYS ?? 14,
+);
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * "Needs action": status is 'applied' or 'interviewing' AND the application
- * has not been updated in the last 7 days (based on updated_at).
+ * "Ghosted": status is 'applied' or 'interviewing' AND the application has
+ * not been updated in GHOSTED_AFTER_DAYS (based on updated_at). Any edit or
+ * milestone change refreshes updated_at and un-ghosts the application.
  */
-export function isNeedsAction(
+export function isGhosted(
   status: ApplicationStatus,
   updatedAt: Date | string,
 ): boolean {
   if (status !== "applied" && status !== "interviewing") return false;
-  const cutoff = Date.now() - NEEDS_ACTION_DAYS * MS_PER_DAY;
+  const cutoff = Date.now() - GHOSTED_AFTER_DAYS * MS_PER_DAY;
   return new Date(updatedAt).getTime() < cutoff;
+}
+
+/** Effective (display) status: ghosted when the app is stale, else raw. */
+export function displayStatusOf(
+  status: ApplicationStatus,
+  updatedAt: Date | string,
+): DisplayStatus {
+  return isGhosted(status, updatedAt) ? "ghosted" : status;
 }

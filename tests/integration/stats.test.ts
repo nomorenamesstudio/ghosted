@@ -125,31 +125,31 @@ describe("GET /api/dashboard/stats", () => {
     expect(stats.interviewing).toBe(1);
     expect(stats.offers).toBe(1);
     expect(stats.rejected).toBe(1);
-    expect(stats.needsAction).toBe(0);
+    expect(stats.ghosted).toBe(0);
   });
 
-  it("flags stale applications as needs action", async () => {
+  it("flags stale applications as ghosted", async () => {
     const user = await createUser();
     const app = await createApp(user.id, "StaleCo");
 
-    // Simulate 8 days without updates.
-    const old = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    // Simulate 15 days without updates (threshold is 14 days).
+    const old = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
     await db
       .update(applications)
       .set({ updatedAt: old })
       .where(eq(applications.id, app.id));
 
     const stats = await getStats(user.id);
-    expect(stats.needsAction).toBe(1);
-    expect(stats.active).toBe(1);
+    expect(stats.ghosted).toBe(1);
+    expect(stats.active).toBe(0);
     expect(stats.total).toBe(1);
   });
 
-  it("does not count a recently updated application as needs action", async () => {
+  it("does not count a recently updated application as ghosted", async () => {
     const user = await createUser();
     await createApp(user.id, "FreshCo");
     const stats = await getStats(user.id);
-    expect(stats.needsAction).toBe(0);
+    expect(stats.ghosted).toBe(0);
     expect(stats.active).toBe(1);
   });
 });

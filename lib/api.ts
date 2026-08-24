@@ -4,8 +4,9 @@ import type {
   Milestone,
 } from "@/lib/db/schema";
 import type { ApplicationSummary } from "@/lib/services/applications";
+import type { DisplayStatus } from "@/lib/utils/status";
 
-export type { ApplicationStatus };
+export type { ApplicationStatus, DisplayStatus };
 
 /* ------------------------------------------------------------------ */
 /* Types shared with the client                                        */
@@ -15,11 +16,15 @@ export interface ApplicationListItem extends Application {
   progress: number;
   currentRound: string | null;
   milestoneCount: number;
+  /** Effective status — "ghosted" when the app is stale (time-derived). */
+  displayStatus: DisplayStatus;
 }
 
 export interface ApplicationDetail extends Application {
   milestones: Milestone[];
   progress: number;
+  /** Effective status — "ghosted" when the app is stale (time-derived). */
+  displayStatus: DisplayStatus;
 }
 
 export interface Pagination {
@@ -40,7 +45,7 @@ export interface DashboardStats {
   interviewing: number;
   offers: number;
   rejected: number;
-  needsAction: number;
+  ghosted: number;
 }
 
 export interface MilestoneResult {
@@ -53,7 +58,7 @@ export interface DeleteMilestoneResult {
 }
 
 export interface ListParams {
-  status?: ApplicationStatus;
+  status?: DisplayStatus;
   search?: string;
   sort?: "company" | "status" | "updated_at";
   page?: number;

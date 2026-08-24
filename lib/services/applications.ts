@@ -20,7 +20,12 @@ import {
 } from "@/lib/utils/reorder";
 import { sanitizeText } from "@/lib/utils/sanitize";
 import { ApiError } from "@/lib/utils/api";
-import { deriveStatus, isNeedsAction } from "@/lib/utils/status";
+import {
+  deriveStatus,
+  displayStatusOf,
+  GHOSTED_AFTER_DAYS,
+  type DisplayStatus,
+} from "@/lib/utils/status";
 import type {
   CreateApplicationInput,
   CreateMilestoneInput,
@@ -43,12 +48,16 @@ export interface ApplicationSummary {
 export interface ApplicationDetail extends Application {
   milestones: Milestone[];
   progress: number;
+  /** Effective status — "ghosted" when the app is stale (time-derived). */
+  displayStatus: DisplayStatus;
 }
 
 export interface ApplicationListItem extends Application {
   progress: number;
   currentRound: string | null;
   milestoneCount: number;
+  /** Effective status — "ghosted" when the app is stale (time-derived). */
+  displayStatus: DisplayStatus;
 }
 
 export interface ListResult {
@@ -57,7 +66,7 @@ export interface ListResult {
 }
 
 export interface ListFilters {
-  status?: Application["status"];
+  status?: DisplayStatus;
   search?: string;
   sort?: "company" | "status" | "updated_at";
   page: number;
@@ -103,8 +112,22 @@ export async function listApplications(
 ): Promise<ListResult> {
   const { status, search, sort, page, limit } = filters;
 
+  const cutoff = Date.now() - GHOSTED_AFTER_DAYS * 24 * 60 * 60 * 1000;
+
   const conditions = [eq(applications.userId, userId)];
-  if (status) {
+  if (status === "ghosted") {
+    // Stale applied|interviewing apps.
+    conditions.push(
+      inArray(applications.status, ["applied", "interviewing"]),
+      sql`${applications.updatedAt} < ${new Date(cutoff).toISOString()}`,
+    );
+  } else if (status === "applied" || status === "interviewing") {
+    // Recent apps of this status (stale ones are shown as ghosted).
+    conditions.push(eq(applications.status, status));
+    conditions.push(
+      sql`${applications.updatedAt} >= ${new Date(cutoff).toISOString()}`,
+    );
+  } else if (status) {
     conditions.push(eq(applications.status, status));
   } else {
     // Archived ("soft-deleted") applications are hidden by default.
@@ -181,6 +204,7 @@ export async function listApplications(
         }),
         currentRound: currentRound(ms),
         milestoneCount: ms.length,
+        displayStatus: displayStatusOf(app.status, app.updatedAt),
       });
     }
   }
@@ -224,6 +248,7 @@ export async function getApplication(
       milestones: ms,
       totalSteps: app.totalSteps,
     }),
+    displayStatus: displayStatusOf(app.status, app.updatedAt),
   };
 }
 
@@ -271,6 +296,7 @@ export async function createApplication(
         milestones: ms,
         totalSteps: app.totalSteps,
       }),
+      displayStatus: displayStatusOf(app.status, app.updatedAt),
     };
   });
 }
@@ -575,7 +601,7 @@ export interface DashboardStats {
   interviewing: number;
   offers: number;
   rejected: number;
-  needsAction: number;
+  ghosted: number;
 }
 
 export async function getStats(userId: string): Promise<DashboardStats> {
@@ -590,18 +616,23 @@ export async function getStats(userId: string): Promise<DashboardStats> {
     interviewing: 0,
     offers: 0,
     rejected: 0,
-    needsAction: 0,
+    ghosted: 0,
   };
 
   for (const r of rows) {
     if (r.status === "archived") continue;
     stats.total += 1;
-    if (r.status === "interviewing") stats.interviewing += 1;
-    if (r.status === "offer") stats.offers += 1;
-    if (r.status === "rejected") stats.rejected += 1;
-    if (r.status === "applied" || r.status === "interviewing") {
+
+    const display = displayStatusOf(r.status, r.updatedAt);
+    if (display === "ghosted") {
+      stats.ghosted += 1;
+      continue;
+    }
+    if (display === "interviewing") stats.interviewing += 1;
+    if (display === "offer") stats.offers += 1;
+    if (display === "rejected") stats.rejected += 1;
+    if (display === "applied" || display === "interviewing") {
       stats.active += 1;
-      if (isNeedsAction(r.status, r.updatedAt)) stats.needsAction += 1;
     }
   }
   return stats;

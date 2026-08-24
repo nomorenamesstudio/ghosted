@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
@@ -151,6 +152,48 @@ describe("GET /api/applications", () => {
     expect(res.status).toBe(400);
     const json = await readJson(res);
     expect(json.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("shows stale applications as ghosted and filters by it", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id, { company: "StaleCo" });
+
+    // Simulate 15 days without updates (threshold is 14 days).
+    const old = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+    await db
+      .update(applications)
+      .set({ updatedAt: old })
+      .where(eq(applications.id, app.id));
+
+    // Default list → displayed as ghosted (raw status stays applied).
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const list = await GET(new Request(`${base}?page=1`));
+    const data = (await readJson(list)).data as Array<Record<string, unknown>>;
+    expect(data[0].displayStatus).toBe("ghosted");
+    expect(data[0].status).toBe("applied");
+
+    // Filter status=ghosted → returns it.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const g = await GET(new Request(`${base}?status=ghosted&page=1`));
+    expect((await readJson(g)).data as unknown[]).toHaveLength(1);
+
+    // Filter status=applied → stale one is excluded (it is ghosted now).
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const a = await GET(new Request(`${base}?status=applied&page=1`));
+    expect((await readJson(a)).data as unknown[]).toHaveLength(0);
+
+    // Any edit revives it (updated_at refreshes → no longer ghosted).
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", { notes: "revived" }),
+      { params: { id: app.id } },
+    );
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const after = await GET(new Request(`${base}?page=1`));
+    const afterData = (await readJson(after)).data as Array<
+      Record<string, unknown>
+    >;
+    expect(afterData[0].displayStatus).toBe("applied");
   });
 });
 

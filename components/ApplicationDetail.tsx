@@ -23,20 +23,21 @@ import { MilestoneTimeline } from "./MilestoneTimeline";
 import { EditApplicationForm } from "./EditApplicationForm";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { StatusIcon } from "./status-icons";
-import type { ApplicationStatus } from "@/lib/db/schema";
+import type { DisplayStatus } from "@/lib/utils/status";
 
 export const STATUS_BADGE_VARIANT: Record<
-  ApplicationStatus,
-  "info" | "warning" | "success" | "destructive" | "muted"
+  DisplayStatus,
+  "info" | "warning" | "success" | "destructive" | "muted" | "outline"
 > = {
-  applied: "info",
+  applied: "outline",
   interviewing: "warning",
   offer: "success",
   rejected: "destructive",
   archived: "muted",
+  ghosted: "info",
 };
 
-export function StatusBadge({ status }: { status: ApplicationStatus }) {
+export function StatusBadge({ status }: { status: DisplayStatus }) {
   return (
     <Badge
       data-testid="status-badge"
@@ -126,7 +127,12 @@ export function ApplicationDetail({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold">{app.company}</h1>
             <span className="text-lg text-muted-foreground">{app.role}</span>
-            <StatusBadge status={app.status} />
+            <StatusBadge status={app.displayStatus} />
+            {app.displayStatus === "ghosted" && (
+              <span className="text-xs text-muted-foreground">
+                No updates in a while — any change revives it.
+              </span>
+            )}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Save, X } from "lucide-react";
+import { Ghost, Save, X } from "lucide-react";
 import {
   updateApplication,
   ApiClientError,
@@ -142,6 +142,13 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
         <CardTitle>Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {app.displayStatus === "ghosted" && (
+          <p className="flex items-center gap-1.5 rounded-md border border-sky-300/50 bg-sky-50 px-3 py-2 text-xs text-sky-800 dark:border-sky-800/60 dark:bg-sky-950/30 dark:text-sky-200">
+            <Ghost className="h-3.5 w-3.5 shrink-0" />
+            Shown as ghosted — no updates for a while. Saving any change
+            revives it.
+          </p>
+        )}
         <Field id="edit-company" label="Company">
           <Input
             id="edit-company"

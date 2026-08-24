@@ -101,7 +101,7 @@ const SAMPLES: Sample[] = [
     role: "Motion Designer",
     url: "https://framer.example/jobs/motion",
     doneSteps: 1,
-    staleDays: 9,
+    staleDays: 15,
   },
   {
     company: "Raycast",

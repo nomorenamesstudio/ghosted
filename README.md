@@ -48,9 +48,9 @@ pnpm dev:pretty     # same, piped through pino-pretty
 # 6. (Optional) seed demo data
 pnpm db:seed        # demo@example.com / password123
 #    Seeds 16 sample applications across all statuses (offer / interviewing /
-#    applied / rejected / archived, one stale >7d for the "Cold" card) with
-#    contacts, notes and varied milestone progress. Additive: re-running only
-#    adds samples that don't already exist (matched by company + role).
+#    applied / rejected / archived, one stale >14d to light up the "Ghosted"
+#    card) with contacts, notes and varied milestone progress. Additive:
+#    re-running only adds samples that don't already exist (company + role).
 ```
 
 > Note: in this sandbox environment port 3000 is occupied by a system nginx,
@@ -126,7 +126,7 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | POST   | `/applications/:id/milestones`      | Add milestone (insert at position, reorder)        |
 | PATCH  | `/milestones/:id`                   | Update title/status/comment/date                   |
 | DELETE | `/milestones/:id`                   | Remove milestone, reorder rest                     |
-| GET    | `/dashboard/stats`                  | total / active / interviewing / offers / rejected / needsAction (shown as "Cold") |
+| GET    | `/dashboard/stats`                  | total / active / interviewing / offers / rejected / ghosted |
 | POST   | `/api/auth/login`                   | Email+password sign-in (rate limited)              |
 | POST   | `/api/auth/register`                | Create account (rate limited, auto sign-in)        |
 | POST   | `/api/auth/forgot-password`         | Issue 1h reset token (no account enumeration)      |
@@ -160,13 +160,19 @@ Points the spec left ambiguous, and how this implementation resolves them:
   `round(doneCount / totalSteps * 100)`, doneCount capped at `totalSteps`.
   `totalSteps` always equals the current milestone count (min 1), so inserting
   a step at any position grows the denominator.
-- **Needs action** (your choice — the simpler variant): status is
-  `applied | interviewing` **and** `updated_at` is older than 7 days.
-  Any application edit or milestone change refreshes `updated_at`. The
-  dashboard card is labeled **"Cold"**.
+- **Ghosted** (your choice, one threshold): an application whose status is
+  `applied | interviewing` **and** `updated_at` is older than 14 days is
+  shown as **ghosted** (default `GHOSTED_AFTER_DAYS=14`, env-configurable).
+  It is a *display* overlay — the stored status stays `applied|interviewing`,
+  so any edit or milestone change refreshes `updated_at` and revives the
+  application automatically. `offer` / `rejected` / `archived` are never
+  ghosted.
 - **Stats**: `total` counts non-archived applications (consistent with the
-  default list view); `active` = applied + interviewing; `interviewing`,
-  `offers`, `rejected` by status; archived apps count nowhere.
+  default list view); `active` = applied + interviewing (excluding ghosted);
+  `interviewing`, `offers`, `rejected` by status; `ghosted` counts stale
+  applied/interviewing; archived apps count nowhere.
+- **Status cards**: muted accent borders on the dashboard cards — soft green
+  for offers, soft red for rejected, soft blue for ghosted.
 - **Soft delete**: DELETE sets `status = 'archived'`. Archived apps are hidden
   from the default list and from every stat, but remain in the database and
   are visible via the `status=archived` filter.
@@ -191,10 +197,10 @@ Points the spec left ambiguous, and how this implementation resolves them:
   **Cancel** buttons at the bottom, only after a change has been made
   (Cancel reverts to the saved values).
 - **Dashboard is sectioned by status**: the list groups applications into
-  Offers / Interviewing / Applied / Rejected (and Archived, when filtered)
-  sections with icons; empty sections are hidden. Search and the status/sort
-  dropdowns filter across sections (the list fetches up to 100 rows —
-  pagination was dropped in favor of the grouped view; the API still
+  Offers / Interviewing / Applied / Ghosted / Rejected (and Archived, when
+  filtered) sections with icons; empty sections are hidden. Search and the
+  status/sort dropdowns filter across sections (the list fetches up to 100
+  rows — pagination was dropped in favor of the grouped view; the API still
   supports it).
 - **Status icons** (lucide) appear on status badges, stats cards, section
   headers, and inside every status dropdown.

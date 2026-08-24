@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { getApplications, type ApplicationListItem } from "@/lib/api";
-import type { ApplicationStatus } from "@/lib/db/schema";
+import type { DisplayStatus } from "@/lib/utils/status";
 import { ApplicationCard } from "./ApplicationCard";
 import { AddApplicationModal } from "./AddApplicationModal";
 import { STATUS_ICONS as STATUS_ICONS_MAP, StatusIcon } from "./status-icons";
@@ -19,18 +19,20 @@ import {
 } from "@/components/ui/select";
 
 /** Section order on the dashboard (empty sections are hidden). */
-const SECTION_ORDER: ApplicationStatus[] = [
+const SECTION_ORDER: DisplayStatus[] = [
   "offer",
   "interviewing",
   "applied",
+  "ghosted",
   "rejected",
   "archived",
 ];
 
-const SECTION_TITLES: Record<ApplicationStatus, string> = {
+const SECTION_TITLES: Record<DisplayStatus, string> = {
   offer: "Offers",
   interviewing: "Interviewing",
   applied: "Applied",
+  ghosted: "Ghosted",
   rejected: "Rejected",
   archived: "Archived",
 };
@@ -40,7 +42,7 @@ const ALL = "__all__";
 export function ApplicationList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [status, setStatus] = useState<"" | ApplicationStatus>("");
+  const [status, setStatus] = useState<"" | DisplayStatus>("");
   const [sort, setSort] = useState<"company" | "updated_at">("updated_at");
   const [addOpen, setAddOpen] = useState(false);
 
@@ -66,11 +68,11 @@ export function ApplicationList() {
 
   const apps = data?.data ?? [];
 
-  const byStatus = new Map<ApplicationStatus, ApplicationListItem[]>();
+  const byStatus = new Map<DisplayStatus, ApplicationListItem[]>();
   for (const app of apps) {
-    const list = byStatus.get(app.status) ?? [];
+    const list = byStatus.get(app.displayStatus) ?? [];
     list.push(app);
-    byStatus.set(app.status, list);
+    byStatus.set(app.displayStatus, list);
   }
   const visibleSections = SECTION_ORDER.filter(
     (s) => (byStatus.get(s)?.length ?? 0) > 0,
@@ -94,7 +96,7 @@ export function ApplicationList() {
         <div className="flex flex-1 items-center gap-2">
           <Select
             value={status || ALL}
-            onValueChange={(v) => setStatus(v === ALL ? "" : (v as ApplicationStatus))}
+            onValueChange={(v) => setStatus(v === ALL ? "" : (v as DisplayStatus))}
           >
             <SelectTrigger className="w-[170px]" aria-label="Filter by status">
               <SelectValue placeholder="All statuses" />
