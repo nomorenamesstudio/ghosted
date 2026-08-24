@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { StatusIcon } from "./status-icons";
 
 const STATUS_VARIANT: Record<
   ApplicationListItem["status"],
@@ -35,7 +36,11 @@ export function ApplicationCard({ app }: { app: ApplicationListItem }) {
                 </span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant={STATUS_VARIANT[app.status]}>
+                <Badge
+                  variant={STATUS_VARIANT[app.status]}
+                  className="gap-1 capitalize"
+                >
+                  <StatusIcon status={app.status} className="h-3 w-3" />
                   {app.status}
                 </Badge>
                 {app.currentRound && (

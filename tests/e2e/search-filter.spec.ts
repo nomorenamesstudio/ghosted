@@ -8,24 +8,30 @@ test("search and filter return expected results", async ({ page }) => {
   await createAppViaApi(page, "Globex", "Designer");
 
   await page.goto("/");
-  const list = page.getByTestId("application-list");
-  await expect(list.locator("li")).toHaveCount(2);
+
+  // Both apps live in the "Applied" section; empty sections are hidden.
+  const appliedSection = page.getByTestId("section-applied");
+  await expect(appliedSection).toBeVisible();
+  await expect(appliedSection.locator("li")).toHaveCount(2);
+  await expect(page.getByTestId("section-offer")).toHaveCount(0);
 
   // Search (case-insensitive partial match on company or role).
   await page.getByLabel("Search applications").fill("acme");
-  await expect(list.locator("li")).toHaveCount(1);
+  await expect(appliedSection.locator("li")).toHaveCount(1);
   await expect(page.getByText("Acme Corp")).toBeVisible();
   await expect(page.getByText("Globex")).not.toBeVisible();
 
-  // Clear search, filter by status → no matches.
+  // Clear search; filter by status → no matching sections.
   await page.getByLabel("Search applications").fill("");
-  await expect(list.locator("li")).toHaveCount(2);
-  await page.getByLabel("Filter by status").selectOption("offer");
+  await expect(appliedSection.locator("li")).toHaveCount(2);
+  await page.getByLabel("Filter by status").click();
+  await page.getByRole("option", { name: "Offers" }).click();
   await expect(
     page.getByText("No applications match your filters."),
   ).toBeVisible();
 
-  // Back to "applied" → both apps show again.
-  await page.getByLabel("Filter by status").selectOption("applied");
-  await expect(list.locator("li")).toHaveCount(2);
+  // Back to "Applied" → both apps show again.
+  await page.getByLabel("Filter by status").click();
+  await page.getByRole("option", { name: "Applied" }).click();
+  await expect(appliedSection.locator("li")).toHaveCount(2);
 });

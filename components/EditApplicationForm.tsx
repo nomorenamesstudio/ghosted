@@ -15,10 +15,17 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { StatusIcon } from "./status-icons";
 
 const STATUS_OPTIONS: ApplicationStatus[] = [
   "applied",
@@ -43,6 +50,8 @@ interface FormState {
   status: ApplicationStatus;
 }
 
+type FormField = keyof FormState;
+
 function snapshot(f: FormState) {
   return {
     company: f.company,
@@ -54,6 +63,57 @@ function snapshot(f: FormState) {
     notes: f.notes || null,
     status: f.status,
   };
+}
+
+/** Small save-state indicator shown next to the last-edited field's label. */
+function SaveStatus({ state }: { state: SaveState }) {
+  if (state === "saving") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  if (state === "saved") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-emerald-600">
+        <CheckCircle2 className="h-3 w-3" />
+        Saved
+      </span>
+    );
+  }
+  if (state === "error") {
+    return (
+      <span className="flex items-center gap-1 text-xs text-destructive">
+        <TriangleAlert className="h-3 w-3" />
+        Save failed
+      </span>
+    );
+  }
+  return null;
+}
+
+function Field({
+  id,
+  label,
+  status,
+  children,
+}: {
+  id: string;
+  label: string;
+  status?: SaveState;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label htmlFor={id}>{label}</Label>
+        <SaveStatus state={status ?? "idle"} />
+      </div>
+      {children}
+    </div>
+  );
 }
 
 export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
@@ -71,6 +131,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
   });
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [lastEdited, setLastEdited] = useState<FormField | null>(null);
 
   // Latest-form ref so debounced/flush saves always send the newest values.
   const formRef = useRef(form);
@@ -129,6 +190,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
 
   function onChange(patch: Partial<FormState>) {
     setForm((f) => ({ ...f, ...patch }));
+    setLastEdited(Object.keys(patch)[0] as FormField);
     dirtyRef.current = true;
     setSaveState("dirty");
     scheduleSave(AUTOSAVE_DEBOUNCE_MS);
@@ -161,131 +223,111 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
     };
   }, [app.id]);
 
-  const saveLabel =
-    saveState === "saving" ? (
-      <>
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        Saving…
-      </>
-    ) : saveState === "saved" ? (
-      <>
-        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-        Saved
-      </>
-    ) : saveState === "dirty" ? (
-      "Unsaved changes…"
-    ) : saveState === "error" ? (
-      <>
-        <TriangleAlert className="h-3.5 w-3.5" />
-        Save failed
-      </>
-    ) : null;
+  const statusFor = (field: FormField): SaveState | undefined =>
+    lastEdited === field ? saveState : undefined;
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between space-y-0">
-        <div>
-          <CardTitle>Details</CardTitle>
-          <CardDescription>
-            Changes are saved automatically as you type.
-          </CardDescription>
-        </div>
-        {saveLabel && (
-          <span
-            className="flex items-center gap-1.5 text-xs text-muted-foreground"
-            data-testid="autosave-status"
-            role="status"
-          >
-            {saveLabel}
-          </span>
-        )}
+      <CardHeader>
+        <CardTitle>Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="edit-company">Company</Label>
+        <Field id="edit-company" label="Company" status={statusFor("company")}>
           <Input
             id="edit-company"
             value={form.company}
             onChange={(e) => onChange({ company: e.target.value })}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="edit-role">Role</Label>
+        </Field>
+        <Field id="edit-role" label="Role" status={statusFor("role")}>
           <Input
             id="edit-role"
             value={form.role}
             onChange={(e) => onChange({ role: e.target.value })}
           />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="edit-url">Job posting URL</Label>
+        </Field>
+        <Field id="edit-url" label="Job posting URL" status={statusFor("url")}>
           <Input
             id="edit-url"
             type="url"
             value={form.url}
             onChange={(e) => onChange({ url: e.target.value })}
           />
-        </div>
+        </Field>
 
         <div className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Contact
           </p>
-          <div className="space-y-2">
-            <Label htmlFor="edit-contact-name">Name</Label>
+          <Field
+            id="edit-contact-name"
+            label="Name"
+            status={statusFor("contactName")}
+          >
             <Input
               id="edit-contact-name"
               value={form.contactName}
               onChange={(e) => onChange({ contactName: e.target.value })}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-contact-email">Email</Label>
+          </Field>
+          <Field
+            id="edit-contact-email"
+            label="Email"
+            status={statusFor("contactEmail")}
+          >
             <Input
               id="edit-contact-email"
               type="email"
               value={form.contactEmail}
               onChange={(e) => onChange({ contactEmail: e.target.value })}
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="edit-contact-phone">Phone</Label>
+          </Field>
+          <Field
+            id="edit-contact-phone"
+            label="Phone"
+            status={statusFor("contactPhone")}
+          >
             <Input
               id="edit-contact-phone"
               type="tel"
               value={form.contactPhone}
               onChange={(e) => onChange({ contactPhone: e.target.value })}
             />
-          </div>
+          </Field>
           {/* Divider: the title separates enough, the line closes the block. */}
           <div className="border-t" />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="edit-notes">Notes</Label>
+        <Field id="edit-notes" label="Notes" status={statusFor("notes")}>
           <Textarea
             id="edit-notes"
             rows={4}
             value={form.notes}
             onChange={(e) => onChange({ notes: e.target.value })}
           />
-        </div>
+        </Field>
+
         <div className="space-y-2">
-          <Label htmlFor="edit-status">Status</Label>
-          <select
-            id="edit-status"
+          <div className="flex items-center justify-between">
+            <Label htmlFor="edit-status">Status</Label>
+            <SaveStatus state={statusFor("status") ?? "idle"} />
+          </div>
+          <Select
             value={form.status}
-            onChange={(e) =>
-              onChange({ status: e.target.value as ApplicationStatus })
-            }
-            className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+            onValueChange={(v) => onChange({ status: v as ApplicationStatus })}
           >
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger id="edit-status" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">
+                  <StatusIcon status={s} className="h-4 w-4" />
+                  {s}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <p className="text-xs text-muted-foreground">
             Applied / interviewing / offer are derived from your milestones
             (all done → offer, 2+ done → interviewing); rejected &amp;

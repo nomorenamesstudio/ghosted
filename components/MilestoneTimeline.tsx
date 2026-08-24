@@ -33,6 +33,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddMilestoneModal } from "./AddMilestoneModal";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { MILESTONE_STATUS_ICONS } from "./status-icons";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function statusVariant(
   status: Milestone["status"],
@@ -268,18 +276,29 @@ export function MilestoneTimeline({
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-m-status">Status</Label>
-              <select
-                id="edit-m-status"
+              <Select
                 value={editStatus}
-                onChange={(e) =>
-                  setEditStatus(e.target.value as Milestone["status"])
+                onValueChange={(v) =>
+                  setEditStatus(v as Milestone["status"])
                 }
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
               >
-                <option value="pending">Pending</option>
-                <option value="done">Done</option>
-                <option value="skipped">Skipped</option>
-              </select>
+                <SelectTrigger id="edit-m-status" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(
+                    ["pending", "done", "skipped"] as const
+                  ).map((s) => {
+                    const Icon = MILESTONE_STATUS_ICONS[s];
+                    return (
+                      <SelectItem key={s} value={s} className="capitalize">
+                        <Icon className="h-4 w-4" />
+                        {s}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-m-date">Date</Label>

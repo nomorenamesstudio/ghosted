@@ -184,7 +184,16 @@ Points the spec left ambiguous, and how this implementation resolves them:
   persisted in localStorage.
 - **Details autosave**: the detail-page details block saves automatically
   (debounced ~800ms, flush on page leave) instead of a manual Save button; a
-  small status indicator shows Unsaved / Saving / Saved / errors.
+  small "Saving… / Saved" indicator appears next to the label of the field you
+  just edited.
+- **Dashboard is sectioned by status**: the list groups applications into
+  Offers / Interviewing / Applied / Rejected (and Archived, when filtered)
+  sections with icons; empty sections are hidden. Search and the status/sort
+  dropdowns filter across sections (the list fetches up to 100 rows —
+  pagination was dropped in favor of the grouped view; the API still
+  supports it).
+- **Status icons** (lucide) appear on status badges, stats cards, section
+  headers, and inside every status dropdown.
 - **Modals animate from the center** (fade + scale, no corner slide).
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to

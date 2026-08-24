@@ -3,58 +3,79 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
-import { getApplications, type ApplicationStatus } from "@/lib/api";
+import { getApplications, type ApplicationListItem } from "@/lib/api";
+import type { ApplicationStatus } from "@/lib/db/schema";
 import { ApplicationCard } from "./ApplicationCard";
 import { AddApplicationModal } from "./AddApplicationModal";
+import { STATUS_ICONS as STATUS_ICONS_MAP, StatusIcon } from "./status-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const STATUS_OPTIONS: Array<{ value: "" | ApplicationStatus; label: string }> = [
-  { value: "", label: "All statuses" },
-  { value: "applied", label: "Applied" },
-  { value: "interviewing", label: "Interviewing" },
-  { value: "offer", label: "Offer" },
-  { value: "rejected", label: "Rejected" },
-  { value: "archived", label: "Archived" },
+/** Section order on the dashboard (empty sections are hidden). */
+const SECTION_ORDER: ApplicationStatus[] = [
+  "offer",
+  "interviewing",
+  "applied",
+  "rejected",
+  "archived",
 ];
 
-const SORT_OPTIONS = [
-  { value: "updated_at", label: "Last updated" },
-  { value: "company", label: "Company" },
-  { value: "status", label: "Status" },
-] as const;
+const SECTION_TITLES: Record<ApplicationStatus, string> = {
+  offer: "Offers",
+  interviewing: "Interviewing",
+  applied: "Applied",
+  rejected: "Rejected",
+  archived: "Archived",
+};
+
+const ALL = "__all__";
 
 export function ApplicationList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<"" | ApplicationStatus>("");
-  const [sort, setSort] = useState<"company" | "status" | "updated_at">(
-    "updated_at",
-  );
-  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState<"company" | "updated_at">("updated_at");
   const [addOpen, setAddOpen] = useState(false);
 
   // Debounce search input (300ms).
   useEffect(() => {
     const t = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
     }, 300);
     return () => clearTimeout(t);
   }, [search]);
 
   const { data, isPending, isError, error, isFetching } = useQuery({
-    queryKey: ["applications", { search: debouncedSearch, status, sort, page }],
+    queryKey: ["applications", { search: debouncedSearch, status, sort }],
     queryFn: () =>
       getApplications({
         search: debouncedSearch || undefined,
         status: status || undefined,
         sort,
-        page,
-        limit: 10,
+        limit: 100,
       }),
     placeholderData: (prev) => prev,
   });
+
+  const apps = data?.data ?? [];
+
+  const byStatus = new Map<ApplicationStatus, ApplicationListItem[]>();
+  for (const app of apps) {
+    const list = byStatus.get(app.status) ?? [];
+    list.push(app);
+    byStatus.set(app.status, list);
+  }
+  const visibleSections = SECTION_ORDER.filter(
+    (s) => (byStatus.get(s)?.length ?? 0) > 0,
+  );
+  const hasActiveFilters = Boolean(debouncedSearch || status);
 
   return (
     <div className="space-y-4">
@@ -70,37 +91,33 @@ export function ApplicationList() {
             aria-label="Search applications"
           />
         </div>
-        <div className="flex flex-1 items-center gap-2 sm:justify-start">
-          <select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as "" | ApplicationStatus);
-              setPage(1);
-            }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            aria-label="Filter by status"
+        <div className="flex flex-1 items-center gap-2">
+          <Select
+            value={status || ALL}
+            onValueChange={(v) => setStatus(v === ALL ? "" : (v as ApplicationStatus))}
           >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sort}
-            onChange={(e) => {
-              setSort(e.target.value as typeof sort);
-              setPage(1);
-            }}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-            aria-label="Sort applications"
-          >
-            {SORT_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                Sort: {o.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="w-[170px]" aria-label="Filter by status">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>All statuses</SelectItem>
+              {SECTION_ORDER.map((s) => (
+                <SelectItem key={s} value={s} className="capitalize">
+                  <StatusIcon status={s} className="h-4 w-4" />
+                  {SECTION_TITLES[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
+            <SelectTrigger className="w-[160px]" aria-label="Sort applications">
+              <SelectValue placeholder="Last updated" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="updated_at">Last updated</SelectItem>
+              <SelectItem value="company">Company</SelectItem>
+            </SelectContent>
+          </Select>
           <Button
             size="sm"
             data-testid="add-application-fab"
@@ -134,42 +151,34 @@ export function ApplicationList() {
             />
           ))}
         </div>
-      ) : data && data.data.length === 0 ? (
+      ) : visibleSections.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          {debouncedSearch || status
+          {hasActiveFilters
             ? "No applications match your filters."
             : "No applications yet — tap Add to create your first one."}
         </div>
       ) : (
-        <ul className="space-y-2" data-testid="application-list">
-          {data?.data.map((app) => (
-            <ApplicationCard key={app.id} app={app} />
-          ))}
-        </ul>
-      )}
-
-      {data && data.pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            Previous
-          </Button>
-          <span className="text-muted-foreground">
-            Page {data.pagination.page} of {data.pagination.totalPages} ·{" "}
-            {data.pagination.total} total
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={page >= data.pagination.totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            Next
-          </Button>
+        <div className="space-y-6" data-testid="application-sections">
+          {visibleSections.map((s) => {
+            const items = byStatus.get(s) ?? [];
+            const Icon = STATUS_ICONS_MAP[s];
+            return (
+              <section key={s} data-testid={`section-${s}`}>
+                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                  <Icon className="h-4 w-4" />
+                  {SECTION_TITLES[s]}
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+                    {items.length}
+                  </span>
+                </h2>
+                <ul className="space-y-2">
+                  {items.map((app) => (
+                    <ApplicationCard key={app.id} app={app} />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
         </div>
       )}
 

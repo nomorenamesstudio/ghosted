@@ -22,6 +22,7 @@ import {
 import { MilestoneTimeline } from "./MilestoneTimeline";
 import { EditApplicationForm } from "./EditApplicationForm";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { StatusIcon } from "./status-icons";
 import type { ApplicationStatus } from "@/lib/db/schema";
 
 export const STATUS_BADGE_VARIANT: Record<
@@ -37,7 +38,12 @@ export const STATUS_BADGE_VARIANT: Record<
 
 export function StatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <Badge data-testid="status-badge" variant={STATUS_BADGE_VARIANT[status]}>
+    <Badge
+      data-testid="status-badge"
+      variant={STATUS_BADGE_VARIANT[status]}
+      className="gap-1 capitalize"
+    >
+      <StatusIcon status={status} className="h-3.5 w-3.5" />
       {status}
     </Badge>
   );

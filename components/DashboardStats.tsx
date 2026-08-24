@@ -1,20 +1,24 @@
 "use client";
 
+import { Activity, Clock, Files } from "lucide-react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { StatusIcon } from "./status-icons";
 import type { DashboardStats as Stats } from "@/lib/api";
 
 function StatCard({
   label,
   value,
+  icon,
   highlight,
 }: {
   label: string;
   value: number | null;
+  icon: React.ReactNode;
   highlight?: boolean;
 }) {
   return (
@@ -24,7 +28,8 @@ function StatCard({
       }
     >
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
+        <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+          <span className="text-foreground/60">{icon}</span>
           {label}
         </CardTitle>
       </CardHeader>
@@ -43,14 +48,27 @@ function StatCard({
 export function DashboardStats({ stats }: { stats?: Stats }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-      <StatCard label="Total" value={stats?.total ?? null} />
-      <StatCard label="Active" value={stats?.active ?? null} />
-      <StatCard label="Interviewing" value={stats?.interviewing ?? null} />
-      <StatCard label="Offers" value={stats?.offers ?? null} />
-      <StatCard label="Rejected" value={stats?.rejected ?? null} />
+      <StatCard label="Total" value={stats?.total ?? null} icon={<Files className="h-4 w-4" />} />
+      <StatCard label="Active" value={stats?.active ?? null} icon={<Activity className="h-4 w-4" />} />
+      <StatCard
+        label="Interviewing"
+        value={stats?.interviewing ?? null}
+        icon={<StatusIcon status="interviewing" />}
+      />
+      <StatCard
+        label="Offers"
+        value={stats?.offers ?? null}
+        icon={<StatusIcon status="offer" />}
+      />
+      <StatCard
+        label="Rejected"
+        value={stats?.rejected ?? null}
+        icon={<StatusIcon status="rejected" />}
+      />
       <StatCard
         label="Needs action"
         value={stats?.needsAction ?? null}
+        icon={<Clock className="h-4 w-4" />}
         highlight={Boolean(stats && stats.needsAction > 0)}
       />
     </div>
