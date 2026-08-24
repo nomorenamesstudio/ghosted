@@ -131,7 +131,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
           />
         </div>
 
-        <div className="space-y-3 rounded-md border p-3">
+        <div className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Contact
           </p>
@@ -170,6 +170,8 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
               }}
             />
           </div>
+          {/* Divider: the title separates enough, the line closes the block. */}
+          <div className="border-t" />
         </div>
 
         <div className="space-y-2">

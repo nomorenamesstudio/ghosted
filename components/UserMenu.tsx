@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Moon, Settings } from "lucide-react";
+import { LogOut, Moon, Settings, Sun } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
-  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -56,13 +55,10 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
             Settings
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuCheckboxItem
-          checked={theme === "dark"}
-          onCheckedChange={toggleTheme}
-        >
-          <Moon />
-          Night mode
-        </DropdownMenuCheckboxItem>
+        <DropdownMenuItem onSelect={toggleTheme}>
+          {theme === "dark" ? <Sun /> : <Moon />}
+          {theme === "dark" ? "Light mode" : "Night mode"}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         {/* Hidden form; the menu button submits it via the form attribute. */}
         <form id="sign-out-form" action={signOutAction} hidden />

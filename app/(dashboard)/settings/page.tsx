@@ -1,6 +1,6 @@
 "use client";
 
-import { Moon } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -27,8 +27,12 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
-            <Moon className="h-4 w-4" />
-            Night mode
+            {theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+            {theme === "dark" ? "Light mode" : "Night mode"}
           </div>
           <button
             type="button"

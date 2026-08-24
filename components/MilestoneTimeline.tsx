@@ -13,6 +13,17 @@ import type { Milestone } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AddMilestoneModal } from "./AddMilestoneModal";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 function statusVariant(
   status: Milestone["status"],
@@ -45,6 +57,7 @@ export function MilestoneTimeline({
   const [editDate, setEditDate] = useState("");
   const [editStatus, setEditStatus] = useState<Milestone["status"]>("pending");
   const [editError, setEditError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Milestone | null>(null);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["application", appId] });
@@ -93,7 +106,9 @@ export function MilestoneTimeline({
         title: editTitle,
         comment: editComment || null,
         date: editDate ? new Date(editDate).toISOString() : null,
-        status: editStatus,
+        // "Save & mark done": pending stays selectable in the dialog, but the
+        // primary save action for a pending milestone marks it done.
+        status: editStatus === "pending" ? "done" : editStatus,
       }),
     onSuccess: () => {
       setEditing(null);
@@ -124,7 +139,7 @@ export function MilestoneTimeline({
 
       <ol className="space-y-0" data-testid="milestone-timeline">
         {milestones.map((m, i) => (
-          <li key={m.id} className="relative flex gap-4 pb-6">
+          <li key={m.id} className="group relative flex gap-4 pb-6">
             {/* Connector line */}
             {i < milestones.length - 1 && (
               <span
@@ -143,8 +158,14 @@ export function MilestoneTimeline({
                     : "border-muted-foreground/40 bg-background",
               )}
             />
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
+            {/* Clicking the milestone opens the edit dialog. */}
+            <button
+              type="button"
+              onClick={() => openEdit(m)}
+              className="min-w-0 flex-1 cursor-pointer space-y-1 rounded-md text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label={`Edit ${m.title}`}
+            >
+              <span className="flex flex-wrap items-center gap-2">
                 <span className="font-medium">{m.title}</span>
                 <Badge variant={statusVariant(m.status)}>{m.status}</Badge>
                 {m.date && (
@@ -152,18 +173,22 @@ export function MilestoneTimeline({
                     {format(new Date(m.date), "MMM d, yyyy")}
                   </span>
                 )}
-              </div>
+              </span>
               {m.comment && (
-                <p className="text-sm text-muted-foreground">{m.comment}</p>
+                <span className="block text-sm text-muted-foreground">
+                  {m.comment}
+                </span>
               )}
-            </div>
+            </button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7 shrink-0"
+                  className="h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
                   aria-label={`Actions for ${m.title}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -195,13 +220,7 @@ export function MilestoneTimeline({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onSelect={() => {
-                    if (
-                      window.confirm(`Remove "${m.title}" from the timeline?`)
-                    ) {
-                      deleteMutation.mutate(m.id);
-                    }
-                  }}
+                  onSelect={() => setConfirmDelete(m)}
                   disabled={deleteMutation.isPending}
                 >
                   <Trash2 />
@@ -221,33 +240,31 @@ export function MilestoneTimeline({
       />
 
       {/* Edit milestone dialog */}
-      {editing && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Edit ${editing.title}`}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setEditing(null);
-          }}
-        >
-          <div className="w-full max-w-md space-y-4 rounded-lg border bg-background p-6 shadow-lg">
-            <h3 className="text-lg font-semibold">Edit milestone</h3>
+      <Dialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit milestone</DialogTitle>
+            <DialogDescription>
+              Update the step, then save — a pending milestone is marked done
+              on save.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="edit-m-title">
-                Title
-              </label>
-              <input
+              <Label htmlFor="edit-m-title">Title</Label>
+              <Input
                 id="edit-m-title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="edit-m-status">
-                Status
-              </label>
+              <Label htmlFor="edit-m-status">Status</Label>
               <select
                 id="edit-m-status"
                 value={editStatus}
@@ -262,27 +279,21 @@ export function MilestoneTimeline({
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="edit-m-date">
-                Date
-              </label>
-              <input
+              <Label htmlFor="edit-m-date">Date</Label>
+              <Input
                 id="edit-m-date"
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="edit-m-comment">
-                Comment
-              </label>
-              <textarea
+              <Label htmlFor="edit-m-comment">Comment</Label>
+              <Textarea
                 id="edit-m-comment"
                 rows={3}
                 value={editComment}
                 onChange={(e) => setEditComment(e.target.value)}
-                className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
               />
             </div>
             {editError && (
@@ -290,20 +301,39 @@ export function MilestoneTimeline({
                 {editError}
               </p>
             )}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setEditing(null)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={() => saveEdit.mutate()}
-                disabled={saveEdit.isPending || !editTitle.trim()}
-              >
-                Save
-              </Button>
-            </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => saveEdit.mutate()}
+              disabled={saveEdit.isPending || !editTitle.trim()}
+            >
+              {editStatus === "pending" ? "Save & mark done" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete milestone confirm */}
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDelete(null);
+        }}
+        title={confirmDelete ? `Remove "${confirmDelete.title}"?` : "Remove milestone?"}
+        description="It will be removed from the timeline and later steps shift up."
+        confirmLabel="Delete"
+        destructive
+        loading={deleteMutation.isPending}
+        onConfirm={() => {
+          if (confirmDelete) {
+            deleteMutation.mutate(confirmDelete.id);
+          }
+          setConfirmDelete(null);
+        }}
+      />
     </div>
   );
 }

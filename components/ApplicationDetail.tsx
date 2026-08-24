@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MilestoneTimeline } from "./MilestoneTimeline";
 import { EditApplicationForm } from "./EditApplicationForm";
+import { ConfirmDialog } from "./ConfirmDialog";
 import type { ApplicationStatus } from "@/lib/db/schema";
 
 export const STATUS_BADGE_VARIANT: Record<
@@ -52,6 +53,7 @@ export function ApplicationDetail({ id }: { id: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState(false);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["application", id],
@@ -145,15 +147,7 @@ export function ApplicationDetail({ id }: { id: string }) {
                 </DropdownMenuItem>
               ) : (
                 <DropdownMenuItem
-                  onSelect={() => {
-                    if (
-                      window.confirm(
-                        "Archive this application? It will be hidden from the dashboard.",
-                      )
-                    ) {
-                      archive.mutate();
-                    }
-                  }}
+                  onSelect={() => setConfirmArchive(true)}
                   disabled={archive.isPending}
                 >
                   <Archive />
@@ -182,6 +176,20 @@ export function ApplicationDetail({ id }: { id: string }) {
           <EditApplicationForm app={app} />
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmArchive}
+        onOpenChange={setConfirmArchive}
+        title="Archive application?"
+        description="It will be hidden from the dashboard. You can reopen it later from its page."
+        confirmLabel="Archive"
+        destructive
+        loading={archive.isPending}
+        onConfirm={() => {
+          setConfirmArchive(false);
+          archive.mutate();
+        }}
+      />
     </div>
   );
 }
