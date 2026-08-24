@@ -47,6 +47,10 @@ pnpm dev:pretty     # same, piped through pino-pretty
 
 # 6. (Optional) seed demo data
 pnpm db:seed        # demo@example.com / password123
+#    Seeds 16 sample applications across all statuses (offer / interviewing /
+#    applied / rejected / archived, one stale >7d for the "Cold" card) with
+#    contacts, notes and varied milestone progress. Additive: re-running only
+#    adds samples that don't already exist (matched by company + role).
 ```
 
 > Note: in this sandbox environment port 3000 is occupied by a system nginx,
