@@ -66,7 +66,7 @@ export function DashboardStats({ stats }: { stats?: Stats }) {
         icon={<StatusIcon status="rejected" />}
       />
       <StatCard
-        label="Needs action"
+        label="Cold"
         value={stats?.needsAction ?? null}
         icon={<Clock className="h-4 w-4" />}
         highlight={Boolean(stats && stats.needsAction > 0)}

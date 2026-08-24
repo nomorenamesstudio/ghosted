@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, TriangleAlert } from "lucide-react";
+import { Save, X } from "lucide-react";
 import {
   updateApplication,
   ApiClientError,
   type ApplicationDetail,
 } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/db/schema";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,10 +36,6 @@ const STATUS_OPTIONS: ApplicationStatus[] = [
   "archived",
 ];
 
-type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
-
-const AUTOSAVE_DEBOUNCE_MS = 800;
-
 interface FormState {
   company: string;
   role: string;
@@ -49,8 +46,6 @@ interface FormState {
   notes: string;
   status: ApplicationStatus;
 }
-
-type FormField = keyof FormState;
 
 function snapshot(f: FormState) {
   return {
@@ -65,61 +60,8 @@ function snapshot(f: FormState) {
   };
 }
 
-/** Small save-state indicator shown next to the last-edited field's label. */
-function SaveStatus({ state }: { state: SaveState }) {
-  if (state === "saving") {
-    return (
-      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Loader2 className="h-3 w-3 animate-spin" />
-        Saving…
-      </span>
-    );
-  }
-  if (state === "saved") {
-    return (
-      <span className="flex items-center gap-1 text-xs text-emerald-600">
-        <CheckCircle2 className="h-3 w-3" />
-        Saved
-      </span>
-    );
-  }
-  if (state === "error") {
-    return (
-      <span className="flex items-center gap-1 text-xs text-destructive">
-        <TriangleAlert className="h-3 w-3" />
-        Save failed
-      </span>
-    );
-  }
-  return null;
-}
-
-function Field({
-  id,
-  label,
-  status,
-  children,
-}: {
-  id: string;
-  label: string;
-  status?: SaveState;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Label htmlFor={id}>{label}</Label>
-        <SaveStatus state={status ?? "idle"} />
-      </div>
-      {children}
-    </div>
-  );
-}
-
-export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
-  const qc = useQueryClient();
-
-  const [form, setForm] = useState<FormState>({
+function fromApp(app: ApplicationDetail): FormState {
+  return {
     company: app.company,
     role: app.role,
     url: app.url ?? "",
@@ -128,103 +70,71 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
     contactPhone: app.contactPhone ?? "",
     notes: app.notes ?? "",
     status: app.status,
-  });
-  const [saveState, setSaveState] = useState<SaveState>("idle");
+  };
+}
+
+function Field({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
+  const qc = useQueryClient();
+  const [form, setForm] = useState<FormState>(() => fromApp(app));
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastEdited, setLastEdited] = useState<FormField | null>(null);
 
-  // Latest-form ref so debounced/flush saves always send the newest values.
-  const formRef = useRef(form);
-  formRef.current = form;
-  const dirtyRef = useRef(false);
-  const savingRef = useRef(false);
-  const resaveRef = useRef(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const invalidate = useCallback(() => {
+  const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["application", app.id] });
     qc.invalidateQueries({ queryKey: ["applications"] });
     qc.invalidateQueries({ queryKey: ["stats"] });
-  }, [qc, app.id]);
+  };
 
-  const doSave = useCallback(async () => {
-    if (savingRef.current) {
-      resaveRef.current = true;
-      return;
-    }
-    savingRef.current = true;
-    setSaveState("saving");
-    try {
-      await updateApplication(app.id, snapshot(formRef.current));
-      savingRef.current = false;
-      dirtyRef.current = false;
-      setSaveState("saved");
-      setError(null);
-      invalidate();
-      if (resaveRef.current) {
-        resaveRef.current = false;
-        timerRef.current = setTimeout(() => {
-          timerRef.current = null;
-          void doSave();
-        }, 0);
-      }
-    } catch (err) {
-      savingRef.current = false;
-      setSaveState("error");
-      setError(
-        err instanceof ApiClientError ? err.message : "Failed to save changes",
-      );
-    }
-  }, [app.id, invalidate]);
-
-  const scheduleSave = useCallback(
-    (ms: number) => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        timerRef.current = null;
-        void doSave();
-      }, ms);
-    },
-    [doSave],
-  );
+  // Sync from the server only when the user has no unsaved changes.
+  useEffect(() => {
+    if (dirty) return;
+    setForm(fromApp(app));
+  }, [app, dirty]);
 
   function onChange(patch: Partial<FormState>) {
     setForm((f) => ({ ...f, ...patch }));
-    setLastEdited(Object.keys(patch)[0] as FormField);
-    dirtyRef.current = true;
-    setSaveState("dirty");
-    scheduleSave(AUTOSAVE_DEBOUNCE_MS);
+    setDirty(true);
   }
 
-  // Sync from the server only when the user has no unsaved edits.
-  useEffect(() => {
-    if (dirtyRef.current) return;
-    setForm({
-      company: app.company,
-      role: app.role,
-      url: app.url ?? "",
-      contactName: app.contactName ?? "",
-      contactEmail: app.contactEmail ?? "",
-      contactPhone: app.contactPhone ?? "",
-      notes: app.notes ?? "",
-      status: app.status,
-    });
-  }, [app]);
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      await updateApplication(app.id, snapshot(form));
+      setDirty(false);
+      invalidate();
+    } catch (err) {
+      setError(
+        err instanceof ApiClientError ? err.message : "Failed to save changes",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
 
-  // Flush pending edits when leaving the page.
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (dirtyRef.current && !savingRef.current) {
-        void updateApplication(app.id, snapshot(formRef.current)).catch(
-          () => {},
-        );
-      }
-    };
-  }, [app.id]);
-
-  const statusFor = (field: FormField): SaveState | undefined =>
-    lastEdited === field ? saveState : undefined;
+  function handleCancel() {
+    setForm(fromApp(app));
+    setDirty(false);
+    setError(null);
+  }
 
   return (
     <Card>
@@ -232,21 +142,21 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
         <CardTitle>Details</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Field id="edit-company" label="Company" status={statusFor("company")}>
+        <Field id="edit-company" label="Company">
           <Input
             id="edit-company"
             value={form.company}
             onChange={(e) => onChange({ company: e.target.value })}
           />
         </Field>
-        <Field id="edit-role" label="Role" status={statusFor("role")}>
+        <Field id="edit-role" label="Role">
           <Input
             id="edit-role"
             value={form.role}
             onChange={(e) => onChange({ role: e.target.value })}
           />
         </Field>
-        <Field id="edit-url" label="Job posting URL" status={statusFor("url")}>
+        <Field id="edit-url" label="Job posting URL">
           <Input
             id="edit-url"
             type="url"
@@ -259,22 +169,14 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Contact
           </p>
-          <Field
-            id="edit-contact-name"
-            label="Name"
-            status={statusFor("contactName")}
-          >
+          <Field id="edit-contact-name" label="Name">
             <Input
               id="edit-contact-name"
               value={form.contactName}
               onChange={(e) => onChange({ contactName: e.target.value })}
             />
           </Field>
-          <Field
-            id="edit-contact-email"
-            label="Email"
-            status={statusFor("contactEmail")}
-          >
+          <Field id="edit-contact-email" label="Email">
             <Input
               id="edit-contact-email"
               type="email"
@@ -282,11 +184,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
               onChange={(e) => onChange({ contactEmail: e.target.value })}
             />
           </Field>
-          <Field
-            id="edit-contact-phone"
-            label="Phone"
-            status={statusFor("contactPhone")}
-          >
+          <Field id="edit-contact-phone" label="Phone">
             <Input
               id="edit-contact-phone"
               type="tel"
@@ -298,7 +196,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
           <div className="border-t" />
         </div>
 
-        <Field id="edit-notes" label="Notes" status={statusFor("notes")}>
+        <Field id="edit-notes" label="Notes">
           <Textarea
             id="edit-notes"
             rows={4}
@@ -308,10 +206,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
         </Field>
 
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="edit-status">Status</Label>
-            <SaveStatus state={statusFor("status") ?? "idle"} />
-          </div>
+          <Label htmlFor="edit-status">Status</Label>
           <Select
             value={form.status}
             onValueChange={(v) => onChange({ status: v as ApplicationStatus })}
@@ -339,6 +234,23 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
+        )}
+
+        {dirty && (
+          <div className="flex gap-2 pt-2">
+            <Button onClick={handleSave} disabled={saving}>
+              <Save />
+              {saving ? "Saving…" : "Save"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleCancel}
+              disabled={saving}
+            >
+              <X />
+              Cancel
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

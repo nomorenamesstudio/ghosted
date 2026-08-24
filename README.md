@@ -122,7 +122,7 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | POST   | `/applications/:id/milestones`      | Add milestone (insert at position, reorder)        |
 | PATCH  | `/milestones/:id`                   | Update title/status/comment/date                   |
 | DELETE | `/milestones/:id`                   | Remove milestone, reorder rest                     |
-| GET    | `/dashboard/stats`                  | total / active / interviewing / offers / rejected / needsAction |
+| GET    | `/dashboard/stats`                  | total / active / interviewing / offers / rejected / needsAction (shown as "Cold") |
 | POST   | `/api/auth/login`                   | Email+password sign-in (rate limited)              |
 | POST   | `/api/auth/register`                | Create account (rate limited, auto sign-in)        |
 | POST   | `/api/auth/forgot-password`         | Issue 1h reset token (no account enumeration)      |
@@ -158,7 +158,8 @@ Points the spec left ambiguous, and how this implementation resolves them:
   a step at any position grows the denominator.
 - **Needs action** (your choice — the simpler variant): status is
   `applied | interviewing` **and** `updated_at` is older than 7 days.
-  Any application edit or milestone change refreshes `updated_at`.
+  Any application edit or milestone change refreshes `updated_at`. The
+  dashboard card is labeled **"Cold"**.
 - **Stats**: `total` counts non-archived applications (consistent with the
   default list view); `active` = applied + interviewing; `interviewing`,
   `offers`, `rejected` by status; archived apps count nowhere.
@@ -182,10 +183,9 @@ Points the spec left ambiguous, and how this implementation resolves them:
 - **Night mode**: defaults to the user's system preference
   (`prefers-color-scheme`), with a manual override (user menu or /settings)
   persisted in localStorage.
-- **Details autosave**: the detail-page details block saves automatically
-  (debounced ~800ms, flush on page leave) instead of a manual Save button; a
-  small "Saving… / Saved" indicator appears next to the label of the field you
-  just edited.
+- **Details save/cancel**: the detail-page details block shows **Save** and
+  **Cancel** buttons at the bottom, only after a change has been made
+  (Cancel reverts to the saved values).
 - **Dashboard is sectioned by status**: the list groups applications into
   Offers / Interviewing / Applied / Rejected (and Archived, when filtered)
   sections with icons; empty sections are hidden. Search and the status/sort
