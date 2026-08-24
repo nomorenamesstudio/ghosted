@@ -177,7 +177,7 @@ describe("status auto-advance", () => {
     expect(await statusOf(user.id, app.id)).toBe("offer");
   });
 
-  it("keeps HR Screen done at 'applied'", async () => {
+  it("moves to interviewing once two milestones are done (HR Screen + Application)", async () => {
     const user = await createUser();
     const app = await createApp(user.id);
     const ms = await db
@@ -190,7 +190,43 @@ describe("status auto-advance", () => {
       jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { status: "done" }),
       { params: { id: ms[1].id } },
     );
-    expect(await statusOf(user.id, app.id)).toBe("applied");
+    expect(await statusOf(user.id, app.id)).toBe("interviewing");
+  });
+
+  it("reorders the timeline so done milestones come before pending ones", async () => {
+    const user = await createUser();
+    const app = await createApp(user.id);
+    const ms = await db
+      .select()
+      .from(milestones)
+      .where(eq2(milestones.applicationId, app.id))
+      .orderBy(milestones.stepOrder);
+
+    // Mark "Technical Interview" (step 2) done BEFORE "HR Screen" (step 1).
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await PATCH_MILESTONE(
+      jsonRequest(`${base}/milestones/${ms[2].id}`, "PATCH", { status: "done" }),
+      { params: { id: ms[2].id } },
+    );
+    expect(res.status).toBe(200);
+
+    const after = await db
+      .select()
+      .from(milestones)
+      .where(eq2(milestones.applicationId, app.id))
+      .orderBy(milestones.stepOrder);
+
+    // Done steps lead; the rest follow in their original relative order.
+    expect(after.map((m) => m.title)).toEqual([
+      "Application",
+      "Technical Interview",
+      "HR Screen",
+      "Test/Homework",
+      "Offer/Decision",
+    ]);
+    expect(after.map((m) => m.stepOrder)).toEqual([0, 1, 2, 3, 4]);
+    expect(after.slice(0, 2).every((m) => m.status === "done")).toBe(true);
+    expect(after.slice(2).every((m) => m.status !== "done")).toBe(true);
   });
 
   it("does not override a manual rejected status", async () => {

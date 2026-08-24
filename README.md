@@ -143,11 +143,15 @@ Points the spec left ambiguous, and how this implementation resolves them:
   milestones advances `applied → interviewing → offer`.
   - `rejected` and `archived` are manual terminal states; milestone changes
     never overwrite them.
-  - Rule: final milestone (highest `step_order`) `done` → `offer`; any
-    `done` milestone at `step_order >= 2` (Technical Interview stage or
-    later) → `interviewing`; otherwise `applied`.
+  - Rule (done-count based): **all** milestones `done` → `offer`; **2+**
+    milestones `done` → `interviewing`; otherwise `applied`. Skipped steps do
+    not count. This pairs with the timeline invariant below — positional
+    rules would be unstable.
   - You can still set status manually via PATCH (e.g. mark `rejected`); the
     next milestone change recomputes it unless the status is manual.
+- **Timeline stays "done first"**: marking a milestone done out of order
+  reorganizes the steps so done milestones always come before pending ones
+  (stable within each group). This is enforced on status changes.
 - **Progress**: `offer`/`rejected` → 100%. Otherwise
   `round(doneCount / totalSteps * 100)`, doneCount capped at `totalSteps`.
   `totalSteps` always equals the current milestone count (min 1), so inserting
@@ -173,11 +177,15 @@ Points the spec left ambiguous, and how this implementation resolves them:
   `rejected`). Both the application and each milestone row use a "…" popover
   menu for their actions; there is no hard delete.
 - **Milestone dates**: marking a milestone *done* records today's date
-  automatically; the date is always editable afterwards via the milestone
-  *Edit* dialog.
+  automatically; the milestone *Edit* dialog defaults an unset date to today
+  and the date is always editable afterwards.
 - **Night mode**: defaults to the user's system preference
   (`prefers-color-scheme`), with a manual override (user menu or /settings)
   persisted in localStorage.
+- **Details autosave**: the detail-page details block saves automatically
+  (debounced ~800ms, flush on page leave) instead of a manual Save button; a
+  small status indicator shows Unsaved / Saving / Saved / errors.
+- **Modals animate from the center** (fade + scale, no corner slide).
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
   `iat + 7d`). Google/LinkedIn providers are only registered when their env

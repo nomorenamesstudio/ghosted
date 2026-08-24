@@ -122,7 +122,10 @@ export function MilestoneTimeline({
     setEditing(m);
     setEditTitle(m.title);
     setEditComment(m.comment ?? "");
-    setEditDate(m.date ? format(new Date(m.date), "yyyy-MM-dd") : "");
+    // Default the date to today when the milestone has none recorded.
+    setEditDate(
+      m.date ? format(new Date(m.date), "yyyy-MM-dd") : format(new Date(), "yyyy-MM-dd"),
+    );
     setEditStatus(m.status);
     setEditError(null);
   }

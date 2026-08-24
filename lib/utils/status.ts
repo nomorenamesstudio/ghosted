@@ -6,27 +6,25 @@ export const MANUAL_STATUSES: ApplicationStatus[] = ["rejected", "archived"];
 /**
  * Auto-advance rule (documented in README):
  * - 'rejected' / 'archived' are manual overrides and are never rewritten.
- * - If the final milestone (highest step_order) is 'done' → 'offer'.
- * - Else if any milestone at step_order >= 2 (Technical Interview stage or
- *   later) is 'done' → 'interviewing'.
- * - Else → 'applied'.
+ * - All milestones 'done' → 'offer'.
+ * - At least two milestones 'done' (i.e., past the first step) → 'interviewing'.
+ * - Otherwise → 'applied'.
+ *
+ * This is deliberately based on the *count* of done milestones rather than
+ * step indices, because the timeline is kept ordered "done first" (pending
+ * steps always come after done ones), so positional rules would be unstable.
+ * Skipped milestones do not count as done.
  */
 export function deriveStatus(
   current: ApplicationStatus,
-  milestones: Array<{ stepOrder: number; status: MilestoneStatus }>,
+  milestones: Array<{ status: MilestoneStatus }>,
 ): ApplicationStatus {
   if (MANUAL_STATUSES.includes(current)) return current;
 
-  if (milestones.length === 0) return "applied";
-
-  const sorted = [...milestones].sort((a, b) => a.stepOrder - b.stepOrder);
-  const last = sorted[sorted.length - 1];
-  if (last.status === "done") return "offer";
-
-  const advanced = sorted.some(
-    (m) => m.stepOrder >= 2 && m.status === "done",
-  );
-  return advanced ? "interviewing" : "applied";
+  const doneCount = milestones.filter((m) => m.status === "done").length;
+  if (milestones.length > 0 && doneCount >= milestones.length) return "offer";
+  if (doneCount >= 2) return "interviewing";
+  return "applied";
 }
 
 export const NEEDS_ACTION_DAYS = 7;

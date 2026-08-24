@@ -483,7 +483,26 @@ export async function updateMilestone(
         .from(milestones)
         .where(eq(milestones.applicationId, app.id)),
     );
-    const status = deriveStatus(app.status, all);
+
+    // Timeline invariant: done milestones always come before pending ones
+    // (marking a milestone done out of order reorganizes the steps). Stable:
+    // done first (by step_order), then everything else (by step_order).
+    const reordered = [...all].sort((a, b) => {
+      const aDone = a.status === "done" ? 0 : 1;
+      const bDone = b.status === "done" ? 0 : 1;
+      if (aDone !== bDone) return aDone - bDone;
+      return a.stepOrder - b.stepOrder;
+    });
+    for (let i = 0; i < reordered.length; i++) {
+      if (reordered[i].stepOrder !== i) {
+        await tx
+          .update(milestones)
+          .set({ stepOrder: i })
+          .where(eq(milestones.id, reordered[i].id));
+      }
+    }
+
+    const status = deriveStatus(app.status, reordered);
 
     const [updatedApp] = await tx
       .update(applications)

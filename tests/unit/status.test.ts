@@ -7,37 +7,31 @@ const m = (stepOrder: number, status: "pending" | "done" | "skipped") => ({
 });
 
 describe("deriveStatus", () => {
-  it("stays applied with nothing meaningful done", () => {
+  it("stays applied with only the first step done", () => {
     expect(
       deriveStatus("applied", [m(0, "done"), m(1, "pending"), m(2, "pending")]),
     ).toBe("applied");
   });
 
-  it("becomes interviewing once a step_order >= 2 milestone is done", () => {
+  it("stays applied with nothing done", () => {
+    expect(deriveStatus("applied", [m(0, "pending"), m(1, "pending")])).toBe(
+      "applied",
+    );
+  });
+
+  it("becomes interviewing once two milestones are done (order independent)", () => {
+    // Done out of order — e.g. Technical Interview before HR Screen.
     expect(
       deriveStatus("applied", [
-        m(0, "done"),
-        m(1, "done"),
         m(2, "done"),
+        m(0, "done"),
+        m(1, "pending"),
         m(3, "pending"),
       ]),
     ).toBe("interviewing");
   });
 
-  it("becomes offer when the final milestone is done", () => {
-    expect(
-      deriveStatus("applied", [
-        m(0, "done"),
-        m(1, "done"),
-        m(2, "done"),
-        m(3, "done"),
-        m(4, "done"),
-      ]),
-    ).toBe("offer");
-  });
-
-  it("offer requires the LAST milestone specifically", () => {
-    // 4 of 5 done, last one pending → interviewing (not offer)
+  it("becomes interviewing with most steps done but not all", () => {
     expect(
       deriveStatus("applied", [
         m(0, "done"),
@@ -47,6 +41,18 @@ describe("deriveStatus", () => {
         m(4, "pending"),
       ]),
     ).toBe("interviewing");
+  });
+
+  it("becomes offer only when every milestone is done", () => {
+    expect(
+      deriveStatus("applied", [
+        m(0, "done"),
+        m(1, "done"),
+        m(2, "done"),
+        m(3, "done"),
+        m(4, "done"),
+      ]),
+    ).toBe("offer");
   });
 
   it("handles an empty timeline as applied", () => {
@@ -65,10 +71,22 @@ describe("deriveStatus", () => {
     ).toBe("archived");
   });
 
-  it("skipped steps do not advance the status", () => {
+  it("skipped steps do not count as done", () => {
     expect(
       deriveStatus("applied", [m(0, "done"), m(1, "skipped"), m(2, "skipped")]),
     ).toBe("applied");
+    expect(
+      deriveStatus("applied", [
+        m(0, "done"),
+        m(1, "done"),
+        m(2, "skipped"),
+        m(3, "skipped"),
+      ]),
+    ).toBe("interviewing");
+  });
+
+  it("a single-milestone timeline that is done counts as offer (all done)", () => {
+    expect(deriveStatus("applied", [m(0, "done")])).toBe("offer");
   });
 });
 
