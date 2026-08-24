@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { SignOutButton } from "@/components/SignOutButton";
+import { UserMenu } from "@/components/UserMenu";
 
 export default async function DashboardLayout({
   children,
@@ -15,15 +15,16 @@ export default async function DashboardLayout({
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="font-semibold tracking-tight">
-            Job Tracker
-          </Link>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {session.user.email}
+          <Link href="/" className="flex items-baseline gap-2">
+            <span className="font-semibold tracking-tight">UnoMas</span>
+            <span className="hidden text-xs text-muted-foreground sm:inline">
+              Job Tracker
             </span>
-            <SignOutButton />
-          </div>
+          </Link>
+          <UserMenu
+            name={session.user.name ?? ""}
+            email={session.user.email ?? ""}
+          />
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 pb-28">{children}</main>

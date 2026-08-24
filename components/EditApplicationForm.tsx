@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Save } from "lucide-react";
 import {
-  deleteApplication,
   updateApplication,
   ApiClientError,
   type ApplicationDetail,
@@ -31,12 +30,13 @@ const STATUS_OPTIONS: ApplicationStatus[] = [
 ];
 
 export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
-  const router = useRouter();
   const qc = useQueryClient();
   const [company, setCompany] = useState(app.company);
   const [role, setRole] = useState(app.role);
   const [url, setUrl] = useState(app.url ?? "");
-  const [contact, setContact] = useState(app.contact ?? "");
+  const [contactName, setContactName] = useState(app.contactName ?? "");
+  const [contactEmail, setContactEmail] = useState(app.contactEmail ?? "");
+  const [contactPhone, setContactPhone] = useState(app.contactPhone ?? "");
   const [notes, setNotes] = useState(app.notes ?? "");
   const [status, setStatus] = useState<ApplicationStatus>(app.status);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,9 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
     setCompany(app.company);
     setRole(app.role);
     setUrl(app.url ?? "");
-    setContact(app.contact ?? "");
+    setContactName(app.contactName ?? "");
+    setContactEmail(app.contactEmail ?? "");
+    setContactPhone(app.contactPhone ?? "");
     setNotes(app.notes ?? "");
     setStatus(app.status);
     setDirty(false);
@@ -65,7 +67,9 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
         company,
         role,
         url: url || null,
-        contact: contact || null,
+        contactName: contactName || null,
+        contactEmail: contactEmail || null,
+        contactPhone: contactPhone || null,
         notes: notes || null,
         status,
       }),
@@ -77,20 +81,6 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
     onError: (err) => {
       setError(
         err instanceof ApiClientError ? err.message : "Failed to save changes",
-      );
-    },
-  });
-
-  const archive = useMutation({
-    mutationFn: () => deleteApplication(app.id),
-    onSuccess: () => {
-      invalidate();
-      router.push("/");
-      router.refresh();
-    },
-    onError: (err) => {
-      setError(
-        err instanceof ApiClientError ? err.message : "Failed to archive",
       );
     },
   });
@@ -140,17 +130,48 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
             }}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="edit-contact">Contact</Label>
-          <Input
-            id="edit-contact"
-            value={contact}
-            onChange={(e) => {
-              setContact(e.target.value);
-              markDirty();
-            }}
-          />
+
+        <div className="space-y-3 rounded-md border p-3">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Contact
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="edit-contact-name">Name</Label>
+            <Input
+              id="edit-contact-name"
+              value={contactName}
+              onChange={(e) => {
+                setContactName(e.target.value);
+                markDirty();
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-contact-email">Email</Label>
+            <Input
+              id="edit-contact-email"
+              type="email"
+              value={contactEmail}
+              onChange={(e) => {
+                setContactEmail(e.target.value);
+                markDirty();
+              }}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="edit-contact-phone">Phone</Label>
+            <Input
+              id="edit-contact-phone"
+              type="tel"
+              value={contactPhone}
+              onChange={(e) => {
+                setContactPhone(e.target.value);
+                markDirty();
+              }}
+            />
+          </div>
         </div>
+
         <div className="space-y-2">
           <Label htmlFor="edit-notes">Notes</Label>
           <Textarea
@@ -197,22 +218,8 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
             onClick={() => save.mutate()}
             disabled={!dirty || save.isPending}
           >
+            <Save />
             {save.isPending ? "Saving…" : "Save changes"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (
-                window.confirm(
-                  "Archive this application? It will be hidden from the dashboard.",
-                )
-              ) {
-                archive.mutate();
-              }
-            }}
-            disabled={archive.isPending}
-          >
-            Archive
           </Button>
         </div>
       </CardContent>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Check, MoreVertical, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import {
   deleteMilestone,
   updateMilestone,
@@ -12,6 +13,13 @@ import type { Milestone } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AddMilestoneModal } from "./AddMilestoneModal";
 
 function statusVariant(
@@ -109,6 +117,7 @@ export function MilestoneTimeline({
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Timeline</h2>
         <Button size="sm" onClick={() => setAddOpen(true)}>
+          <Plus />
           Add milestone
         </Button>
       </div>
@@ -147,48 +156,59 @@ export function MilestoneTimeline({
               {m.comment && (
                 <p className="text-sm text-muted-foreground">{m.comment}</p>
               )}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {m.status !== "done" ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => toggleStatus.mutate({ id: m.id, next: "done" })}
-                    disabled={toggleStatus.isPending}
-                  >
-                    Mark done
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => toggleStatus.mutate({ id: m.id, next: "pending" })}
-                    disabled={toggleStatus.isPending}
-                  >
-                    Reopen
-                  </Button>
-                )}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
-                  size="sm"
                   variant="ghost"
-                  onClick={() => openEdit(m)}
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  aria-label={`Actions for ${m.title}`}
                 >
-                  Edit
+                  <MoreVertical className="h-4 w-4" />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => {
-                    if (window.confirm(`Remove "${m.title}" from the timeline?`)) {
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {m.status !== "done" ? (
+                  <DropdownMenuItem
+                    onSelect={() => toggleStatus.mutate({ id: m.id, next: "done" })}
+                    disabled={toggleStatus.isPending}
+                  >
+                    <Check />
+                    Mark done
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      toggleStatus.mutate({ id: m.id, next: "pending" })
+                    }
+                    disabled={toggleStatus.isPending}
+                  >
+                    <RotateCcw />
+                    Reopen
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onSelect={() => openEdit(m)}>
+                  <Pencil />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => {
+                    if (
+                      window.confirm(`Remove "${m.title}" from the timeline?`)
+                    ) {
                       deleteMutation.mutate(m.id);
                     }
                   }}
                   disabled={deleteMutation.isPending}
                 >
+                  <Trash2 />
                   Delete
-                </Button>
-              </div>
-            </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </li>
         ))}
       </ol>

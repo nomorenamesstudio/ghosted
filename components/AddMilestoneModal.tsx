@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { addMilestone, ApiClientError } from "@/lib/api";
 import type { Milestone } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
@@ -135,7 +136,14 @@ export function AddMilestoneModal({
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Adding…" : "Add milestone"}
+              {mutation.isPending ? (
+                "Adding…"
+              ) : (
+                <>
+                  <Plus />
+                  Add milestone
+                </>
+              )}
             </Button>
           </DialogFooter>
         </form>

@@ -68,6 +68,26 @@ describe("createApplicationSchema", () => {
     });
     expect(r.success).toBe(false);
   });
+
+  it("rejects an invalid contact email", () => {
+    const r = createApplicationSchema.safeParse({
+      company: "A",
+      role: "B",
+      contactEmail: "not-an-email",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("accepts valid contact fields", () => {
+    const r = createApplicationSchema.safeParse({
+      company: "A",
+      role: "B",
+      contactName: "Jane Doe",
+      contactEmail: "jane@acme.example",
+      contactPhone: "+1-555-0100",
+    });
+    expect(r.success).toBe(true);
+  });
 });
 
 describe("updateApplicationSchema", () => {

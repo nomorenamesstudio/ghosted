@@ -262,7 +262,9 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     const res = await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", {
         company: "NewCo",
-        contact: "Jane",
+        contactName: "Jane Doe",
+        contactEmail: "jane@acme.example",
+        contactPhone: "+1-555-0100",
         status: "rejected",
       }),
       { params: { id: app.id } },
@@ -270,7 +272,27 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect(res.status).toBe(200);
     const json = await readJson(res);
     expect((json.data as Record<string, unknown>).company).toBe("NewCo");
+    expect((json.data as Record<string, unknown>).contactName).toBe("Jane Doe");
+    expect((json.data as Record<string, unknown>).contactEmail).toBe(
+      "jane@acme.example",
+    );
+    expect((json.data as Record<string, unknown>).contactPhone).toBe(
+      "+1-555-0100",
+    );
     expect((json.data as Record<string, unknown>).status).toBe("rejected");
+  });
+
+  it("rejects an invalid contact email in the patch", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", {
+        contactEmail: "not-an-email",
+      }),
+      { params: { id: app.id } },
+    );
+    expect(res.status).toBe(400);
   });
 
   it("rejects an invalid status in the patch", async () => {
@@ -309,5 +331,37 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     const archived = await GET(new Request(`${base}?status=archived&page=1`));
     const archivedJson = await readJson(archived);
     expect((archivedJson.data as unknown[])).toHaveLength(1);
+  });
+
+  it("reopens (un-archives) an application back to applied", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await DELETE_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+
+    // Hidden after archiving…
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const list = await GET(new Request(`${base}?page=1`));
+    expect((await readJson(list)).data as unknown[]).toHaveLength(0);
+
+    // …reopen restores it to the default list as 'applied'.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", { status: "applied" }),
+      { params: { id: app.id } },
+    );
+    expect(res.status).toBe(200);
+    expect((await readJson(res)).data as Record<string, unknown>).toMatchObject({
+      id: app.id,
+      status: "applied",
+    });
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const list2 = await GET(new Request(`${base}?page=1`));
+    const list2Json = await readJson(list2);
+    expect((list2Json.data as unknown[])).toHaveLength(1);
   });
 });

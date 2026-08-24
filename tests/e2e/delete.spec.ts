@@ -11,10 +11,11 @@ test("archived application disappears from the dashboard", async ({
   await page.goto("/");
   await expect(page.getByText("Doomed Corp")).toBeVisible();
 
-  // Open the detail view and archive it (soft delete).
+  // Open the detail view and archive it (soft delete) via the "…" menu.
   await page.goto(`/applications/${id}`);
   page.once("dialog", (dialog) => dialog.accept());
-  await page.getByRole("button", { name: "Archive" }).click();
+  await page.getByRole("button", { name: "Application actions" }).click();
+  await page.getByRole("menuitem", { name: "Archive" }).click();
 
   // Back on the dashboard the app is no longer visible.
   await expect(page).toHaveURL("/");

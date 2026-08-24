@@ -240,6 +240,43 @@ describe("status auto-advance", () => {
       new Date(app.updatedAt).getTime(),
     );
   });
+
+  it("records today's date automatically when marked done, and stays editable", async () => {
+    const user = await createUser();
+    const app = await createApp(user.id);
+    const ms = await db
+      .select()
+      .from(milestones)
+      .where(eq2(milestones.applicationId, app.id));
+
+    // The second default milestone has no date yet.
+    expect(ms[1].date).toBeNull();
+
+    // Mark done without a date → server records today.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_MILESTONE(
+      jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { status: "done" }),
+      { params: { id: ms[1].id } },
+    );
+    const [afterDone] = await db
+      .select()
+      .from(milestones)
+      .where(eq2(milestones.id, ms[1].id));
+    expect(afterDone.date).not.toBeNull();
+
+    // The date can still be edited later via the edit dialog (explicit date).
+    const future = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_MILESTONE(
+      jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { date: future }),
+      { params: { id: ms[1].id } },
+    );
+    const [afterEdit] = await db
+      .select()
+      .from(milestones)
+      .where(eq2(milestones.id, ms[1].id));
+    expect(afterEdit.date!.toISOString()).toBe(new Date(future).toISOString());
+  });
 });
 
 describe("DELETE /api/milestones/:id", () => {

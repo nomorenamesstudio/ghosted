@@ -245,7 +245,9 @@ export async function createApplication(
         company: sanitizeText(input.company) ?? input.company,
         role: sanitizeText(input.role) ?? input.role,
         url: input.url || null,
-        contact: sanitizeText(input.contact),
+        contactName: sanitizeText(input.contactName),
+        contactEmail: sanitizeText(input.contactEmail),
+        contactPhone: sanitizeText(input.contactPhone),
         notes: sanitizeText(input.notes),
         status: "applied",
         totalSteps: titles.length,
@@ -283,7 +285,12 @@ export async function updateApplication(
   if (input.role !== undefined)
     values.role = sanitizeText(input.role) ?? input.role;
   if (input.url !== undefined) values.url = input.url || null;
-  if (input.contact !== undefined) values.contact = sanitizeText(input.contact);
+  if (input.contactName !== undefined)
+    values.contactName = sanitizeText(input.contactName);
+  if (input.contactEmail !== undefined)
+    values.contactEmail = sanitizeText(input.contactEmail);
+  if (input.contactPhone !== undefined)
+    values.contactPhone = sanitizeText(input.contactPhone);
   if (input.notes !== undefined) values.notes = sanitizeText(input.notes);
   if (input.status !== undefined) values.status = input.status;
 
@@ -409,6 +416,14 @@ export async function updateMilestone(
     if (input.comment !== undefined)
       values.comment = sanitizeText(input.comment);
     if (input.date !== undefined) values.date = input.date;
+
+    // Auto-record today's date when a milestone is marked done (editable later
+    // via the edit dialog, which sends an explicit date).
+    if (input.status === "done" && input.date === undefined && !m.date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      values.date = today;
+    }
 
     const [updated] = await tx
       .update(milestones)

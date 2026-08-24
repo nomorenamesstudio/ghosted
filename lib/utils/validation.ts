@@ -33,6 +33,14 @@ export const optionalUrlSchema = z
 const optionalLongText = (max: number) =>
   z.string().trim().max(max).optional().nullable();
 
+const optionalEmailText = z
+  .email("Enter a valid email address")
+  .trim()
+  .toLowerCase()
+  .max(254)
+  .optional()
+  .nullable();
+
 /** ISO-8601 date string → Date (or null). */
 const optionalDateSchema = z
   .string()
@@ -52,7 +60,9 @@ export const createApplicationSchema = z.object({
   company: z.string().trim().min(1, "Company is required").max(200),
   role: z.string().trim().min(1, "Role is required").max(200),
   url: optionalUrlSchema,
-  contact: optionalLongText(200),
+  contactName: optionalLongText(200),
+  contactEmail: optionalEmailText,
+  contactPhone: optionalLongText(40),
   notes: optionalLongText(10_000),
 });
 
@@ -61,7 +71,9 @@ export const updateApplicationSchema = z
     company: z.string().trim().min(1).max(200).optional(),
     role: z.string().trim().min(1).max(200).optional(),
     url: optionalUrlSchema,
-    contact: optionalLongText(200),
+    contactName: optionalLongText(200),
+    contactEmail: optionalEmailText,
+    contactPhone: optionalLongText(40),
     notes: optionalLongText(10_000),
     status: z.enum(applicationStatusEnum.enumValues).optional(),
   })

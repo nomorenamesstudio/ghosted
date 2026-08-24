@@ -1,4 +1,4 @@
-# Job Tracker
+# UnoMas — Job Tracker
 
 A personal job-application tracking webapp. Log applications, track progress
 through a 5-step default timeline (extendable), and view a lightweight
@@ -75,7 +75,7 @@ PASSWORD_RESET_TTL_MINUTES= # default 60
 ```
 app/
   (auth)/                 # login, register, forgot/reset password
-  (dashboard)/            # protected shell: stats + list + application detail
+  (dashboard)/            # protected shell: stats + list + application detail + settings
   api/
     applications/         # GET (list w/ filters) + POST
     applications/[id]/    # GET / PATCH / DELETE (soft)
@@ -84,10 +84,11 @@ app/
     dashboard/stats/      # GET
     auth/                 # [...nextauth], login, register, forgot/reset-password
 components/
-  ui/                     # shadcn-style primitives (button, dialog, card, …)
+  ui/                     # shadcn-style primitives (button, dialog, card, dropdown, …)
+  UserMenu / theme-provider / StatusBadge
   ApplicationCard / ApplicationList / AddApplicationModal
   MilestoneTimeline / AddMilestoneModal / EditApplicationForm
-  Dashboard / DashboardStats / StatusBadge
+  Dashboard / DashboardStats
 lib/
   auth.ts                 # Auth.js v5 config (JWT, bcrypt, OAuth stubs)
   api.ts                  # typed client-side API + error handling
@@ -134,8 +135,9 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 
 Points the spec left ambiguous, and how this implementation resolves them:
 
-- **Schema gap**: `contact` and `notes` columns were added to `applications`
-  (the detail view requires them).
+- **Schema gap**: `contact` was replaced by three structured columns —
+  `contact_name`, `contact_email`, `contact_phone` (the detail view renders
+  three inputs).
 - **Status is auto-derived from milestones** (your choice): completing
   milestones advances `applied → interviewing → offer`.
   - `rejected` and `archived` are manual terminal states; milestone changes
@@ -163,6 +165,17 @@ Points the spec left ambiguous, and how this implementation resolves them:
   `step_order > deleted` down by 1, keeping the sequence dense 0..n-1.
 - **"Current round"** on list cards = title of the highest-`step_order` done
   milestone, falling back to the first milestone's title.
+- **Archive is reversible**: the "…" menu on the detail page offers
+  *Archive* (soft delete → hidden from list/stats) and, when archived,
+  *Reopen* (restores it as `applied`). Both the application and each
+  milestone row use a "…" popover menu for their actions; there is no hard
+  delete.
+- **Milestone dates**: marking a milestone *done* records today's date
+  automatically; the date is always editable afterwards via the milestone
+  *Edit* dialog.
+- **Night mode**: defaults to the user's system preference
+  (`prefers-color-scheme`), with a manual override (user menu or /settings)
+  persisted in localStorage.
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
   `iat + 7d`). Google/LinkedIn providers are only registered when their env
@@ -228,8 +241,9 @@ Deployment itself is out of scope for this MVP — wire a green-build deploy
 ## MVP Scope
 
 **Included:** full CRUD for applications, milestone timeline (add/update/delete
-with reordering), 5-step default + extra steps, progress bar, dashboard stats,
-search + filter + sort, OAuth + email/password auth, responsive UI.
+with reordering + per-row menus), 5-step default + extra steps, progress bar,
+dashboard stats, search + filter + sort, reversible archive, OAuth +
+email/password auth, user menu with night mode, responsive UI.
 
 **Explicitly out (v2 candidates):** job-description auto-fetch from URL,
 email notifications, public profiles/sharing, calendar integrations,

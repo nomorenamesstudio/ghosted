@@ -8,6 +8,13 @@
       "when": 1787478396910,
       "tag": "0000_right_jane_foster",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787574049822,
+      "tag": "0001_pretty_captain_universe",
+      "breakpoints": true
     }
   ]
 }

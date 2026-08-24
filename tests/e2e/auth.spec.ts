@@ -1,9 +1,5 @@
 import { test, expect } from "@playwright/test";
-import {
-  loginViaUi,
-  registerViaUi,
-  uniqueEmail,
-} from "./helpers";
+import { loginViaUi, registerViaUi, uniqueEmail } from "./helpers";
 
 test("register, sign out, and log back in", async ({ page }) => {
   const email = uniqueEmail("auth");
@@ -13,8 +9,9 @@ test("register, sign out, and log back in", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText("No applications yet")).toBeVisible();
 
-  // Sign out → back to the login page.
-  await page.getByRole("button", { name: "Sign out" }).click();
+  // Sign out via the user menu → back to the login page.
+  await page.getByRole("button", { name: "User menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/login/);
 
   // Log back in with the same credentials.

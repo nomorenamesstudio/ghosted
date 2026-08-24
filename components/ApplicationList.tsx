@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Plus, Search } from "lucide-react";
 import { getApplications, type ApplicationStatus } from "@/lib/api";
 import { ApplicationCard } from "./ApplicationCard";
+import { AddApplicationModal } from "./AddApplicationModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -30,6 +32,7 @@ export function ApplicationList() {
     "updated_at",
   );
   const [page, setPage] = useState(1);
+  const [addOpen, setAddOpen] = useState(false);
 
   // Debounce search input (300ms).
   useEffect(() => {
@@ -56,15 +59,18 @@ export function ApplicationList() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          type="search"
-          placeholder="Search company or role…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="sm:max-w-xs"
-          aria-label="Search applications"
-        />
-        <div className="flex gap-2">
+        <div className="relative sm:max-w-xs sm:flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search company or role…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+            aria-label="Search applications"
+          />
+        </div>
+        <div className="flex flex-1 items-center gap-2 sm:justify-start">
           <select
             value={status}
             onChange={(e) => {
@@ -95,6 +101,15 @@ export function ApplicationList() {
               </option>
             ))}
           </select>
+          <Button
+            size="sm"
+            data-testid="add-application-fab"
+            className="ml-auto"
+            onClick={() => setAddOpen(true)}
+          >
+            <Plus />
+            Add
+          </Button>
         </div>
       </div>
 
@@ -123,7 +138,7 @@ export function ApplicationList() {
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           {debouncedSearch || status
             ? "No applications match your filters."
-            : "No applications yet — tap the + button to add your first one."}
+            : "No applications yet — tap Add to create your first one."}
         </div>
       ) : (
         <ul className="space-y-2" data-testid="application-list">
@@ -157,6 +172,8 @@ export function ApplicationList() {
           </Button>
         </div>
       )}
+
+      <AddApplicationModal open={addOpen} onOpenChange={setAddOpen} />
     </div>
   );
 }

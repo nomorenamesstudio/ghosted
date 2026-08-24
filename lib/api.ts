@@ -64,7 +64,9 @@ export interface CreateApplicationInput {
   company: string;
   role: string;
   url?: string | null;
-  contact?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   notes?: string | null;
 }
 
@@ -72,7 +74,9 @@ export interface UpdateApplicationInput {
   company?: string;
   role?: string;
   url?: string | null;
-  contact?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
   notes?: string | null;
   status?: ApplicationStatus;
 }
