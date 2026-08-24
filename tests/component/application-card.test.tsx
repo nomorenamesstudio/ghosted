@@ -14,6 +14,7 @@ const app: ApplicationListItem = {
   contactPhone: null,
   notes: null,
   status: "applied",
+  archivedFromStatus: null,
   totalSteps: 5,
   createdAt: new Date(),
   updatedAt: new Date(),

@@ -118,6 +118,7 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | GET    | `/applications/:id`                 | Single app + milestones                            |
 | PATCH  | `/applications/:id`                 | Update fields / status                             |
 | DELETE | `/applications/:id`                 | Soft delete (→ archived)                           |
+| POST   | `/applications/:id/reopen`          | Restore an archived app to its previous status     |
 | POST   | `/applications/:id/milestones`      | Add milestone (insert at position, reorder)        |
 | PATCH  | `/milestones/:id`                   | Update title/status/comment/date                   |
 | DELETE | `/milestones/:id`                   | Remove milestone, reorder rest                     |
@@ -167,9 +168,10 @@ Points the spec left ambiguous, and how this implementation resolves them:
   milestone, falling back to the first milestone's title.
 - **Archive is reversible**: the "…" menu on the detail page offers
   *Archive* (soft delete → hidden from list/stats) and, when archived,
-  *Reopen* (restores it as `applied`). Both the application and each
-  milestone row use a "…" popover menu for their actions; there is no hard
-  delete.
+  *Reopen*. Reopen restores the exact status the application had before
+  archiving (stored in `archived_from_status`, including manual states like
+  `rejected`). Both the application and each milestone row use a "…" popover
+  menu for their actions; there is no hard delete.
 - **Milestone dates**: marking a milestone *done* records today's date
   automatically; the date is always editable afterwards via the milestone
   *Edit* dialog.

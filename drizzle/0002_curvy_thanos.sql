@@ -1,0 +1,1 @@
+ALTER TABLE "applications" ADD COLUMN "archived_from_status" "application_status";

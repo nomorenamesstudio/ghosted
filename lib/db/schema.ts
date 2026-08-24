@@ -60,6 +60,9 @@ export const applications = pgTable(
     contactPhone: text("contact_phone"),
     notes: text("notes"),
     status: applicationStatusEnum("status").notNull().default("applied"),
+    // The status an archived application had before archiving, so Reopen can
+    // restore it exactly (including manual states like 'rejected').
+    archivedFromStatus: applicationStatusEnum("archived_from_status"),
     totalSteps: integer("total_steps").notNull().default(5),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

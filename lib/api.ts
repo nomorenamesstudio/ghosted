@@ -174,6 +174,11 @@ export function deleteApplication(id: string): Promise<void> {
   return request<void>(`/api/applications/${id}`, { method: "DELETE" });
 }
 
+/** Restore an archived application to its pre-archive status. */
+export function reopenApplication(id: string): Promise<{ data: Application }> {
+  return request(`/api/applications/${id}/reopen`, { method: "POST" });
+}
+
 export function addMilestone(
   applicationId: string,
   input: CreateMilestoneInput,

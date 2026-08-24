@@ -19,6 +19,7 @@ import {
   totalStepsAfterInsert,
 } from "@/lib/utils/reorder";
 import { sanitizeText } from "@/lib/utils/sanitize";
+import { ApiError } from "@/lib/utils/api";
 import { deriveStatus, isNeedsAction } from "@/lib/utils/status";
 import type {
   CreateApplicationInput,
@@ -304,17 +305,62 @@ export async function updateApplication(
   return updated ?? null;
 }
 
-/** Soft delete: mark archived. Row is never removed. */
+/** Soft delete: archive the application, remembering its previous status. */
 export async function softDeleteApplication(
   userId: string,
   applicationId: string,
 ): Promise<Application | null> {
-  const [updated] = await db
-    .update(applications)
-    .set({ status: "archived", updatedAt: new Date() })
+  const [existing] = await db
+    .select({ status: applications.status })
+    .from(applications)
     .where(
       and(eq(applications.id, applicationId), eq(applications.userId, userId)),
     )
+    .limit(1);
+  if (!existing) return null;
+
+  const [updated] = await db
+    .update(applications)
+    .set({
+      status: "archived",
+      archivedFromStatus: existing.status,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
+    .returning();
+  return updated ?? null;
+}
+
+/**
+ * Reopen: restore an archived application to the exact status it had before
+ * archiving (falls back to 'applied' when unknown).
+ */
+export async function reopenApplication(
+  userId: string,
+  applicationId: string,
+): Promise<Application | null> {
+  const [existing] = await db
+    .select()
+    .from(applications)
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
+    .limit(1);
+  if (!existing) return null;
+  if (existing.status !== "archived") {
+    throw new ApiError(400, "Application is not archived", "NOT_ARCHIVED");
+  }
+
+  const [updated] = await db
+    .update(applications)
+    .set({
+      status: existing.archivedFromStatus ?? "applied",
+      archivedFromStatus: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(applications.id, applicationId))
     .returning();
   return updated ?? null;
 }

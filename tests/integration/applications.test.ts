@@ -15,6 +15,7 @@ import {
   PATCH as PATCH_APP,
   DELETE as DELETE_APP,
 } from "@/app/api/applications/[id]/route";
+import { POST as REOPEN_APP } from "@/app/api/applications/[id]/reopen/route";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import {
@@ -333,10 +334,16 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect((archivedJson.data as unknown[])).toHaveLength(1);
   });
 
-  it("reopens (un-archives) an application back to applied", async () => {
+  it("reopens (un-archives) an application, restoring its previous status", async () => {
     const user = await createUser();
     const { app } = await createApp(user.id);
 
+    // Advance to an intermediate status (as auto-advance would), then archive.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", { status: "interviewing" }),
+      { params: { id: app.id } },
+    );
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await DELETE_APP(new Request(`${base}/${app.id}`), {
       params: { id: app.id },
@@ -347,21 +354,56 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     const list = await GET(new Request(`${base}?page=1`));
     expect((await readJson(list)).data as unknown[]).toHaveLength(0);
 
-    // …reopen restores it to the default list as 'applied'.
+    // …reopen restores 'interviewing', not a generic 'applied'.
     authMock.mockResolvedValueOnce(mockSession(user.id));
-    const res = await PATCH_APP(
-      jsonRequest(`${base}/${app.id}`, "PATCH", { status: "applied" }),
-      { params: { id: app.id } },
-    );
-    expect(res.status).toBe(200);
-    expect((await readJson(res)).data as Record<string, unknown>).toMatchObject({
-      id: app.id,
-      status: "applied",
+    const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
+      params: { id: app.id },
     });
+    expect(res.status).toBe(200);
+    expect(
+      (await readJson(res)).data as Record<string, unknown>,
+    ).toMatchObject({ id: app.id, status: "interviewing" });
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const list2 = await GET(new Request(`${base}?page=1`));
-    const list2Json = await readJson(list2);
-    expect((list2Json.data as unknown[])).toHaveLength(1);
+    expect((await readJson(list2)).data as unknown[]).toHaveLength(1);
+  });
+
+  it("reopening restores a manual rejected status too", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", { status: "rejected" }),
+      { params: { id: app.id } },
+    );
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await DELETE_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
+      params: { id: app.id },
+    });
+    expect(res.status).toBe(200);
+    expect((await readJson(res)).data as Record<string, unknown>).toMatchObject({
+      id: app.id,
+      status: "rejected",
+    });
+  });
+
+  it("rejects reopening an application that is not archived", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
+      params: { id: app.id },
+    });
+    expect(res.status).toBe(400);
+    const json = await readJson(res);
+    expect(json.code).toBe("NOT_ARCHIVED");
   });
 });

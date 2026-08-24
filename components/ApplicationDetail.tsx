@@ -8,7 +8,7 @@ import { Archive, ArrowLeft, MoreVertical, Pencil, RotateCcw } from "lucide-reac
 import {
   deleteApplication,
   getApplication,
-  updateApplication,
+  reopenApplication,
 } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -77,9 +77,9 @@ export function ApplicationDetail({ id }: { id: string }) {
     onError: (err) => setActionError((err as Error).message),
   });
 
-  /** Reopen: restores an archived application to 'applied'. */
+  /** Reopen: restores an archived application to its pre-archive status. */
   const reopen = useMutation({
-    mutationFn: () => updateApplication(id, { status: "applied" }),
+    mutationFn: () => reopenApplication(id),
     onSuccess: invalidate,
     onError: (err) => setActionError((err as Error).message),
   });
