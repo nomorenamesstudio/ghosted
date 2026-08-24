@@ -17,7 +17,7 @@ const STATUS_VARIANT: Record<
   DisplayStatus,
   "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "muted" | "violet"
 > = {
-  applied: "outline",
+  applied: "info",
   interviewing: "warning",
   offer: "success",
   rejected: "destructive",

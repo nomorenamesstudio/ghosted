@@ -35,7 +35,7 @@ export const STATUS_BADGE_VARIANT: Record<
   | "outline"
   | "violet"
 > = {
-  applied: "outline",
+  applied: "info",
   interviewing: "warning",
   offer: "success",
   rejected: "destructive",
