@@ -27,14 +27,20 @@ import type { DisplayStatus } from "@/lib/utils/status";
 
 export const STATUS_BADGE_VARIANT: Record<
   DisplayStatus,
-  "info" | "warning" | "success" | "destructive" | "muted" | "outline"
+  | "info"
+  | "warning"
+  | "success"
+  | "destructive"
+  | "muted"
+  | "outline"
+  | "violet"
 > = {
   applied: "outline",
   interviewing: "warning",
   offer: "success",
   rejected: "destructive",
   archived: "muted",
-  ghosted: "info",
+  ghosted: "violet",
 };
 
 export function StatusBadge({ status }: { status: DisplayStatus }) {

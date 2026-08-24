@@ -69,7 +69,6 @@ export function DashboardStats({ stats }: { stats?: Stats }) {
         label="Ghosted"
         value={stats?.ghosted ?? null}
         icon={<Ghost className="h-4 w-4" />}
-        highlight={Boolean(stats && stats.ghosted > 0)}
       />
     </div>
   );

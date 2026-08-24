@@ -172,7 +172,7 @@ Points the spec left ambiguous, and how this implementation resolves them:
   `interviewing`, `offers`, `rejected` by status; `ghosted` counts stale
   applied/interviewing; archived apps count nowhere.
 - **Status cards**: muted accent borders on the dashboard cards — soft green
-  for offers, soft red for rejected, soft blue for ghosted.
+  for offers, soft red for rejected, soft purple for ghosted.
 - **Soft delete**: DELETE sets `status = 'archived'`. Archived apps are hidden
   from the default list and from every stat, but remain in the database and
   are visible via the `status=archived` filter.

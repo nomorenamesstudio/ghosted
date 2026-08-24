@@ -15,14 +15,14 @@ import type { DisplayStatus } from "@/lib/utils/status";
 
 const STATUS_VARIANT: Record<
   DisplayStatus,
-  "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "muted"
+  "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "muted" | "violet"
 > = {
   applied: "outline",
   interviewing: "warning",
   offer: "success",
   rejected: "destructive",
   archived: "muted",
-  ghosted: "info",
+  ghosted: "violet",
 };
 
 /** Muted, soft card-border accents for selected statuses. */
@@ -32,7 +32,7 @@ const STATUS_BORDER: Partial<Record<DisplayStatus, string>> = {
   rejected:
     "border-red-300/70 hover:border-red-400/70 dark:border-red-900/60 dark:hover:border-red-800/60",
   ghosted:
-    "border-sky-300/70 hover:border-sky-400/70 dark:border-sky-800/60 dark:hover:border-sky-700/60",
+    "border-violet-300/70 hover:border-violet-400/70 dark:border-violet-800/60 dark:hover:border-violet-700/60",
 };
 
 export function ApplicationCard({ app }: { app: ApplicationListItem }) {
