@@ -51,7 +51,7 @@ export function RegisterForm() {
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle>Create account</CardTitle>
-        <CardDescription>Start tracking your job applications.</CardDescription>
+        <CardDescription>Start your job hunt with Ghosted.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-4">

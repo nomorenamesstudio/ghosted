@@ -15,7 +15,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "UnoMas - Job Tracker",
+  title: "Ghosted - Job Tracker",
   description: "Track your job applications and interview progress.",
 };
 
@@ -30,7 +30,7 @@ export default function RootLayout({
         {/* Apply the saved/system theme before first paint to avoid a flash. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('unomas-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
       </head>

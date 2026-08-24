@@ -1,8 +1,9 @@
-# UnoMas — Job Tracker
+# Ghosted — For the Job Hunters
 
 A personal job-application tracking webapp. Log applications, track progress
 through a 5-step default timeline (extendable), and view a lightweight
-dashboard with stats.
+dashboard with stats — and never lose track of the applications that went
+quiet on you (ghosted).
 
 Built from a full technical specification — see
 [Spec decisions & definitions](#spec-decisions--definitions) for how ambiguous

@@ -9,7 +9,7 @@ import {
 } from "react";
 
 export type Theme = "light" | "dark";
-const STORAGE_KEY = "unomas-theme";
+const STORAGE_KEY = "ghosted-theme";
 
 interface ThemeContextValue {
   theme: Theme;

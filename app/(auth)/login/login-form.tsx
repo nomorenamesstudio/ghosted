@@ -58,9 +58,7 @@ export function LoginForm({
     <Card className="w-full max-w-sm">
       <CardHeader>
         <CardTitle>Sign in</CardTitle>
-        <CardDescription>
-          Continue to your job application tracker.
-        </CardDescription>
+        <CardDescription>Welcome back to Ghosted.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {providers.google || providers.linkedin ? (
