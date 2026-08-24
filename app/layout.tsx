@@ -15,8 +15,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Ghosted - Job Tracker",
-  description: "Track your job applications and interview progress.",
+  title: "Ghosted - For the Job Hunters",
+  description:
+    "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
 };
 
 export default function RootLayout({
