@@ -13,11 +13,15 @@ export function Dashboard() {
   });
 
   return (
-    <div className="space-y-6 pt-4">
+    <>
+      {/* sr-only h1 kept outside the spaced container so it doesn't push the
+          banner down (space-y applies margin to every sibling after the first). */}
       <h1 className="sr-only">Applications</h1>
-      <DonateBanner offers={stats?.data?.offers ?? 0} />
-      <DashboardStats stats={stats?.data} />
-      <ApplicationList />
-    </div>
+      <div className="space-y-6 pt-4">
+        <DonateBanner offers={stats?.data?.offers ?? 0} />
+        <DashboardStats stats={stats?.data} />
+        <ApplicationList />
+      </div>
+    </>
   );
 }
