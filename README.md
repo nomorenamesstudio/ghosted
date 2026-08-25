@@ -212,10 +212,11 @@ Points the spec left ambiguous, and how this implementation resolves them:
   (Cancel reverts to the saved values).
 - **Dashboard is sectioned by status**: the list groups applications into
   Offers / Interviewing / Applied / Ghosted / Rejected (and Archived, when
-  filtered) sections with icons; empty sections are hidden. Search and the
-  status/sort dropdowns filter across sections (the list fetches up to 100
-  rows — pagination was dropped in favor of the grouped view; the API still
-  supports it).
+  filtered) sections with icons; empty sections are hidden. Section headers
+  are **sticky** (they stay visible while scrolling so sections can always be
+  collapsed). Applications **lazy-load on scroll** (50 per page via the
+  "Load more" sentinel, which is keyboard-accessible and auto-triggers near
+  the viewport bottom); the API still supports explicit pagination.
 - **Status icons** (lucide) appear on status badges, stats cards, section
   headers, and inside every status dropdown.
 - **Modals animate from the center** (fade + scale, no corner slide).
