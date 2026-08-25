@@ -53,6 +53,15 @@ test("stress: hundreds of applications load via infinite scroll", async ({
     page.getByRole("button", { name: /Load more|Loading/ }),
   ).toHaveCount(0);
 
+  // The scroll-to-top button appeared after scrolling down…
+  const scrollTop = page.getByRole("button", { name: "Scroll to top" });
+  await expect(scrollTop).toBeVisible();
+
+  // …clicking it returns to the top and it disappears again.
+  await scrollTop.click();
+  await page.waitForFunction(() => window.scrollY < 100);
+  await expect(scrollTop).toHaveCount(0);
+
   // No client errors during the whole stress session.
   expect(errors).toEqual([]);
 });

@@ -5,6 +5,7 @@ import { getStats } from "@/lib/api";
 import { DashboardStats } from "./DashboardStats";
 import { DonateBanner } from "./DonateBanner";
 import { ApplicationList } from "./ApplicationList";
+import { ScrollTopButton } from "./ScrollTopButton";
 
 export function Dashboard() {
   const { data: stats } = useQuery({
@@ -22,6 +23,7 @@ export function Dashboard() {
         <DashboardStats stats={stats?.data} />
         <ApplicationList />
       </div>
+      <ScrollTopButton />
     </>
   );
 }
