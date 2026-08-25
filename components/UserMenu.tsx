@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Coffee, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { DONATE_URL } from "@/lib/utils/donate-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -54,6 +55,12 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
             <Settings />
             Settings
           </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <a href={DONATE_URL} target="_blank" rel="noopener noreferrer">
+            <Coffee />
+            Donate
+          </a>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={toggleTheme}>
           {theme === "dark" ? <Sun /> : <Moon />}
