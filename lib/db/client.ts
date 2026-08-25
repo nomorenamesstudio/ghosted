@@ -7,7 +7,7 @@ import * as schema from "./schema";
  * Uses `DATABASE_URL` in the app and `TEST_DATABASE_URL` under Vitest.
  */
 const globalForDb = globalThis as unknown as {
-  __jobtrackerDb?: PostgresJsDatabase<typeof schema>;
+  __ghostedDb?: PostgresJsDatabase<typeof schema>;
 };
 
 function getConnectionString(): string {
@@ -37,10 +37,10 @@ export function createDb(
 }
 
 export const db: PostgresJsDatabase<typeof schema> =
-  globalForDb.__jobtrackerDb ?? createDb();
+  globalForDb.__ghostedDb ?? createDb();
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.__jobtrackerDb = db;
+  globalForDb.__ghostedDb = db;
 }
 
 /** Raw postgres connection for schema setup in tests/scripts. */

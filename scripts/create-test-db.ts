@@ -7,8 +7,8 @@ import postgres from "postgres";
 async function main() {
   const url =
     process.env.TEST_DATABASE_URL ??
-    "postgres://jobtracker:jobtracker@localhost:5432/jobtracker_test";
-  const dbName = new URL(url).pathname.slice(1) || "jobtracker_test";
+    "postgres://ghosted:ghosted@localhost:5432/ghosted_test";
+  const dbName = new URL(url).pathname.slice(1) || "ghosted_test";
   const adminUrl = url.replace(/\/[^/?]+(\?.*)?$/, "/postgres$1");
 
   const sql = postgres(adminUrl, { max: 1, onnotice: () => {} });

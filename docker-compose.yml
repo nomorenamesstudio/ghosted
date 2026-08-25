@@ -1,21 +1,24 @@
+name: ghosted
+
 services:
   db:
     image: postgres:16-alpine
-    container_name: jobtracker-db
+    container_name: ghosted-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: jobtracker
-      POSTGRES_PASSWORD: jobtracker
-      POSTGRES_DB: jobtracker
+      POSTGRES_USER: ghosted
+      POSTGRES_PASSWORD: ghosted
+      POSTGRES_DB: ghosted
     ports:
       - "5432:5432"
     volumes:
-      - jobtracker_pgdata:/var/lib/postgresql/data
+      - ghosted_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jobtracker -d jobtracker"]
+      test: ["CMD-SHELL", "pg_isready -U ghosted -d ghosted"]
       interval: 5s
       timeout: 5s
       retries: 10
 
 volumes:
-  jobtracker_pgdata:
+  ghosted_pgdata:
+    name: ghosted_pgdata

@@ -7,7 +7,7 @@ dotenv.config({ path: ".env" });
 // E2E runs against the dedicated test database so it never touches dev data.
 const testDbUrl =
   process.env.TEST_DATABASE_URL ??
-  "postgres://jobtracker:jobtracker@localhost:5432/jobtracker_test";
+  "postgres://ghosted:ghosted@localhost:5432/ghosted_test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
