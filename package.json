@@ -15,6 +15,7 @@
     "db:studio": "drizzle-kit studio",
     "db:create-test": "tsx scripts/create-test-db.ts",
     "db:seed": "tsx scripts/seed.ts",
+    "db:seed:stress": "tsx scripts/seed-stress.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
