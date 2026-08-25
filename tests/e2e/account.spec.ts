@@ -13,10 +13,13 @@ test("settings: update profile name", async ({ page }) => {
 
   await page.goto("/settings");
   await page.getByLabel("Name").fill("New Name");
-  await page.getByRole("button", { name: "Save profile" }).click();
+  // Save only appears after a change (details-page pattern).
+  await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Profile updated.")).toBeVisible();
+  // Let the server layout re-render with the updated session JWT.
+  await page.waitForTimeout(500);
 
-  // The user menu reflects the new name after the server session refresh.
+  // The user menu reflects the new name.
   await page.getByRole("button", { name: "User menu" }).click();
   await expect(page.getByText("New Name")).toBeVisible();
 });
@@ -26,9 +29,16 @@ test("settings: change password and sign in with it", async ({ page }) => {
   await registerUser(page, email);
 
   await page.goto("/settings");
-  await page.getByLabel("Current password").fill("password123");
-  await page.getByLabel("New password").fill("newpassword456");
-  await page.getByRole("button", { name: "Update password" }).click();
+  await page.getByRole("button", { name: "Change password" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Current password").fill("password123");
+  await dialog.getByLabel("New password", { exact: true }).fill("newpassword456");
+  await dialog
+    .getByLabel("Confirm new password", { exact: true })
+    .fill("newpassword456");
+  await dialog.getByRole("button", { name: "Update password" }).click();
+
+  // Success message shown in the card after the modal closes.
   await expect(page.getByText("Password updated.")).toBeVisible();
 
   // Sign out and sign back in with the new password.

@@ -93,6 +93,7 @@ describe("POST /api/auth/change-password", () => {
       req(`${base}/change-password`, "POST", {
         currentPassword: "oldpassword1",
         newPassword: "newpassword1",
+        confirmPassword: "newpassword1",
       }),
     );
     expect(res.status).toBe(200);
@@ -112,6 +113,7 @@ describe("POST /api/auth/change-password", () => {
       req(`${base}/change-password`, "POST", {
         currentPassword: "wrong",
         newPassword: "newpassword1",
+        confirmPassword: "newpassword1",
       }),
     );
     expect(res.status).toBe(401);
@@ -125,9 +127,27 @@ describe("POST /api/auth/change-password", () => {
       req(`${base}/change-password`, "POST", {
         currentPassword: "password123",
         newPassword: "short",
+        confirmPassword: "short",
       }),
     );
     expect(res.status).toBe(400);
+  });
+
+  it("rejects mismatched confirmation passwords", async () => {
+    const user = await createUser("pw4@test.dev");
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await CHANGE_PASSWORD(
+      req(`${base}/change-password`, "POST", {
+        currentPassword: "password123",
+        newPassword: "newpassword1",
+        confirmPassword: "different1",
+      }),
+    );
+    expect(res.status).toBe(400);
+    const json = await readJson(res);
+    expect(String(JSON.stringify(json.details ?? ""))).toContain(
+      "Passwords do not match",
+    );
   });
 });
 

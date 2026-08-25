@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  changePasswordSchema,
   createApplicationSchema,
   updateApplicationSchema,
   createMilestoneSchema,
@@ -182,6 +183,21 @@ describe("auth schemas", () => {
     ).toBe(true);
     expect(
       resetPasswordSchema.safeParse({ token: "short", password: "x".repeat(8) })
+        .success,
+    ).toBe(false);
+  });
+
+  it("changePasswordSchema requires matching confirmation", () => {
+    const base = {
+      currentPassword: "current123",
+      newPassword: "newpassword1",
+    };
+    expect(
+      changePasswordSchema.safeParse({ ...base, confirmPassword: "newpassword1" })
+        .success,
+    ).toBe(true);
+    expect(
+      changePasswordSchema.safeParse({ ...base, confirmPassword: "mismatch1" })
         .success,
     ).toBe(false);
   });

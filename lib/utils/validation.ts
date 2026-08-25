@@ -142,10 +142,19 @@ export const updateProfileSchema = z
     message: "At least one field must be provided",
   });
 
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, "Current password is required").max(200),
-  newPassword: passwordSchema,
-});
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required").max(200),
+    newPassword: passwordSchema,
+    confirmPassword: z
+      .string()
+      .min(1, "Please confirm the new password")
+      .max(200),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
 
 export const resetPasswordSchema = z.object({
   token: z.string().trim().min(20, "Invalid reset token").max(300),
