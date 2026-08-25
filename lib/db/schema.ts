@@ -1,4 +1,5 @@
 import {
+  boolean,
   pgEnum,
   pgTable,
   index,
@@ -60,6 +61,8 @@ export const applications = pgTable(
     contactPhone: text("contact_phone"),
     notes: text("notes"),
     status: applicationStatusEnum("status").notNull().default("applied"),
+    // Favourites are pinned to the top of every list/section.
+    isFavorite: boolean("is_favorite").notNull().default(false),
     // The status an archived application had before archiving, so Reopen can
     // restore it exactly (including manual states like 'rejected').
     archivedFromStatus: applicationStatusEnum("archived_from_status"),

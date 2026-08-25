@@ -153,18 +153,21 @@ export async function listApplications(
   switch (sort ?? "updated_at") {
     case "company":
       orderBy = [
+        sql`${applications.isFavorite} desc`,
         sql`lower(${applications.company}) asc`,
         sql`${applications.updatedAt} desc`,
       ];
       break;
     case "status":
       orderBy = [
+        sql`${applications.isFavorite} desc`,
         sql`case ${applications.status} when 'applied' then 1 when 'interviewing' then 2 when 'offer' then 3 when 'rejected' then 4 when 'archived' then 5 end asc`,
         sql`${applications.updatedAt} desc`,
       ];
       break;
     default:
       orderBy = [
+        sql`${applications.isFavorite} desc`,
         sql`${applications.updatedAt} desc`,
         sql`${applications.createdAt} desc`,
       ];
@@ -386,6 +389,28 @@ export async function reopenApplication(
       archivedFromStatus: null,
       updatedAt: new Date(),
     })
+    .where(eq(applications.id, applicationId))
+    .returning();
+  return updated ?? null;
+}
+
+/** Toggle the favourite flag (favourites are pinned to the top of lists). */
+export async function toggleFavorite(
+  userId: string,
+  applicationId: string,
+): Promise<Application | null> {
+  const [existing] = await db
+    .select({ isFavorite: applications.isFavorite })
+    .from(applications)
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
+    .limit(1);
+  if (!existing) return null;
+
+  const [updated] = await db
+    .update(applications)
+    .set({ isFavorite: !existing.isFavorite })
     .where(eq(applications.id, applicationId))
     .returning();
   return updated ?? null;

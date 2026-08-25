@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { Star } from "lucide-react";
 import type { ApplicationListItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -72,6 +73,12 @@ export function ApplicationCard({ app }: { app: ApplicationListItem }) {
                 </span>
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {app.isFavorite && (
+                  <Star
+                    className="h-3.5 w-3.5 fill-amber-400 text-amber-500"
+                    aria-hidden
+                  />
+                )}
                 <Badge
                   variant={STATUS_VARIANT[status]}
                   className="gap-1 capitalize"

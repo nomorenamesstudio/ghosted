@@ -124,6 +124,7 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | PATCH  | `/applications/:id`                 | Update fields / status                             |
 | DELETE | `/applications/:id`                 | Soft delete (→ archived)                           |
 | POST   | `/applications/:id/reopen`          | Restore an archived app to its previous status     |
+| POST   | `/applications/:id/favorite`        | Toggle favourite (pinned to the top of lists)      |
 | POST   | `/applications/:id/milestones`      | Add milestone (insert at position, reorder)        |
 | PATCH  | `/milestones/:id`                   | Update title/status/comment/date                   |
 | DELETE | `/milestones/:id`                   | Remove milestone, reorder rest                     |
@@ -172,6 +173,9 @@ Points the spec left ambiguous, and how this implementation resolves them:
   default list view); `active` = applied + interviewing (excluding ghosted);
   `interviewing`, `offers`, `rejected` by status; `ghosted` counts stale
   applied/interviewing; archived apps count nowhere.
+- **Favourites**: a star button on the detail page toggles `is_favorite`;
+  favourited applications are pinned to the top of every list/section (all
+  sort modes) and get a small star indicator on their card.
 - **Status cards**: muted accent borders on the dashboard cards — soft green
   for offers, soft red for rejected, soft purple for ghosted.
 - **Soft delete**: DELETE sets `status = 'archived'`. Archived apps are hidden

@@ -15,6 +15,7 @@ const app: ApplicationListItem = {
   notes: null,
   status: "applied",
   displayStatus: "applied",
+  isFavorite: false,
   archivedFromStatus: null,
   totalSteps: 5,
   createdAt: new Date(),

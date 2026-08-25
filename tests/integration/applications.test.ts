@@ -17,6 +17,7 @@ import {
   DELETE as DELETE_APP,
 } from "@/app/api/applications/[id]/route";
 import { POST as REOPEN_APP } from "@/app/api/applications/[id]/reopen/route";
+import { POST as TOGGLE_FAVORITE } from "@/app/api/applications/[id]/favorite/route";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import {
@@ -128,6 +129,30 @@ describe("GET /api/applications", () => {
     const json = await readJson(res);
     const data = json.data as Array<Record<string, unknown>>;
     expect(data.map((d) => d.company)).toEqual(["Apple", "Zebra"]);
+  });
+
+  it("pins favourite applications to the top of the list", async () => {
+    const user = await createUser();
+    const zebra = await createApp(user.id, { company: "Zebra" });
+    const apple = await createApp(user.id, { company: "Apple" });
+
+    // Favourite "Apple" (created after Zebra, so it sorts last by default).
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await TOGGLE_FAVORITE(new Request(`${base}/${apple.app.id}/favorite`), {
+      params: { id: apple.app.id },
+    });
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await GET(new Request(`${base}?page=1`));
+    const data = (await readJson(res)).data as Array<Record<string, unknown>>;
+    expect(data.map((d) => d.company)).toEqual(["Apple", "Zebra"]);
+    expect(data[0].isFavorite).toBe(true);
+
+    // Still first with sort=company.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res2 = await GET(new Request(`${base}?sort=company&page=1`));
+    const data2 = (await readJson(res2)).data as Array<Record<string, unknown>>;
+    expect(data2.map((d) => d.company)).toEqual(["Apple", "Zebra"]);
   });
 
   it("paginates", async () => {
@@ -448,5 +473,45 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect(res.status).toBe(400);
     const json = await readJson(res);
     expect(json.code).toBe("NOT_ARCHIVED");
+  });
+});
+
+describe("POST /api/applications/:id/favorite", () => {
+  it("toggles the favourite flag", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const on = await TOGGLE_FAVORITE(
+      new Request(`${base}/${app.id}/favorite`),
+      { params: { id: app.id } },
+    );
+    expect(on.status).toBe(200);
+    expect((await readJson(on)).data as Record<string, unknown>).toMatchObject({
+      id: app.id,
+      isFavorite: true,
+    });
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const off = await TOGGLE_FAVORITE(
+      new Request(`${base}/${app.id}/favorite`),
+      { params: { id: app.id } },
+    );
+    expect((await readJson(off)).data as Record<string, unknown>).toMatchObject({
+      isFavorite: false,
+    });
+  });
+
+  it("returns 404 for another user's application", async () => {
+    const alice = await createUser("alice@test.dev");
+    const bob = await createUser("bob@test.dev");
+    const { app } = await createApp(alice.id);
+
+    authMock.mockResolvedValueOnce(mockSession(bob.id));
+    const res = await TOGGLE_FAVORITE(
+      new Request(`${base}/${app.id}/favorite`),
+      { params: { id: app.id } },
+    );
+    expect(res.status).toBe(404);
   });
 });

@@ -4,12 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Archive, ArrowLeft, MoreVertical, Pencil, RotateCcw } from "lucide-react";
+import { Archive, ArrowLeft, MoreVertical, Pencil, RotateCcw, Star } from "lucide-react";
 import {
   deleteApplication,
   getApplication,
   reopenApplication,
+  toggleFavorite,
+  type ApplicationDetail,
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -97,6 +100,30 @@ export function ApplicationDetail({ id }: { id: string }) {
     onError: (err) => setActionError((err as Error).message),
   });
 
+  /** Toggle favourite (optimistic). */
+  const favorite = useMutation({
+    mutationFn: () => toggleFavorite(id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: ["application", id] });
+      const previous = qc.getQueryData(["application", id]);
+      qc.setQueryData(["application", id], (old?: { data: ApplicationDetail }) =>
+        old
+          ? { ...old, data: { ...old.data, isFavorite: !old.data.isFavorite } }
+          : old,
+      );
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(["application", id], ctx.previous);
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["application", id] });
+      qc.invalidateQueries({ queryKey: ["applications"] });
+    },
+  });
+
   if (isPending) {
     return (
       <div className="space-y-4 pt-6">
@@ -140,16 +167,34 @@ export function ApplicationDetail({ id }: { id: string }) {
               </span>
             )}
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label="Application actions"
-              >
-                <MoreVertical />
-              </Button>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={
+                app.isFavorite ? "Remove from favourites" : "Add to favourites"
+              }
+              aria-pressed={app.isFavorite}
+              onClick={() => favorite.mutate()}
+              disabled={favorite.isPending}
+            >
+              <Star
+                className={cn(
+                  "h-5 w-5",
+                  app.isFavorite && "fill-amber-400 text-amber-500",
+                )}
+              />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Application actions"
+                >
+                  <MoreVertical />
+                </Button>
+              </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={scrollToForm}>
                 <Pencil />
@@ -174,6 +219,7 @@ export function ApplicationDetail({ id }: { id: string }) {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
         {actionError && (
           <p role="alert" className="mt-2 text-sm text-destructive">

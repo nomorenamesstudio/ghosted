@@ -184,6 +184,11 @@ export function reopenApplication(id: string): Promise<{ data: Application }> {
   return request(`/api/applications/${id}/reopen`, { method: "POST" });
 }
 
+/** Toggle the favourite flag (favourites are pinned to the top of lists). */
+export function toggleFavorite(id: string): Promise<{ data: Application }> {
+  return request(`/api/applications/${id}/favorite`, { method: "POST" });
+}
+
 export function addMilestone(
   applicationId: string,
   input: CreateMilestoneInput,
