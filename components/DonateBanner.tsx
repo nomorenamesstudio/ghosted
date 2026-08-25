@@ -38,8 +38,9 @@ export function DonateBanner({ offers }: { offers: number }) {
               Congratulations on the offer — happy job hunting! 🎉
             </p>
             <p className="text-sm text-muted-foreground">
-              If Ghosted was useful in your job-seeking journey, please
-              consider buying us a coffee — it keeps the ghost alive.
+              If Ghosted has been useful in your job-seeking journey, please
+              consider buying us a coffee — every cup keeps the ghost alive
+              and the tracker free for everyone.
             </p>
           </div>
         </div>

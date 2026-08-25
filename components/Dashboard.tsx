@@ -13,7 +13,7 @@ export function Dashboard() {
   });
 
   return (
-    <div className="space-y-6 pt-6">
+    <div className="space-y-6 pt-4">
       <h1 className="sr-only">Applications</h1>
       <DonateBanner offers={stats?.data?.offers ?? 0} />
       <DashboardStats stats={stats?.data} />
