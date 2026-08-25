@@ -210,6 +210,10 @@ Points the spec left ambiguous, and how this implementation resolves them:
 - **Status icons** (lucide) appear on status badges, stats cards, section
   headers, and inside every status dropdown.
 - **Modals animate from the center** (fade + scale, no corner slide).
+- **Legal footer**: a footer with "Made with ❤ by Lost Signals Studio" and
+  links to public static pages — Privacy Policy (GDPR), Terms of Service and
+  Imprint. These are templates: complete the bracketed operator details
+  (address, contact, jurisdiction) before going live.
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
   `iat + 7d`). Google/LinkedIn providers are only registered when their env

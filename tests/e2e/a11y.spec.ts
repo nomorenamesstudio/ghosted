@@ -18,7 +18,14 @@ async function audit(page: import("@playwright/test").Page, name: string) {
 }
 
 test("a11y: public pages", async ({ page }) => {
-  for (const path of ["/login", "/register", "/forgot-password"]) {
+  for (const path of [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/privacy",
+    "/terms",
+    "/imprint",
+  ]) {
     await page.goto(path);
     await audit(page, path);
   }
