@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Plus, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
 import { getApplications, type ApplicationListItem } from "@/lib/api";
+import { cn } from "@/lib/utils";
 import type { DisplayStatus } from "@/lib/utils/status";
 import { ApplicationCard } from "./ApplicationCard";
 import { AddApplicationModal } from "./AddApplicationModal";
@@ -38,6 +39,7 @@ const SECTION_TITLES: Record<DisplayStatus, string> = {
 };
 
 const ALL = "__all__";
+const COLLAPSED_KEY = "ghosted-collapsed-sections";
 
 export function ApplicationList() {
   const [search, setSearch] = useState("");
@@ -45,6 +47,31 @@ export function ApplicationList() {
   const [status, setStatus] = useState<"" | DisplayStatus>("");
   const [sort, setSort] = useState<"company" | "updated_at">("updated_at");
   const [addOpen, setAddOpen] = useState(false);
+
+  // Collapsed sections (persisted per browser).
+  const [collapsed, setCollapsed] = useState<Set<DisplayStatus>>(() => {
+    if (typeof window === "undefined") return new Set();
+    try {
+      const raw = localStorage.getItem(COLLAPSED_KEY);
+      return raw ? new Set(JSON.parse(raw) as DisplayStatus[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  function toggleSection(s: DisplayStatus) {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(Array.from(next)));
+      } catch {
+        /* ignore storage errors */
+      }
+      return next;
+    });
+  }
 
   // Debounce search input (300ms).
   useEffect(() => {
@@ -164,20 +191,35 @@ export function ApplicationList() {
           {visibleSections.map((s) => {
             const items = byStatus.get(s) ?? [];
             const Icon = STATUS_ICONS_MAP[s];
+            const isCollapsed = collapsed.has(s);
             return (
               <section key={s} data-testid={`section-${s}`}>
-                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <button
+                  type="button"
+                  onClick={() => toggleSection(s)}
+                  aria-expanded={!isCollapsed}
+                  className="mb-2 flex w-full items-center gap-2 rounded-md text-left text-sm font-semibold uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
                   <Icon className="h-4 w-4" />
                   {SECTION_TITLES[s]}
                   <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
                     {items.length}
                   </span>
-                </h2>
-                <ul className="space-y-2">
-                  {items.map((app) => (
-                    <ApplicationCard key={app.id} app={app} />
-                  ))}
-                </ul>
+                  <ChevronDown
+                    className={cn(
+                      "ml-auto h-4 w-4 transition-transform",
+                      isCollapsed && "-rotate-90",
+                    )}
+                    aria-hidden
+                  />
+                </button>
+                {!isCollapsed && (
+                  <ul className="space-y-2">
+                    {items.map((app) => (
+                      <ApplicationCard key={app.id} app={app} />
+                    ))}
+                  </ul>
+                )}
               </section>
             );
           })}
