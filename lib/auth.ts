@@ -112,7 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (dbUser) {
               [dbUser] = await db
                 .update(users)
-                .set({ provider, providerId })
+                .set({ provider, providerId, emailVerified: true })
                 .where(eq(users.id, dbUser.id))
                 .returning();
             }
@@ -125,6 +125,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 name: user.name ?? "User",
                 provider,
                 providerId,
+                // OAuth providers verify the email themselves.
+                emailVerified: true,
               })
               .returning();
           }

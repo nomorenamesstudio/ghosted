@@ -73,6 +73,9 @@ NEXT_PUBLIC_APP_URL=     # used in password-reset links
 RATE_LIMIT_MAX=          # default 5
 RATE_LIMIT_WINDOW_MINUTES= # default 15
 PASSWORD_RESET_TTL_MINUTES= # default 60
+RESEND_API_KEY=          # transactional email (verification, resets); unset → log stub
+EMAIL_FROM=              # e.g. "Ghosted <noreply@yourdomain.com>"
+EMAIL_VERIFICATION_TTL_MINUTES= # default 1440 (24h)
 ```
 
 ## Project Structure
@@ -133,6 +136,8 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | POST   | `/api/auth/register`                | Create account (rate limited, auto sign-in)        |
 | POST   | `/api/auth/forgot-password`         | Issue 1h reset token (no account enumeration)      |
 | POST   | `/api/auth/reset-password`          | Redeem token, change password                      |
+| GET    | `/api/auth/verify-email`            | Confirm an email address via the emailed token     |
+| POST   | `/api/auth/resend-verification`     | (Re)send the verification email (signed-in)        |
 | PATCH  | `/api/auth/profile`                 | Update name / email (409 on duplicates)            |
 | POST   | `/api/auth/change-password`         | Change password (current password required)        |
 | DELETE | `/api/auth/account`                 | GDPR erasure — permanently delete account + data   |
@@ -223,6 +228,12 @@ Points the spec left ambiguous, and how this implementation resolves them:
   (rate limited, current password required), **data export** (JSON download,
   Art. 20 portability) and **account deletion** (Art. 17 erasure — cascades
   to all applications/milestones).
+- **Email & verification**: transactional emails (verification, password
+  reset) go through Resend when `RESEND_API_KEY` is set — otherwise they are
+  logged as a dev stub (tests always force the stub). Email accounts start
+  unverified and get a `/verify-email` link; the Settings page shows the
+  verified status with a resend option; changing the email resets
+  verification. OAuth accounts are verified by their provider.
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
   `iat + 7d`). Google/LinkedIn providers are only registered when their env

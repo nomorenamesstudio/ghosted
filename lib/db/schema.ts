@@ -39,6 +39,8 @@ export const users = pgTable(
     name: text("name").notNull(),
     provider: providerEnum("provider").notNull().default("email"),
     providerId: text("provider_id"),
+    emailVerified: boolean("email_verified").notNull().default(false),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -117,6 +119,24 @@ export const passwordResetTokens = pgTable(
   (t) => [index("prt_user_id_idx").on(t.userId)],
 );
 
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // SHA-256 hash of the raw token; the raw value is only ever shown once.
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("evt_user_id_idx").on(t.userId)],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   applications: many(applications),
 }));
@@ -141,6 +161,16 @@ export const passwordResetTokensRelations = relations(
   ({ one }) => ({
     user: one(users, {
       fields: [passwordResetTokens.userId],
+      references: [users.id],
+    }),
+  }),
+);
+
+export const emailVerificationTokensRelations = relations(
+  emailVerificationTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [emailVerificationTokens.userId],
       references: [users.id],
     }),
   }),

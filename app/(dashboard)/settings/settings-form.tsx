@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
+  BadgeCheck,
   Database,
   Download,
   KeyRound,
+  Mail,
   Moon,
   Palette,
   Save,
@@ -57,9 +59,11 @@ function Message({ state }: { state: Msg }) {
 export function SettingsForm({
   name: initialName,
   email: initialEmail,
+  emailVerified,
 }: {
   name: string;
   email: string;
+  emailVerified: boolean;
 }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -87,6 +91,31 @@ export function SettingsForm({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Verification resend.
+  const [resendBusy, setResendBusy] = useState(false);
+
+  async function resendVerification() {
+    setResendBusy(true);
+    setProfileMsg(null);
+    try {
+      const res = await fetch("/api/auth/resend-verification", {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to send verification email");
+      }
+      setProfileMsg({
+        type: "ok",
+        text: "Verification email sent — check your inbox.",
+      });
+    } catch (err) {
+      setProfileMsg({ type: "error", text: (err as Error).message });
+    } finally {
+      setResendBusy(false);
+    }
+  }
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -257,6 +286,31 @@ export function SettingsForm({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              {emailVerified ? (
+                <p
+                  role="status"
+                  className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+                  Email verified
+                </p>
+              ) : (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">
+                    Not verified yet — check your inbox.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={resendVerification}
+                    disabled={resendBusy}
+                  >
+                    <Mail />
+                    {resendBusy ? "Sending…" : "Resend"}
+                  </Button>
+                </div>
+              )}
             </div>
             <Message state={profileMsg} />
             {dirty && (

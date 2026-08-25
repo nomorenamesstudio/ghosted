@@ -6,6 +6,8 @@ import { BCRYPT_ROUNDS, signIn } from "@/lib/auth";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { registerSchema } from "@/lib/utils/validation";
+import { issueEmailVerification } from "@/lib/services/account";
+import { sendVerificationEmail } from "@/lib/emails";
 import {
   handleRouteError,
   jsonError,
@@ -51,6 +53,10 @@ export async function POST(req: Request) {
       .returning();
 
     logAuthEvent("register", { ip, email });
+
+    // Email accounts start unverified — send the verification email.
+    const { raw, email: verifyEmail } = await issueEmailVerification(user.id);
+    await sendVerificationEmail(verifyEmail, raw);
 
     // Auto sign-in after successful registration.
     try {

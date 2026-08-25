@@ -1,21 +1,39 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
 import {
   applications,
+  emailVerificationTokens,
   milestones,
   users,
   type Milestone,
+  type User,
 } from "@/lib/db/schema";
 import { ApiError } from "@/lib/utils/api";
 import { BCRYPT_ROUNDS } from "@/lib/auth";
+
+const hashToken = (t: string) =>
+  createHash("sha256").update(t).digest("hex");
 
 /** Update profile fields (name/email). Throws 409 EMAIL_TAKEN on duplicates. */
 export async function updateProfile(
   userId: string,
   input: { name?: string; email?: string },
-) {
-  const values: { name?: string; email?: string } = {};
+): Promise<{ user: User; emailChanged: boolean }> {
+  const [current] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!current) throw new ApiError(404, "User not found", "NOT_FOUND");
+
+  const values: {
+    name?: string;
+    email?: string;
+    emailVerified?: boolean;
+    emailVerifiedAt?: Date | null;
+  } = {};
   if (input.name !== undefined) values.name = input.name;
   if (input.email !== undefined) {
     const [existing] = await db
@@ -31,6 +49,11 @@ export async function updateProfile(
       );
     }
     values.email = input.email;
+    if (input.email !== current.email) {
+      // A changed email is unverified until the new address is confirmed.
+      values.emailVerified = false;
+      values.emailVerifiedAt = null;
+    }
   }
   if (Object.keys(values).length === 0) {
     throw new ApiError(400, "Nothing to update", "VALIDATION_ERROR");
@@ -41,7 +64,7 @@ export async function updateProfile(
     .set(values)
     .where(eq(users.id, userId))
     .returning();
-  return user;
+  return { user, emailChanged: input.email !== undefined && input.email !== current.email };
 }
 
 /** Verify the current password and set a new one. */
@@ -76,6 +99,69 @@ export async function changePassword(
 /** GDPR erasure: delete the account (cascades to applications, milestones, tokens). */
 export async function deleteAccount(userId: string): Promise<void> {
   await db.delete(users).where(eq(users.id, userId));
+}
+
+/**
+ * Create a fresh email-verification token for the user (invalidating any
+ * previous one) and return the raw token (only ever shown once, emailed).
+ */
+export async function createEmailVerification(userId: string): Promise<string> {
+  const ttlMinutes = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES ?? 60 * 24);
+  await db
+    .delete(emailVerificationTokens)
+    .where(eq(emailVerificationTokens.userId, userId));
+  const raw = randomBytes(32).toString("hex");
+  await db.insert(emailVerificationTokens).values({
+    userId,
+    tokenHash: hashToken(raw),
+    expiresAt: new Date(Date.now() + ttlMinutes * 60_000),
+  });
+  return raw;
+}
+
+/** Issue a verification token and return it together with the user's email. */
+export async function issueEmailVerification(
+  userId: string,
+): Promise<{ raw: string; email: string }> {
+  const raw = await createEmailVerification(userId);
+  const [u] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, userId));
+  return { raw, email: u?.email ?? "" };
+}
+
+/** Redeem a verification token; marks the user verified and the token used. */
+export async function verifyEmail(
+  rawToken: string,
+): Promise<{ email: string } | null> {
+  const [row] = await db
+    .select()
+    .from(emailVerificationTokens)
+    .where(
+      and(
+        eq(emailVerificationTokens.tokenHash, hashToken(rawToken)),
+        isNull(emailVerificationTokens.usedAt),
+      ),
+    )
+    .limit(1);
+  if (!row || row.expiresAt.getTime() <= Date.now()) return null;
+
+  const now = new Date();
+  await db
+    .update(users)
+    .set({ emailVerified: true, emailVerifiedAt: now })
+    .where(eq(users.id, row.userId));
+  await db
+    .update(emailVerificationTokens)
+    .set({ usedAt: now })
+    .where(eq(emailVerificationTokens.id, row.id));
+
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, row.userId));
+  return user ?? null;
 }
 
 export interface UserExport {

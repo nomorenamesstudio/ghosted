@@ -4,13 +4,14 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { passwordResetTokens, users } from "@/lib/db/schema";
 import { forgotPasswordSchema } from "@/lib/utils/validation";
+import { sendPasswordResetEmail } from "@/lib/emails";
 import {
   handleRouteError,
   jsonError,
   rateLimited,
 } from "@/lib/utils/api";
 import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
-import { logAuthEvent, logger } from "@/lib/utils/logger";
+import { logAuthEvent } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -62,13 +63,7 @@ export async function POST(req: Request) {
           expiresAt,
         });
 
-        const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/reset-password?token=${rawToken}`;
-        // MVP stub: no mail provider configured. In production this would be
-        // sent via an email service; here it is logged (structured) instead.
-        logger.info(
-          { userId: user.id, email, ttlMinutes },
-          `password reset link (dev stub): ${resetUrl}`,
-        );
+        await sendPasswordResetEmail(email, rawToken);
         logAuthEvent("password_reset", { ip, email });
       }
     }

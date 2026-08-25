@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { updateProfile } from "@/lib/services/account";
+import { issueEmailVerification, updateProfile } from "@/lib/services/account";
+import { sendVerificationEmail } from "@/lib/emails";
 import { updateProfileSchema } from "@/lib/utils/validation";
 import { handleRouteError, jsonError, requireSession } from "@/lib/utils/api";
 
@@ -18,7 +19,14 @@ export async function PATCH(req: Request) {
         parsed.error.flatten(),
       );
     }
-    const user = await updateProfile(userId, parsed.data);
+    const { user, emailChanged } = await updateProfile(userId, parsed.data);
+
+    // A changed email is unverified until confirmed — send a new link.
+    if (emailChanged) {
+      const { raw, email } = await issueEmailVerification(userId);
+      await sendVerificationEmail(email, raw);
+    }
+
     return NextResponse.json({
       data: { id: user.id, name: user.name, email: user.email },
     });

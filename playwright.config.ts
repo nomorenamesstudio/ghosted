@@ -36,6 +36,8 @@ export default defineConfig({
       DATABASE_URL: testDbUrl,
       TEST_DATABASE_URL: testDbUrl,
       NEXT_PUBLIC_APP_URL: "http://localhost:3100",
+      // E2E must never send real emails — force the dev-log fallback.
+      RESEND_API_KEY: "",
       PLAYWRIGHT_BROWSERS_PATH: path.resolve(__dirname, ".browsers"),
     },
   },
