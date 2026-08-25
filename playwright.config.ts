@@ -38,6 +38,9 @@ export default defineConfig({
       NEXT_PUBLIC_APP_URL: "http://localhost:3100",
       // E2E must never send real emails — force the dev-log fallback.
       RESEND_API_KEY: "",
+      // E2E registers many users per run; rate limiting is covered by unit
+      // tests, so keep it out of the way here.
+      RATE_LIMIT_MAX: "100000",
       PLAYWRIGHT_BROWSERS_PATH: path.resolve(__dirname, ".browsers"),
     },
   },
