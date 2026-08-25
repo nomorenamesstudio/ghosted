@@ -19,6 +19,21 @@ export const metadata: Metadata = {
   title: "Ghosted - For the Job Hunters",
   description:
     "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+  applicationName: "Ghosted",
+  openGraph: {
+    title: "Ghosted - For the Job Hunters",
+    description:
+      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+    type: "website",
+    siteName: "Ghosted",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: "Ghosted - For the Job Hunters",
+    description:
+      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+  },
 };
 
 export default function RootLayout({
