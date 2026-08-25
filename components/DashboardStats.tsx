@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusIcon } from "./status-icons";
 import type { DashboardStats as Stats } from "@/lib/api";
 
@@ -38,7 +39,7 @@ function StatCard({
           className="text-3xl font-bold tabular-nums"
           data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}
         >
-          {value === null ? "…" : value}
+          {value === null ? <Skeleton className="h-8 w-10" /> : value}
         </div>
       </CardContent>
     </Card>
