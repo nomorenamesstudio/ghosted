@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Ghost, Plus, Search } from "lucide-react";
 import type { DisplayStatus } from "@/lib/utils/status";
 import { AddApplicationModal } from "./AddApplicationModal";
 import { ApplicationSection, SECTION_ORDER, SECTION_TITLES } from "./ApplicationSection";
@@ -151,13 +151,28 @@ export function ApplicationList() {
         ))}
         {/* Sections stay mounted (even when empty) so their queries stay
             alive and mutations can surface new applications. */}
-        {allEmpty && (
-          <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-            {hasActiveFilters
-              ? "No applications match your filters."
-              : "No applications yet — tap Add to create your first one."}
-          </div>
-        )}
+        {allEmpty &&
+          (hasActiveFilters ? (
+            <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+              No applications match your filters.
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
+              <Ghost className="h-14 w-14 text-violet-300" aria-hidden />
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold">No applications yet</h2>
+                <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+                  Ghosted is here to keep every application, interview and
+                  offer in one place — so nothing ever gets ghosted. Add your
+                  first one and start the hunt! 🎯
+                </p>
+              </div>
+              <Button onClick={() => setAddOpen(true)}>
+                <Plus />
+                Add your first application
+              </Button>
+            </div>
+          ))}
       </div>
 
       <AddApplicationModal open={addOpen} onOpenChange={setAddOpen} />
