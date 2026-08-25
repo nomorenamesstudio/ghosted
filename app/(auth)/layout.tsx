@@ -13,7 +13,12 @@ export default function AuthLayout({
             <Ghost className="h-7 w-7" aria-hidden />
           </span>
           <div className="text-center">
-            <h1 className="text-2xl font-bold tracking-tight">Ghosted</h1>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Ghosted
+              <sup className="ml-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
+                beta
+              </sup>
+            </h1>
             <p className="text-sm text-muted-foreground">For the Job Hunters</p>
           </div>
         </div>
