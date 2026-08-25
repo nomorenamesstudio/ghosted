@@ -71,7 +71,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      // Profile updates (name/email) propagate into the JWT immediately so
+      // the user menu stays in sync without a fresh sign-in.
+      if (trigger === "update" && session) {
+        const s = session as {
+          name?: string;
+          email?: string;
+          user?: { name?: string; email?: string };
+        };
+        if (typeof s.name === "string") token.name = s.name;
+        if (typeof s.email === "string") token.email = s.email;
+        if (s.user) {
+          if (typeof s.user.name === "string") token.name = s.user.name;
+          if (typeof s.user.email === "string") token.email = s.user.email;
+        }
+      }
+
       // OAuth sign-in: find-or-create our DB user and pin token.sub to OUR id.
       if (user && account?.provider && account.provider !== "credentials") {
         const provider = account.provider as Provider;

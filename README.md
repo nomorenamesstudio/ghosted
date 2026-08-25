@@ -133,6 +133,10 @@ shape `{ "error": string, "code": string, "details"?: unknown }`.
 | POST   | `/api/auth/register`                | Create account (rate limited, auto sign-in)        |
 | POST   | `/api/auth/forgot-password`         | Issue 1h reset token (no account enumeration)      |
 | POST   | `/api/auth/reset-password`          | Redeem token, change password                      |
+| PATCH  | `/api/auth/profile`                 | Update name / email (409 on duplicates)            |
+| POST   | `/api/auth/change-password`         | Change password (current password required)        |
+| DELETE | `/api/auth/account`                 | GDPR erasure — permanently delete account + data   |
+| GET    | `/api/auth/export`                  | GDPR portability — download all data as JSON       |
 
 **List filters:** `status`, `search` (company/role, case-insensitive partial),
 `sort` (`company | status | updated_at`, default `updated_at desc`),
@@ -214,6 +218,11 @@ Points the spec left ambiguous, and how this implementation resolves them:
   links to public static pages — Privacy Policy (GDPR), Terms of Service and
   Imprint. These are templates: complete the bracketed operator details
   (address, contact, jurisdiction) before going live.
+- **Profile & GDPR**: the Settings page covers appearance, profile (name,
+  email — synced into the session JWT via a session update), password change
+  (rate limited, current password required), **data export** (JSON download,
+  Art. 20 portability) and **account deletion** (Art. 17 erasure — cascades
+  to all applications/milestones).
 - **Auth**: email/password with bcrypt (salt rounds 12); JWT sessions with a
   30-day idle TTL hard-capped at 7 days absolute (JWT `exp` pinned to
   `iat + 7d`). Google/LinkedIn providers are only registered when their env

@@ -133,6 +133,20 @@ export const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
 
+export const updateProfileSchema = z
+  .object({
+    name: z.string().trim().min(1, "Name is required").max(100).optional(),
+    email: emailSchema.optional(),
+  })
+  .refine((v) => v.name !== undefined || v.email !== undefined, {
+    message: "At least one field must be provided",
+  });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required").max(200),
+  newPassword: passwordSchema,
+});
+
 export const resetPasswordSchema = z.object({
   token: z.string().trim().min(20, "Invalid reset token").max(300),
   password: passwordSchema,
