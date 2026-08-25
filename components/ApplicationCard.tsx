@@ -81,7 +81,7 @@ export function ApplicationCard({ app }: { app: ApplicationListItem }) {
                 </Badge>
                 {app.currentRound && (
                   <span>
-                    Round: {app.currentRound}
+                    Last round: {app.currentRound}
                   </span>
                 )}
                 <span>Updated {formatDistanceToNow(new Date(app.updatedAt), { addSuffix: true })}</span>
@@ -91,7 +91,11 @@ export function ApplicationCard({ app }: { app: ApplicationListItem }) {
               <span className="text-xs font-semibold tabular-nums">
                 {app.progress}%
               </span>
-              <Progress value={app.progress} className="w-full" />
+              <Progress
+                value={app.progress}
+                aria-label="Application progress"
+                className="w-full"
+              />
             </div>
           </CardContent>
         </Card>

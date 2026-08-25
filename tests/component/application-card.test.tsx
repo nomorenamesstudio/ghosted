@@ -29,7 +29,7 @@ describe("ApplicationCard", () => {
     render(<ApplicationCard app={app} />);
     expect(screen.getByText("Acme Corp")).toBeInTheDocument();
     expect(screen.getByText("Frontend Engineer")).toBeInTheDocument();
-    expect(screen.getByText("Round: Application")).toBeInTheDocument();
+    expect(screen.getByText("Last round: Application")).toBeInTheDocument();
     expect(screen.getByText("20%")).toBeInTheDocument();
     expect(screen.getByText("applied")).toBeInTheDocument();
   });

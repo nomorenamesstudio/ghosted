@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import {
   createApplication,
   ApiClientError,
@@ -124,6 +124,7 @@ export function AddApplicationModal({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
+              <X />
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>

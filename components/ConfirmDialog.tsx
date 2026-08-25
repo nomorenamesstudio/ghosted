@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +43,7 @@ export function ConfirmDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
+            <X />
             Cancel
           </Button>
           <Button

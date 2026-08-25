@@ -117,7 +117,7 @@ export function ApplicationList() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="updated_at">Last updated</SelectItem>
-              <SelectItem value="company">Company</SelectItem>
+              <SelectItem value="company">Company name</SelectItem>
             </SelectContent>
           </Select>
           <Button
@@ -127,7 +127,7 @@ export function ApplicationList() {
             onClick={() => setAddOpen(true)}
           >
             <Plus />
-            Add
+            Add application
           </Button>
         </div>
       </div>

@@ -181,7 +181,11 @@ export function ApplicationDetail({ id }: { id: string }) {
           </p>
         )}
         <div className="mt-3 flex max-w-md items-center gap-3">
-          <Progress value={app.progress} className="flex-1" />
+          <Progress
+            value={app.progress}
+            aria-label="Application progress"
+            className="flex-1"
+          />
           <span className="text-sm font-semibold tabular-nums">
             {app.progress}%
           </span>

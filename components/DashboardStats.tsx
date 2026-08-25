@@ -29,7 +29,7 @@ function StatCard({
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-          <span className="text-foreground/60">{icon}</span>
+          <span className="text-foreground/80">{icon}</span>
           {label}
         </CardTitle>
       </CardHeader>

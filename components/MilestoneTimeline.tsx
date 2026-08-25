@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, MoreVertical, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Check, MoreVertical, Pencil, Plus, RotateCcw, Save, Trash2, X } from "lucide-react";
 import {
   deleteMilestone,
   updateMilestone,
@@ -326,12 +326,14 @@ export function MilestoneTimeline({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>
+              <X />
               Cancel
             </Button>
             <Button
               onClick={() => saveEdit.mutate()}
               disabled={saveEdit.isPending || !editTitle.trim()}
             >
+              <Save />
               {editStatus === "pending" ? "Save & mark done" : "Save"}
             </Button>
           </DialogFooter>

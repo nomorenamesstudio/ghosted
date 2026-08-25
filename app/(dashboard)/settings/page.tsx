@@ -38,6 +38,7 @@ export default function SettingsPage() {
             type="button"
             role="switch"
             aria-checked={theme === "dark"}
+            aria-label="Toggle night mode"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className={[
               "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
