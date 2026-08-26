@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { StatusIcon } from "./status-icons";
 import type { DashboardStats as Stats } from "@/lib/api";
 
@@ -24,13 +25,14 @@ function StatCard({
 }) {
   return (
     <Card
-      className={
-        highlight ? "border-amber-400 bg-amber-50 dark:bg-amber-950/30" : ""
-      }
+      className={cn(
+        "bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-950/40",
+        highlight && "border-amber-400 bg-amber-50 dark:bg-amber-950/30",
+      )}
     >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-          <span className="text-foreground/80">{icon}</span>
+          <span className="text-violet-500">{icon}</span>
           {label}
         </CardTitle>
       </CardHeader>

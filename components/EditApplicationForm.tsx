@@ -137,7 +137,7 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
   }
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-950/40">
       <CardHeader>
         <CardTitle>Details</CardTitle>
       </CardHeader>

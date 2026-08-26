@@ -58,8 +58,24 @@
   }
 }
 
-/* ---- Hero ghost animation (landing) ---- */
-@keyframes ghost-float {
+/* Subtle violet sheen for cards — a plain class so tailwind-merge can't
+   drop it when combined with per-status background tints. */
+.card-sheen {
+  background-image: linear-gradient(
+    to bottom right,
+    transparent 0%,
+    rgb(237 233 254 / 0.25) 100%
+  );
+}
+.dark .card-sheen {
+  background-image: linear-gradient(
+    to bottom right,
+    transparent 0%,
+    rgb(46 16 101 / 0.2) 100%
+  );
+}
+
+/* ---- Hero ghost animation (landing) ---- */@keyframes ghost-float {
   0%,
   100% {
     transform: translateY(0);

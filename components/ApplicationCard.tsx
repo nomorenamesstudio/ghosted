@@ -98,13 +98,13 @@ export function ApplicationCardView({
   return (
     <Card
       className={cn(
-        "transition-colors",
+        "card-sheen transition-colors",
         STATUS_TINT[status],
         STATUS_BORDER[status],
         className,
       )}
     >
-      <CardContent className="flex items-center justify-between gap-4 p-4">
+      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium">{app.company}</span>
@@ -134,14 +134,16 @@ export function ApplicationCardView({
             <span>Updated {formatDistanceToNow(new Date(app.updatedAt), { addSuffix: true })}</span>
           </div>
         </div>
-        <div className="flex w-32 shrink-0 flex-col items-end gap-1">
+        {/* Mobile: the progress sits under the text as a full-width row;
+            desktop: a right-aligned column next to the text. */}
+        <div className="flex w-full shrink-0 items-center gap-2 sm:w-32 sm:flex-col sm:items-end sm:gap-1">
           <span className="text-xs font-semibold tabular-nums">
             {app.progress}%
           </span>
           <Progress
             value={app.progress}
             aria-label="Application progress"
-            className={cn("w-full", STATUS_PROGRESS[status].track)}
+            className={cn("flex-1 sm:w-full", STATUS_PROGRESS[status].track)}
             indicatorClassName={STATUS_PROGRESS[status].fill}
           />
         </div>
