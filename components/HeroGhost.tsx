@@ -11,6 +11,13 @@
 export function HeroGhost({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 100 100" className={className} aria-hidden focusable="false">
+      <defs>
+        {/* Vertical fade: luminous head → near-transparent feet. */}
+        <linearGradient id="ghost-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0.05" />
+        </linearGradient>
+      </defs>
       {/* Silhouette: dome + spiky zigzag bottom (as in the logo icon). */}
       <path
         d="M16.7 41.7
@@ -18,16 +25,15 @@ export function HeroGhost({ className }: { className?: string }) {
            C66.7 8.3 83.3 18 83.3 41.7
            L83.3 91.7 L70.8 79.2 L60.4 89.6 L50 79.2
            L39.6 89.6 L29.2 79.2 L16.7 91.7 Z"
-        fill="currentColor"
-        fillOpacity="0.2"
+        fill="url(#ghost-fill)"
         stroke="currentColor"
         strokeWidth="3.5"
         strokeLinejoin="round"
       />
-      {/* Eyes glance around and blink together. */}
+      {/* Eyes (pill shapes — straight sides, rounded caps) glance + blink. */}
       <g className="ghost-eyes">
-        <circle cx="37.5" cy="41.7" r="4" fill="currentColor" />
-        <circle cx="62.5" cy="41.7" r="4" fill="currentColor" />
+        <rect x="34" y="36.7" width="7" height="10" rx="3.5" fill="currentColor" />
+        <rect x="59" y="36.7" width="7" height="10" rx="3.5" fill="currentColor" />
       </g>
     </svg>
   );
