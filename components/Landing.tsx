@@ -5,7 +5,6 @@ import {
   Ghost,
   MoonStar,
   ShieldCheck,
-  Sparkles,
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -163,13 +162,15 @@ export function Landing() {
 
       <main className="flex-1">
         {/* Hero — inverted purple band */}
-        <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-24 pt-16 text-center sm:pt-24">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Now in beta — free to use
+        <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
+          <span
+            className="inline-flex items-center rounded-full border border-white/25 bg-white/10 p-2.5 text-white"
+            aria-hidden
+          >
+            <Ghost className="h-4 w-4" />
           </span>
           <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Never let an application go quiet.
+            Never let a job application go quiet.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-violet-100">
             Ghosted keeps every application, interview and offer on one clear
