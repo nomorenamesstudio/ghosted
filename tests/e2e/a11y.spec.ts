@@ -19,6 +19,7 @@ async function audit(page: import("@playwright/test").Page, name: string) {
 
 test("a11y: public pages", async ({ page }) => {
   for (const path of [
+    "/",
     "/login",
     "/register",
     "/forgot-password",
@@ -36,8 +37,8 @@ test("a11y: authenticated pages", async ({ page }) => {
   await registerUser(page, email);
   const id = await createAppViaApi(page, "Acme Corp", "Engineer");
 
-  await page.goto("/");
-  await audit(page, "/");
+  await page.goto("/app");
+  await audit(page, "/app");
 
   await page.goto(`/applications/${id}`);
   // Wait for the detail view to render (the loading skeleton has no h1).

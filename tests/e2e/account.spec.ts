@@ -47,7 +47,7 @@ test("settings: change password and sign in with it", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 
   await loginViaUi(page, email, "newpassword456");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/app$/);
 });
 
 test("settings: export downloads all data", async ({ page }) => {

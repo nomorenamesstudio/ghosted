@@ -41,7 +41,7 @@ export function LoginForm({
       });
       if (res.ok) {
         const callbackUrl = params.get("callbackUrl");
-        router.push(callbackUrl || "/");
+        router.push(callbackUrl || "/app");
         router.refresh();
         return;
       }
@@ -68,7 +68,7 @@ export function LoginForm({
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => signIn("google", { callbackUrl: "/" })}
+                onClick={() => signIn("google", { callbackUrl: "/app" })}
               >
                 Continue with Google
               </Button>
@@ -78,7 +78,7 @@ export function LoginForm({
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => signIn("linkedin", { callbackUrl: "/" })}
+                onClick={() => signIn("linkedin", { callbackUrl: "/app" })}
               >
                 Continue with LinkedIn
               </Button>

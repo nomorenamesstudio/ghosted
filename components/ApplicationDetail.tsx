@@ -89,7 +89,7 @@ export function ApplicationDetail({ id }: { id: string }) {
     mutationFn: () => deleteApplication(id),
     onSuccess: () => {
       invalidate();
-      router.push("/");
+      router.push("/app");
       router.refresh();
     },
     onError: (err) => setActionError((err as Error).message),
@@ -158,7 +158,7 @@ export function ApplicationDetail({ id }: { id: string }) {
   if (isError || !data?.data) {
     return (
       <div className="pt-6">
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
+        <Link href="/app" className="text-sm text-muted-foreground hover:underline">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to dashboard
         </Link>
@@ -174,7 +174,7 @@ export function ApplicationDetail({ id }: { id: string }) {
   return (
     <div className="space-y-6 pt-6">
       <div>
-        <Link href="/" className="text-sm text-muted-foreground hover:underline">
+        <Link href="/app" className="text-sm text-muted-foreground hover:underline">
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to dashboard
         </Link>

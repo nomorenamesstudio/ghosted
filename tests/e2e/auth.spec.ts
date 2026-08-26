@@ -6,7 +6,7 @@ test("register, sign out, and log back in", async ({ page }) => {
 
   // Register via the UI → auto-login lands on the dashboard.
   await registerViaUi(page, email);
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("No applications yet")).toBeVisible();
 
   // Sign out via the user menu → back to the login page.
@@ -16,11 +16,11 @@ test("register, sign out, and log back in", async ({ page }) => {
 
   // Log back in with the same credentials.
   await loginViaUi(page, email, "password123");
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("No applications yet")).toBeVisible();
 });
 
 test("unauthenticated users are redirected to login", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
 });

@@ -4,7 +4,7 @@ import { registerUser, uniqueEmail } from "./helpers";
 test("create an application and add a milestone", async ({ page }) => {
   const email = uniqueEmail("create");
   await registerUser(page, email);
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page.getByText("No applications yet")).toBeVisible();
 
   // Open the add-application modal via the FAB.

@@ -13,7 +13,7 @@ export default function LegalLayout({
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <AppBrand />
           <Link
-            href="/"
+            href="/app"
             className="flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground hover:underline"
           >
             <ArrowLeft className="h-4 w-4" aria-hidden />

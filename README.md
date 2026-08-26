@@ -82,6 +82,7 @@ EMAIL_VERIFICATION_TTL_MINUTES= # default 1440 (24h)
 
 ```
 app/
+  page.tsx                # public landing page (/) — signed-in users → /app
   (auth)/                 # login, register, forgot/reset password
   (dashboard)/            # protected shell: stats + list + application detail + settings
   api/

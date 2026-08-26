@@ -7,7 +7,7 @@ test("search and filter return expected results", async ({ page }) => {
   await createAppViaApi(page, "Acme Corp", "Engineer");
   await createAppViaApi(page, "Globex", "Designer");
 
-  await page.goto("/");
+  await page.goto("/app");
 
   // Both apps live in the "Applied" section; empty sections are hidden.
   const appliedSection = page.getByTestId("section-applied");

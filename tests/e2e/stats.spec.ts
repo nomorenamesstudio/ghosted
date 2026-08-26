@@ -6,7 +6,7 @@ test("dashboard stats update after a milestone-driven status change", async ({
 }) => {
   const email = uniqueEmail("stats");
   await registerUser(page, email);
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page.getByTestId("stat-total")).toHaveText("0");
 
   const id = await createAppViaApi(page, "Globex", "Engineer");

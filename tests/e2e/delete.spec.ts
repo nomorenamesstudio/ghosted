@@ -8,7 +8,7 @@ test("archived application disappears from the dashboard", async ({
   await registerUser(page, email);
   const id = await createAppViaApi(page, "Doomed Corp", "Engineer");
 
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page.getByText("Doomed Corp")).toBeVisible();
 
   // Open the detail view and archive it (soft delete) via the "…" menu.
@@ -21,7 +21,7 @@ test("archived application disappears from the dashboard", async ({
   await confirmDialog.getByRole("button", { name: "Archive" }).click();
 
   // Back on the dashboard the app is no longer visible.
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("Doomed Corp")).not.toBeVisible();
   await expect(page.getByText("No applications yet")).toBeVisible();
 });

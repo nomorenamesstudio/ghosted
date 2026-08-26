@@ -34,7 +34,7 @@ export function RegisterForm() {
       });
       if (res.ok) {
         // Registration auto-signs-in, so land directly on the dashboard.
-        router.push("/");
+        router.push("/app");
         router.refresh();
         return;
       }

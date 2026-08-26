@@ -8,7 +8,7 @@ test("donate banner appears with an offer and 'Not now' hides it for a week", as
   await registerUser(page, email);
 
   // No offers yet → no banner.
-  await page.goto("/");
+  await page.goto("/app");
   await expect(page.getByText(/buy us a coffee/i)).toHaveCount(0);
 
   // Create an app and complete every milestone → offer.

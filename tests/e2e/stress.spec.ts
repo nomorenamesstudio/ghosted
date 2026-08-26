@@ -29,7 +29,7 @@ test("stress: hundreds of applications load via infinite scroll", async ({
     }
   }
 
-  await page.goto("/");
+  await page.goto("/app");
   const cards = page.locator("[data-testid^=section-] li");
 
   // First page only (PAGE_SIZE = 50).
