@@ -13,7 +13,7 @@ test("dashboard stats update after a milestone-driven status change", async ({
   // API-created data isn't in the SPA cache yet — reload to refetch stats.
   await page.reload();
   await expect(page.getByTestId("stat-total")).toHaveText("1");
-  await expect(page.getByTestId("stat-active")).toHaveText("1");
+  await expect(page.getByTestId("stat-applied")).toHaveText("1");
   await expect(page.getByTestId("stat-interviewing")).toHaveText("0");
 
   // Complete the "Technical Interview" milestone (3rd of the 5 defaults)
@@ -33,5 +33,5 @@ test("dashboard stats update after a milestone-driven status change", async ({
   // Back on the dashboard the interviewing stat reflects the change.
   await page.getByRole("link", { name: /Back to dashboard/ }).click();
   await expect(page.getByTestId("stat-interviewing")).toHaveText("1");
-  await expect(page.getByTestId("stat-active")).toHaveText("1");
+  await expect(page.getByTestId("stat-applied")).toHaveText("1");
 });

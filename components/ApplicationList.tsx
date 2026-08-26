@@ -20,10 +20,15 @@ import {
 const ALL = "__all__";
 const COLLAPSED_KEY = "ghosted-collapsed-sections";
 
-export function ApplicationList() {
+export function ApplicationList({
+  status,
+  onStatusChange,
+}: {
+  status: "" | DisplayStatus;
+  onStatusChange: (s: "" | DisplayStatus) => void;
+}) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [status, setStatus] = useState<"" | DisplayStatus>("");
   const [sort, setSort] = useState<"updated_at" | "company" | "progress">(
     "updated_at",
   );
@@ -101,7 +106,7 @@ export function ApplicationList() {
           <Select
             value={status || ALL}
             onValueChange={(v) =>
-              setStatus(v === ALL ? "" : (v as DisplayStatus))
+              onStatusChange(v === ALL ? "" : (v as DisplayStatus))
             }
           >
             <SelectTrigger

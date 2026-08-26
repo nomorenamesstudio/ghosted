@@ -143,7 +143,10 @@ export function ApplicationCardView({
           <Progress
             value={app.progress}
             aria-label="Application progress"
-            className={cn("flex-1 sm:w-full", STATUS_PROGRESS[status].track)}
+            className={cn(
+              "flex-1 sm:w-full sm:flex-none",
+              STATUS_PROGRESS[status].track,
+            )}
             indicatorClassName={STATUS_PROGRESS[status].fill}
           />
         </div>
