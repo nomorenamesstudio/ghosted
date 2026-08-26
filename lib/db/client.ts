@@ -36,12 +36,27 @@ export function createDb(
   return drizzle(client, { schema });
 }
 
-export const db: PostgresJsDatabase<typeof schema> =
-  globalForDb.__ghostedDb ?? createDb();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__ghostedDb = db;
+function getInstance(): PostgresJsDatabase<typeof schema> {
+  if (globalForDb.__ghostedDb) return globalForDb.__ghostedDb;
+  const instance = createDb();
+  if (process.env.NODE_ENV !== "production") {
+    globalForDb.__ghostedDb = instance;
+  }
+  return instance;
 }
+
+/**
+ * Lazy singleton: the connection is only created on first use. This keeps
+ * `next build` from crashing while collecting page data (it imports route
+ * modules without a DATABASE_URL set) and avoids opening a connection at
+ * import time.
+ */
+export const db: PostgresJsDatabase<typeof schema> = new Proxy(
+  {} as PostgresJsDatabase<typeof schema>,
+  {
+    get: (_target, prop) => Reflect.get(getInstance(), prop),
+  },
+);
 
 /** Raw postgres connection for schema setup in tests/scripts. */
 export function createRawClient(connectionString = getConnectionString()) {
