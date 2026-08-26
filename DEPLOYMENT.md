@@ -49,8 +49,10 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
 
 1. Sign up at https://railway.app (GitHub login works).
 2. **New Project → Deploy from GitHub repo** → select the `ghosted` repo
-   (private is fine). Railway auto-detects Next.js (Nixpacks) and reads
-   `railway.json` (start command runs migrations then `next start`).
+   (private is fine). Railway builds the checked-in **Dockerfile**
+   (`railway.json` sets the builder): full pnpm install (dev deps included,
+   which Next needs at build time), `next build`, and a runtime image whose
+   command applies migrations then starts Next.js.
 3. **Add a Postgres plugin** (New → Database → PostgreSQL). Its
    `DATABASE_URL` is auto-injected into the app's env.
 4. **Variables** — set these on the service:
