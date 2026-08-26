@@ -24,7 +24,9 @@ export function ApplicationList() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [status, setStatus] = useState<"" | DisplayStatus>("");
-  const [sort, setSort] = useState<"company" | "updated_at">("updated_at");
+  const [sort, setSort] = useState<"updated_at" | "company" | "progress">(
+    "updated_at",
+  );
   const [addOpen, setAddOpen] = useState(false);
 
   // Collapsed sections (persisted per browser).
@@ -95,14 +97,17 @@ export function ApplicationList() {
             aria-label="Search applications"
           />
         </div>
-        <div className="flex flex-1 items-center gap-2">
+        <div className="flex flex-1 flex-wrap items-center gap-2">
           <Select
             value={status || ALL}
             onValueChange={(v) =>
               setStatus(v === ALL ? "" : (v as DisplayStatus))
             }
           >
-            <SelectTrigger className="w-[170px]" aria-label="Filter by status">
+            <SelectTrigger
+              className="min-w-0 flex-1 sm:w-[170px] sm:flex-none"
+              aria-label="Filter by status"
+            >
               <SelectValue placeholder="All statuses" />
             </SelectTrigger>
             <SelectContent>
@@ -116,18 +121,22 @@ export function ApplicationList() {
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
-            <SelectTrigger className="w-[160px]" aria-label="Sort applications">
+            <SelectTrigger
+              className="min-w-0 flex-1 sm:w-[160px] sm:flex-none"
+              aria-label="Sort applications"
+            >
               <SelectValue placeholder="Last updated" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="updated_at">Last updated</SelectItem>
               <SelectItem value="company">Company name</SelectItem>
+              <SelectItem value="progress">Progress</SelectItem>
             </SelectContent>
           </Select>
           <Button
             size="sm"
             data-testid="add-application-fab"
-            className="ml-auto"
+            className="w-full sm:ml-auto sm:w-auto"
             onClick={() => setAddOpen(true)}
           >
             <Plus />
@@ -144,8 +153,11 @@ export function ApplicationList() {
             status={s}
             search={debouncedSearch}
             sort={sort}
-            collapsed={collapsed.has(s)}
-            onToggle={() => toggleSection(s)}
+            // While a status filter is active the single visible section is
+            // forced open, and toggling is disabled so the persisted manual
+            // collapse state survives until the filter is cleared again.
+            collapsed={status ? false : collapsed.has(s)}
+            onToggle={status ? () => {} : () => toggleSection(s)}
             onTotalChange={reportTotal}
           />
         ))}

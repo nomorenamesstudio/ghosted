@@ -44,7 +44,7 @@ export function ApplicationSection({
 }: {
   status: DisplayStatus;
   search: string;
-  sort: "company" | "updated_at";
+  sort: "company" | "updated_at" | "progress";
   collapsed: boolean;
   onToggle: () => void;
   onTotalChange: (status: DisplayStatus, total: number) => void;

@@ -18,6 +18,7 @@ import {
 } from "@/app/api/applications/[id]/route";
 import { POST as REOPEN_APP } from "@/app/api/applications/[id]/reopen/route";
 import { POST as TOGGLE_FAVORITE } from "@/app/api/applications/[id]/favorite/route";
+import { PATCH as PATCH_MILESTONE } from "@/app/api/milestones/[id]/route";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import {
@@ -129,6 +130,51 @@ describe("GET /api/applications", () => {
     const json = await readJson(res);
     const data = json.data as Array<Record<string, unknown>>;
     expect(data.map((d) => d.company)).toEqual(["Apple", "Zebra"]);
+  });
+
+  it("sorts by progress (highest first)", async () => {
+    const user = await createUser();
+    const { app: low } = await createApp(user.id, { company: "Low" }); // 1/5 = 20%
+    const { app: mid } = await createApp(user.id, { company: "Mid" });
+    const { app: high } = await createApp(user.id, { company: "High" });
+
+    const milestonesOf = async (id: string) => {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await GET_APP(new Request(`${base}/${id}`), {
+        params: { id },
+      });
+      const json = await readJson(res);
+      return (json.data as { milestones: Array<{ id: string }> }).milestones;
+    };
+
+    // Complete 2 more milestones on "Mid" (3/5 = 60%).
+    const midMs = await milestonesOf(mid.id);
+    for (const m of midMs.slice(1, 3)) {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      await PATCH_MILESTONE(
+        jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
+          status: "done",
+        }),
+        { params: { id: m.id } },
+      );
+    }
+    // …and all remaining on "High" (5/5 = 100%).
+    const highMs = await milestonesOf(high.id);
+    for (const m of highMs.slice(1)) {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      await PATCH_MILESTONE(
+        jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
+          status: "done",
+        }),
+        { params: { id: m.id } },
+      );
+    }
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await GET(new Request(`${base}?sort=progress&page=1`));
+    const data = (await readJson(res)).data as Array<Record<string, unknown>>;
+    expect(data.map((d) => d.company)).toEqual(["High", "Mid", "Low"]);
+    expect(data.map((d) => d.progress)).toEqual([100, 60, 20]);
   });
 
   it("pins favourite applications to the top of the list", async () => {

@@ -68,7 +68,7 @@ export interface ListResult {
 export interface ListFilters {
   status?: DisplayStatus;
   search?: string;
-  sort?: "company" | "status" | "updated_at";
+  sort?: "company" | "status" | "updated_at" | "progress";
   page: number;
   limit: number;
 }
@@ -162,6 +162,20 @@ export async function listApplications(
       orderBy = [
         sql`${applications.isFavorite} desc`,
         sql`case ${applications.status} when 'applied' then 1 when 'interviewing' then 2 when 'offer' then 3 when 'rejected' then 4 when 'archived' then 5 end asc`,
+        sql`${applications.updatedAt} desc`,
+      ];
+      break;
+    case "progress":
+      // Progress is derived from milestones (done / total steps), so order
+      // by the same ratio in SQL — favourites stay pinned on top.
+      orderBy = [
+        sql`${applications.isFavorite} desc`,
+        sql`(
+          select count(*)::float / nullif(${applications.totalSteps}, 0)
+          from milestones m
+          where m.application_id = ${applications.id}
+            and m.status = 'done'
+        ) desc`,
         sql`${applications.updatedAt} desc`,
       ];
       break;

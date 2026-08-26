@@ -60,7 +60,7 @@ export interface DeleteMilestoneResult {
 export interface ListParams {
   status?: DisplayStatus;
   search?: string;
-  sort?: "company" | "status" | "updated_at";
+  sort?: "company" | "status" | "updated_at" | "progress";
   page?: number;
   limit?: number;
 }
