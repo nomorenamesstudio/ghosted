@@ -57,3 +57,76 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ---- Hero ghost animation (landing) ---- */
+@keyframes ghost-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes ghost-shadow {
+  0%,
+  100% {
+    transform: translateX(-50%) scaleX(1);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateX(-50%) scaleX(0.8);
+    opacity: 0.25;
+  }
+}
+
+@keyframes ghost-eyes {
+  0%,
+  72% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  76% {
+    transform: translate(3.5px, -1px) scaleY(1);
+  }
+  84% {
+    transform: translate(3.5px, -1px) scaleY(1);
+  }
+  88% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  91% {
+    transform: translate(0, 0) scaleY(0.12);
+  }
+  94% {
+    transform: translate(0, 0) scaleY(1);
+  }
+  97% {
+    transform: translate(-3.5px, 0) scaleY(1);
+  }
+  100% {
+    transform: translate(0, 0) scaleY(1);
+  }
+}
+
+.ghost-float {
+  animation: ghost-float 6s ease-in-out infinite;
+}
+
+.ghost-shadow {
+  animation: ghost-shadow 6s ease-in-out infinite;
+}
+
+.ghost-eyes {
+  animation: ghost-eyes 12s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-float,
+  .ghost-shadow,
+  .ghost-eyes {
+    animation: none;
+  }
+}

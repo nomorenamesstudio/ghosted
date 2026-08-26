@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { ApplicationCardView } from "./ApplicationCard";
+import { HeroGhost } from "./HeroGhost";
 import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
 
@@ -200,10 +201,13 @@ export function Landing() {
       <main className="flex-1">
         {/* Hero — inverted purple band */}
         <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
-          <Ghost
-            className="mx-auto h-20 w-20 text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)]"
+          <div
+            className="relative mx-auto flex h-32 w-32 items-center justify-center"
             aria-hidden
-          />
+          >
+            <HeroGhost className="ghost-float h-24 w-24 text-white" />
+            <span className="ghost-shadow absolute bottom-0 left-1/2 h-2.5 w-16 -translate-x-1/2 rounded-full bg-violet-950/50 blur-[2px]" />
+          </div>
           <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Never let a job application go quiet on you.
           </h1>
