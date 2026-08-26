@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { ApplicationCardView } from "./ApplicationCard";
 import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
@@ -93,6 +94,27 @@ const MOCK_APPS: ApplicationListItem[] = [
     milestoneCount: 5,
   },
   {
+    id: "preview-linear",
+    userId: "preview",
+    company: "Linear",
+    role: "Product Engineer",
+    url: null,
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    notes: null,
+    status: "applied",
+    displayStatus: "applied",
+    isFavorite: false,
+    archivedFromStatus: null,
+    totalSteps: 5,
+    createdAt: new Date(now - 4 * DAY),
+    updatedAt: new Date(now - 1 * DAY),
+    progress: 20,
+    currentRound: "Application",
+    milestoneCount: 5,
+  },
+  {
     id: "preview-framer",
     userId: "preview",
     company: "Framer",
@@ -115,20 +137,35 @@ const MOCK_APPS: ApplicationListItem[] = [
   },
 ];
 
-function SectionHeading({
+/** Tab-style section header in the mock (segmented control look). */
+function MockTab({
   status,
   title,
   count,
+  active = false,
 }: {
-  status: "applied" | "ghosted";
+  status: "applied" | "interviewing" | "ghosted";
   title: string;
   count: number;
+  active?: boolean;
 }) {
   return (
-    <span className="flex items-center gap-1.5">
+    <span
+      className={cn(
+        "flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-semibold uppercase tracking-wide",
+        active
+          ? "bg-background text-foreground shadow-sm"
+          : "text-muted-foreground",
+      )}
+    >
       <StatusIcon status={status} className="h-3.5 w-3.5" />
       {title}
-      <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+      <span
+        className={cn(
+          "rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
+          active ? "bg-muted" : "bg-muted/60",
+        )}
+      >
         {count}
       </span>
     </span>
@@ -197,9 +234,10 @@ export function Landing() {
         {/* Product mock — the real dashboard cards, overlapping the hero edge */}
         <div className="mx-auto -mt-20 max-w-xl px-4" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
-            <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <SectionHeading status="applied" title="Applied" count={2} />
-              <SectionHeading status="ghosted" title="Ghosted" count={1} />
+            <div className="mb-3 flex gap-1 rounded-lg border bg-muted/50 p-1">
+              <MockTab status="applied" title="Applied" count={2} active />
+              <MockTab status="interviewing" title="Interviewing" count={1} />
+              <MockTab status="ghosted" title="Ghosted" count={1} />
             </div>
             <ul className="space-y-2">
               {MOCK_APPS.map((app) => (
