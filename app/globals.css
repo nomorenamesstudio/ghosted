@@ -123,10 +123,30 @@
   transform-origin: center;
 }
 
+/* ---- Hero icon rings (rotating "email tornado" around the ghost) ---- */
+@keyframes icon-cloud-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Icons are radially oriented (bottom toward the ghost) via a static
+   per-icon rotate set inline, so only the ring itself animates. */
+.icon-cloud-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  animation: icon-cloud-spin linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ghost-float,
   .ghost-shadow,
-  .ghost-eyes {
+  .ghost-eyes,
+  .icon-cloud-ring {
     animation: none;
   }
 }

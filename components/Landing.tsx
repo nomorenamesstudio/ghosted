@@ -1,11 +1,28 @@
 import Link from "next/link";
 import {
   BarChart3,
+  Bell,
+  BookOpen,
+  Briefcase,
+  Calendar,
   ClipboardList,
+  Clock,
+  Coffee,
+  FileText,
   Ghost,
+  Globe,
+  Mail,
+  MessageSquare,
   MoonStar,
+  Paperclip,
+  Phone,
+  Send,
   ShieldCheck,
   Star,
+  Tag,
+  Users,
+  Video,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -138,6 +155,57 @@ const MOCK_APPS: ApplicationListItem[] = [
   },
 ];
 
+/**
+ * Communication/office icon pool and concentric orbit rings around the hero
+ * ghost — an "email tornado". Each ring spins at its own speed (faster near
+ * the center, like a vortex) and fades the further it gets from the ghost.
+ * Icons grow outward and are rotated so their bottoms face the ghost.
+ */
+const CLOUD_POOL: LucideIcon[] = [
+  Mail,
+  Phone,
+  Calendar,
+  MessageSquare,
+  Users,
+  Clock,
+  Paperclip,
+  FileText,
+  Send,
+  Video,
+  Briefcase,
+  Globe,
+  Bell,
+  BookOpen,
+  Coffee,
+  Tag,
+];
+
+/**
+ * radius (px), icon count, icon size (px), opacity, spin duration (s),
+ * start-angle offset (radians, so rings don't line up at start) and a
+ * per-ring pool shuffle so the icon sequence begins differently.
+ *
+ * Ring gaps grow incrementally outward — each gap clears the adjacent
+ * icons ((sizeA + sizeB) / 2 plus a growing margin), so the big outer
+ * icons never overlap their neighbours.
+ */
+const CLOUD_RINGS: {
+  radius: number;
+  count: number;
+  size: number;
+  opacity: number;
+  duration: number;
+  offset: number;
+  poolOffset: number;
+}[] = [
+  { radius: 84, count: 8, size: 24, opacity: 0.18, duration: 48, offset: 0, poolOffset: 0 },
+  { radius: 129, count: 10, size: 34, opacity: 0.12, duration: 66, offset: 0.3, poolOffset: 5 },
+  { radius: 191.5, count: 12, size: 47, opacity: 0.08, duration: 84, offset: 0.72, poolOffset: 11 },
+  { radius: 276, count: 14, size: 64, opacity: 0.05, duration: 102, offset: 1.1, poolOffset: 3 },
+  { radius: 388, count: 16, size: 86, opacity: 0.035, duration: 120, offset: 1.45, poolOffset: 13 },
+  { radius: 533, count: 18, size: 112, opacity: 0.02, duration: 138, offset: 1.9, poolOffset: 7 },
+];
+
 /** Tab-style section header in the mock (segmented control look). */
 function MockTab({
   status,
@@ -199,24 +267,73 @@ export function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero — inverted purple band */}
-        <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
+        {/* Hero — inverted purple band (overflow hidden clips the icon cloud). */}
+        <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
           <div
             className="relative mx-auto flex h-32 w-32 items-center justify-center"
             aria-hidden
           >
+            {/* Rotating "email tornado" icon rings around the ghost — first
+                child so the ghost, headline and CTAs render on top. */}
+            {CLOUD_RINGS.map((ring, ri) => (
+              <div
+                key={ri}
+                className="icon-cloud-ring pointer-events-none absolute left-1/2 top-1/2 text-zinc-950"
+                style={{
+                  width: ring.radius * 2,
+                  height: ring.radius * 2,
+                  opacity: ring.opacity,
+                  animationDuration: `${ring.duration}s`,
+                }}
+              >
+                {Array.from({ length: ring.count }, (_, j) => {
+                  const a =
+                    ring.offset + (j / ring.count) * Math.PI * 2;
+                  const Icon =
+                    CLOUD_POOL[
+                      (Math.floor((j * CLOUD_POOL.length) / ring.count) +
+                        ring.poolOffset) %
+                        CLOUD_POOL.length
+                    ];
+                  // Bottom edge of the icon sits on the orbit circle.
+                  const placeR = ring.radius + ring.size / 2;
+                  return (
+                    <span
+                      key={j}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{
+                        left: `calc(50% + ${Math.cos(a) * placeR}px)`,
+                        top: `calc(50% + ${Math.sin(a) * placeR}px)`,
+                      }}
+                    >
+                      {/* Rotated so the icon's bottom faces the ghost. */}
+                      <span
+                        className="block"
+                        style={{
+                          transform: `rotate(${(a * 180) / Math.PI + 90}deg)`,
+                        }}
+                      >
+                        <Icon size={ring.size} />
+                      </span>
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
             <HeroGhost className="ghost-float h-24 w-24 text-white" />
             <span className="ghost-shadow absolute bottom-0 left-1/2 h-2.5 w-16 -translate-x-1/2 rounded-full bg-violet-950/50 blur-[2px]" />
           </div>
-          <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
+          {/* Text is positioned (relative) so it paints above the tornado's
+              positioned ghost wrapper, keeping the rings behind the copy. */}
+          <h1 className="relative mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Never let a job application go quiet on you.
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-violet-100">
+          <p className="relative mx-auto mt-4 max-w-xl text-violet-100">
             Ghosted keeps every application, interview and offer on one clear
             timeline — and gently reminds you of the ones that went silent.
             Your job hunt, without the ghosting.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="relative mt-8 flex items-center justify-center gap-3">
             <Button
               size="lg"
               className="bg-white text-violet-700 shadow hover:bg-violet-100"
@@ -235,8 +352,10 @@ export function Landing() {
           </div>
         </section>
 
-        {/* Product mock — the real dashboard cards, overlapping the hero edge */}
-        <div className="mx-auto -mt-20 max-w-xl px-4" aria-hidden>
+        {/* Product mock — the real dashboard cards, overlapping the hero edge.
+            Positioned (relative) so it paints above the positioned hero
+            section instead of being hidden behind it. */}
+        <div className="relative mx-auto -mt-20 max-w-xl px-4" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
             <div className="mb-3 flex gap-1 rounded-lg border bg-muted/50 p-1">
               <MockTab status="applied" title="Applied" count={1} active />
