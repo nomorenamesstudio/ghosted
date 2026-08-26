@@ -82,8 +82,8 @@ const MOCK_APPS: ApplicationListItem[] = [
     contactEmail: null,
     contactPhone: null,
     notes: null,
-    status: "applied",
-    displayStatus: "applied",
+    status: "interviewing",
+    displayStatus: "interviewing",
     isFavorite: false,
     archivedFromStatus: null,
     totalSteps: 5,
@@ -235,8 +235,8 @@ export function Landing() {
         <div className="mx-auto -mt-20 max-w-xl px-4" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
             <div className="mb-3 flex gap-1 rounded-lg border bg-muted/50 p-1">
-              <MockTab status="applied" title="Applied" count={2} active />
-              <MockTab status="interviewing" title="Interviewing" count={1} />
+              <MockTab status="applied" title="Applied" count={1} active />
+              <MockTab status="interviewing" title="Interviewing" count={2} />
               <MockTab status="ghosted" title="Ghosted" count={1} />
             </div>
             <ul className="space-y-2">
