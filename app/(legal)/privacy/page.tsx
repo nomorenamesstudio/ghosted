@@ -16,13 +16,14 @@ export default function PrivacyPage() {
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">1. Controller</h2>
         <p>
-          Ghosted is operated by <strong>Lost Signals Studio</strong>.
+          Ghosted is operated by <strong>Lost Signals Studio</strong> (legal
+          entity to be formalized — operator details are kept minimal to
+          protect the operator&rsquo;s privacy).
           <br />
           Contact for privacy matters:{" "}
-          <a href="mailto:privacy@lostsignals.studio" className="underline">
-            privacy@lostsignals.studio
-          </a>{" "}
-          (replace with the studio&rsquo;s contact details before launch).
+          <a href="mailto:hey@lostsignals.studio" className="underline">
+            hey@lostsignals.studio
+          </a>
         </p>
       </section>
 
@@ -99,18 +100,17 @@ export default function PrivacyPage() {
           (Art.&nbsp;16), erasure (Art.&nbsp;17), restriction (Art.&nbsp;18), data
           portability (Art.&nbsp;20) and objection (Art.&nbsp;21) with regard to
           your personal data. To exercise any of these rights, contact{" "}
-          <a href="mailto:privacy@lostsignals.studio" className="underline">
-            privacy@lostsignals.studio
+          <a href="mailto:hey@lostsignals.studio" className="underline">
+            hey@lostsignals.studio
           </a>
           . You also have the right to lodge a complaint with your supervisory
-          authority.
+          authority (in the EU/EEA, your local data-protection authority).
         </p>
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        Template notice: this text is a starting point — review and complete
-        the operator details (and have it checked by a professional) before
-        going live. It is not legal advice.
+        This page will be updated as the operator&rsquo;s legal details are
+        formalized. It is not legal advice.
       </p>
     </main>
   );

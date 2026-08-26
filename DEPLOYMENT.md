@@ -62,7 +62,7 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
    | `AUTH_SECRET` | `openssl rand -base64 32` |
    | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | from step 3 |
    | `RESEND_API_KEY` | from step 2 |
-   | `EMAIL_FROM` | `Ghosted <noreply@your-domain>` |
+   | `EMAIL_FROM` | `Ghosted <ghosted@lostsignals.studio>` |
    | `NEXT_PUBLIC_APP_URL` | `https://<APP_URL-host>` |
    | `NEXT_PUBLIC_DONATE_URL` | your coffee/patreon page |
    | `NODE_ENV` | `production` |

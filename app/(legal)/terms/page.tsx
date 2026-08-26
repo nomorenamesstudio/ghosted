@@ -76,15 +76,20 @@ export default function TermsPage() {
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">7. Governing law</h2>
         <p>
-          These terms are governed by the law of{" "}
-          <span className="italic">[jurisdiction]</span> (to be completed by
-          the operator).
+          These terms are governed by the applicable law of your country of
+          residence. If you are located in the EU/EEA, the General Data
+          Protection Regulation and the laws of your member state apply. For
+          any dispute, contact us first at{" "}
+          <a href="mailto:hey@lostsignals.studio" className="underline">
+            hey@lostsignals.studio
+          </a>{" "}
+          and we will do our best to resolve it amicably.
         </p>
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        Template notice: review and complete this text before going live. It
-        is not legal advice.
+        This page will be updated as the operator&rsquo;s legal details are
+        formalized. It is not legal advice.
       </p>
     </main>
   );

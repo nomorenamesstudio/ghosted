@@ -14,11 +14,8 @@ export default function ImprintPage() {
         <p>
           <strong>Lost Signals Studio</strong>
           <br />
-          [Street, number]
-          <br />
-          [Postal code, City]
-          <br />
-          [Country]
+          (legal entity to be formalized — operator details are kept minimal
+          to protect the operator&rsquo;s privacy)
         </p>
       </section>
 
@@ -26,28 +23,26 @@ export default function ImprintPage() {
         <h2 className="text-xl font-semibold">Contact</h2>
         <p>
           Email:{" "}
-          <a href="mailto:contact@lostsignals.studio" className="underline">
-            contact@lostsignals.studio
+          <a href="mailto:hey@lostsignals.studio" className="underline">
+            hey@lostsignals.studio
           </a>
-          <br />
-          Phone: [phone number]
         </p>
       </section>
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">Further information</h2>
         <p>
-          VAT ID / USt-IdNr.: [if applicable]
+          VAT ID / USt-IdNr.: not yet applicable
           <br />
-          Responsible for content per § 18 Abs. 2 MStV / § 5 DDG: [name, if
-          applicable]
+          Responsible for content: Lost Signals Studio, contactable via the
+          email above
         </p>
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        Template notice: complete the bracketed operator details before going
-        live. Requirements vary by jurisdiction (e.g. the German Impressum
-        obligations).
+        This page will be updated as the operator&rsquo;s legal details are
+        formalized. Requirements vary by jurisdiction (e.g. the German
+        Impressum obligations); this is not legal advice.
       </p>
     </main>
   );
