@@ -162,34 +162,42 @@ export function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto max-w-5xl px-4 pb-12 pt-16 text-center sm:pt-24">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-300/60 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700 dark:border-violet-800/60 dark:bg-violet-950/40 dark:text-violet-300">
+        {/* Hero — inverted purple band */}
+        <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-24 pt-16 text-center sm:pt-24">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-medium text-white">
             <Sparkles className="h-3.5 w-3.5" aria-hidden />
             Now in beta — free to use
           </span>
-          <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight sm:text-5xl">
+          <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Never let an application go quiet.
           </h1>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+          <p className="mx-auto mt-4 max-w-xl text-violet-100">
             Ghosted keeps every application, interview and offer on one clear
             timeline — and gently reminds you of the ones that went silent.
             Your job hunt, without the ghosting.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
-            <Button size="lg" asChild>
+            <Button
+              size="lg"
+              className="bg-white text-violet-700 shadow hover:bg-violet-100"
+              asChild
+            >
               <Link href="/register">Start tracking free</Link>
             </Button>
-            <Button size="lg" variant="outline" asChild>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              asChild
+            >
               <Link href="/login">Sign in</Link>
             </Button>
           </div>
+        </section>
 
-          {/* Product mock — the real dashboard cards, non-interactive */}
-          <div
-            className="mx-auto mt-12 max-w-md rounded-xl border bg-card p-4 text-left shadow-lg"
-            aria-hidden
-          >
+        {/* Product mock — the real dashboard cards, overlapping the hero edge */}
+        <div className="mx-auto -mt-20 max-w-md px-4" aria-hidden>
+          <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <SectionHeading status="applied" title="Applied" count={2} />
               <SectionHeading status="ghosted" title="Ghosted" count={1} />
@@ -202,12 +210,12 @@ export function Landing() {
               ))}
             </ul>
           </div>
-        </section>
+        </div>
 
         {/* Features */}
         <section
           aria-label="Features"
-          className="mx-auto max-w-5xl px-4 pb-16"
+          className="mx-auto max-w-5xl px-4 pb-16 pt-12"
         >
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
             Everything a job hunt needs, nothing it doesn&apos;t
