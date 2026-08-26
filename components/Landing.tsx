@@ -2,7 +2,9 @@ import Link from "next/link";
 import {
   BarChart3,
   Bell,
+  BellOff,
   BookOpen,
+  BotOff,
   Briefcase,
   Calendar,
   ClipboardList,
@@ -12,8 +14,8 @@ import {
   Ghost,
   Globe,
   Mail,
+  MailX,
   MessageSquare,
-  MoonStar,
   Paperclip,
   Phone,
   Send,
@@ -22,6 +24,7 @@ import {
   Tag,
   Users,
   Video,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,9 +62,28 @@ const FEATURES = [
     body: "Your data stays yours: export everything as JSON or delete your account permanently, any time (GDPR friendly).",
   },
   {
-    icon: MoonStar,
-    title: "Calm & accessible",
-    body: "Dark mode by default, keyboard friendly, and continuously checked for accessibility.",
+    icon: Wallet,
+    title: "Free forever",
+    body: "Job hunting is a pain already — the log shouldn't cost you too. Free for casual use, always.",
+  },
+];
+
+/** Things Ghosted deliberately does NOT do — a logbook, not automation. */
+const NOT_DOING = [
+  {
+    icon: BellOff,
+    title: "No notifications",
+    body: "No pings, no push alerts, no inbox noise — you open the log when you feel like it.",
+  },
+  {
+    icon: MailX,
+    title: "No email scanning",
+    body: "Your mailbox stays yours. Ghosted only knows what you type into it.",
+  },
+  {
+    icon: BotOff,
+    title: "No auto-applying",
+    body: "Applications are written and sent by you. This is a logbook, not a robot.",
   },
 ];
 
@@ -355,7 +377,7 @@ export function Landing() {
         {/* Product mock — the real dashboard cards, overlapping the hero edge.
             Positioned (relative) so it paints above the positioned hero
             section instead of being hidden behind it. */}
-        <div className="relative mx-auto -mt-20 max-w-xl px-4" aria-hidden>
+        <div className="relative mx-auto -mt-20 max-w-xl px-4 pb-12" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
             <div className="mb-3 flex gap-1 rounded-lg border bg-muted/50 p-1">
               <MockTab status="applied" title="Applied" count={1} active />
@@ -375,14 +397,17 @@ export function Landing() {
         {/* Features */}
         <section
           aria-label="Features"
-          className="mx-auto max-w-5xl px-4 pb-16 pt-12"
+          className="mx-auto max-w-5xl px-4 py-12"
         >
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
             Everything a job hunt needs, nothing it doesn&apos;t
           </h2>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((f) => (
-              <Card key={f.title}>
+              <Card
+                key={f.title}
+                className="bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-950/40"
+              >
                 <CardContent className="p-5">
                   <f.icon className="h-5 w-5 text-violet-500" aria-hidden />
                   <h3 className="mt-3 font-semibold">{f.title}</h3>
@@ -393,9 +418,37 @@ export function Landing() {
           </div>
         </section>
 
+        {/* What we're not doing */}
+        <section
+          aria-label="What we're not doing"
+          className="mx-auto max-w-5xl px-4 pb-24 pt-12"
+        >
+          <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
+            What we&apos;re not doing
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-center text-muted-foreground">
+            Ghosted is a logbook for your job hunt — not an automation
+            software. A simple tool for simple needs.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            {NOT_DOING.map((item) => (
+              <Card
+                key={item.title}
+                className="bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-950/40"
+              >
+                <CardContent className="p-5">
+                  <item.icon className="h-5 w-5 text-violet-500" aria-hidden />
+                  <h3 className="mt-3 font-semibold">{item.title}</h3>
+                  <p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+
         {/* CTA band */}
         <section className="border-t bg-muted/40">
-          <div className="mx-auto max-w-3xl px-4 py-14 text-center">
+          <div className="mx-auto max-w-3xl px-4 py-12 text-center">
             <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
               Ready to stop getting ghosted?
             </h2>
