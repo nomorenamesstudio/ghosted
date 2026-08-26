@@ -168,7 +168,7 @@ export function Landing() {
             aria-hidden
           />
           <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
-            Never let a job application go quiet.
+            Never let a job application go quiet on you.
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-violet-100">
             Ghosted keeps every application, interview and offer on one clear
