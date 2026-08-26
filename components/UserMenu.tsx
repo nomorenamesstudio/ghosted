@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee, LogOut, Moon, Settings, Sun } from "lucide-react";
-import { DONATE_URL } from "@/lib/utils/donate-banner";
+import { Coffee, LogOut, Moon, Settings, Sun, Undo2 } from "lucide-react";
+import { DONATE_STORAGE_KEY, DONATE_URL } from "@/lib/utils/donate-banner";
+import { DONATE_SHOW_EVENT } from "./DonateBanner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -61,6 +62,19 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
             <Coffee />
             Donate
           </a>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => {
+            try {
+              localStorage.removeItem(DONATE_STORAGE_KEY);
+            } catch {
+              /* ignore storage errors */
+            }
+            window.dispatchEvent(new CustomEvent(DONATE_SHOW_EVENT));
+          }}
+        >
+          <Undo2 />
+          Show donation banner
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={toggleTheme}>
           {theme === "dark" ? <Sun /> : <Moon />}

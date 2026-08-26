@@ -379,7 +379,7 @@ export function Landing() {
             section instead of being hidden behind it. */}
         <div className="relative mx-auto -mt-20 max-w-xl px-4 pb-12" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
-            <div className="mb-3 flex gap-1 rounded-lg border bg-muted/50 p-1">
+            <div className="mb-3 flex gap-1 overflow-hidden rounded-lg border bg-muted/50 p-1">
               <MockTab status="applied" title="Applied" count={1} active />
               <MockTab status="interviewing" title="Interviewing" count={2} />
               <MockTab status="ghosted" title="Ghosted" count={1} />
