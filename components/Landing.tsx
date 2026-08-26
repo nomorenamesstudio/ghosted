@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { ApplicationCardView } from "./ApplicationCard";
+import { StatusIcon } from "./status-icons";
+import type { ApplicationListItem } from "@/lib/api";
 
 const FEATURES = [
   {
@@ -45,30 +47,92 @@ const FEATURES = [
   },
 ];
 
-function MockRow({
-  company,
-  round,
-  progress,
-  tint,
+/** Sample applications rendered with the real dashboard card component. */
+const DAY = 86_400_000;
+const now = Date.now();
+const MOCK_APPS: ApplicationListItem[] = [
+  {
+    id: "preview-stripe",
+    userId: "preview",
+    company: "Stripe",
+    role: "Senior Engineer",
+    url: null,
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    notes: null,
+    status: "interviewing",
+    displayStatus: "interviewing",
+    isFavorite: true,
+    archivedFromStatus: null,
+    totalSteps: 5,
+    createdAt: new Date(now - 21 * DAY),
+    updatedAt: new Date(now - 2 * DAY),
+    progress: 60,
+    currentRound: "Technical Interview",
+    milestoneCount: 5,
+  },
+  {
+    id: "preview-vercel",
+    userId: "preview",
+    company: "Vercel",
+    role: "Frontend Engineer",
+    url: null,
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    notes: null,
+    status: "applied",
+    displayStatus: "applied",
+    isFavorite: false,
+    archivedFromStatus: null,
+    totalSteps: 5,
+    createdAt: new Date(now - 6 * DAY),
+    updatedAt: new Date(now - 3 * DAY),
+    progress: 40,
+    currentRound: "HR Screen",
+    milestoneCount: 5,
+  },
+  {
+    id: "preview-framer",
+    userId: "preview",
+    company: "Framer",
+    role: "Product Designer",
+    url: null,
+    contactName: null,
+    contactEmail: null,
+    contactPhone: null,
+    notes: null,
+    status: "applied",
+    displayStatus: "ghosted",
+    isFavorite: false,
+    archivedFromStatus: null,
+    totalSteps: 5,
+    createdAt: new Date(now - 40 * DAY),
+    updatedAt: new Date(now - 15 * DAY),
+    progress: 20,
+    currentRound: "Application",
+    milestoneCount: 5,
+  },
+];
+
+function SectionHeading({
+  status,
+  title,
+  count,
 }: {
-  company: string;
-  round: string;
-  progress: number;
-  tint: string;
+  status: "applied" | "ghosted";
+  title: string;
+  count: number;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-      <div className="min-w-0">
-        <p className="truncate text-sm font-medium">{company}</p>
-        <p className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs ${tint}`}>
-          {round}
-        </p>
-      </div>
-      <div className="flex w-24 shrink-0 flex-col items-end gap-1">
-        <span className="text-xs font-semibold tabular-nums">{progress}%</span>
-        <Progress value={progress} className="w-full" aria-hidden />
-      </div>
-    </div>
+    <span className="flex items-center gap-1.5">
+      <StatusIcon status={status} className="h-3.5 w-3.5" />
+      {title}
+      <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+        {count}
+      </span>
+    </span>
   );
 }
 
@@ -121,37 +185,22 @@ export function Landing() {
             </Button>
           </div>
 
-          {/* Product mock */}
+          {/* Product mock — the real dashboard cards, non-interactive */}
           <div
             className="mx-auto mt-12 max-w-md rounded-xl border bg-card p-4 text-left shadow-lg"
             aria-hidden
           >
             <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>Applied · 2</span>
-              <span className="text-violet-600 dark:text-violet-300">
-                Ghosted · 1
-              </span>
+              <SectionHeading status="applied" title="Applied" count={2} />
+              <SectionHeading status="ghosted" title="Ghosted" count={1} />
             </div>
-            <div className="space-y-2">
-              <MockRow
-                company="Stripe"
-                round="Technical Interview"
-                progress={60}
-                tint="bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300"
-              />
-              <MockRow
-                company="Vercel"
-                round="HR Screen"
-                progress={40}
-                tint="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300"
-              />
-              <MockRow
-                company="Framer"
-                round="👻 ghosted"
-                progress={20}
-                tint="bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
-              />
-            </div>
+            <ul className="space-y-2">
+              {MOCK_APPS.map((app) => (
+                <li key={app.id}>
+                  <ApplicationCardView app={app} />
+                </li>
+              ))}
+            </ul>
           </div>
         </section>
 
