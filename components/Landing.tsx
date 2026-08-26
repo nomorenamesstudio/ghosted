@@ -163,12 +163,10 @@ export function Landing() {
       <main className="flex-1">
         {/* Hero — inverted purple band */}
         <section className="bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
-          <span
-            className="inline-flex items-center rounded-full border border-white/25 bg-white/10 p-2.5 text-white"
+          <Ghost
+            className="mx-auto h-20 w-20 text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.25)]"
             aria-hidden
-          >
-            <Ghost className="h-4 w-4" />
-          </span>
+          />
           <h1 className="mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
             Never let a job application go quiet.
           </h1>
