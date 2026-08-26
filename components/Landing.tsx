@@ -195,7 +195,7 @@ export function Landing() {
         </section>
 
         {/* Product mock — the real dashboard cards, overlapping the hero edge */}
-        <div className="mx-auto -mt-20 max-w-md px-4" aria-hidden>
+        <div className="mx-auto -mt-20 max-w-xl px-4" aria-hidden>
           <div className="rounded-xl border bg-card p-4 text-left shadow-2xl">
             <div className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <SectionHeading status="applied" title="Applied" count={2} />
