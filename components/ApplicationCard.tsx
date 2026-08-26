@@ -52,6 +52,37 @@ const STATUS_BORDER: Partial<Record<DisplayStatus, string>> = {
     "border-zinc-300/70 hover:border-zinc-400/70 dark:border-zinc-700/60 dark:hover:border-zinc-600/60",
 };
 
+/** Progress bar colors harmonized with each status (track + fill). */
+export const STATUS_PROGRESS: Record<
+  DisplayStatus,
+  { track: string; fill: string }
+> = {
+  applied: {
+    track: "bg-sky-200/60 dark:bg-sky-900/50",
+    fill: "bg-sky-500 dark:bg-sky-400",
+  },
+  interviewing: {
+    track: "bg-amber-200/60 dark:bg-amber-900/50",
+    fill: "bg-amber-500 dark:bg-amber-400",
+  },
+  offer: {
+    track: "bg-emerald-200/60 dark:bg-emerald-900/50",
+    fill: "bg-emerald-500 dark:bg-emerald-400",
+  },
+  rejected: {
+    track: "bg-red-200/60 dark:bg-red-900/50",
+    fill: "bg-red-500 dark:bg-red-400",
+  },
+  ghosted: {
+    track: "bg-violet-200/60 dark:bg-violet-900/50",
+    fill: "bg-violet-500 dark:bg-violet-400",
+  },
+  archived: {
+    track: "bg-zinc-200/60 dark:bg-zinc-800/50",
+    fill: "bg-zinc-400 dark:bg-zinc-500",
+  },
+};
+
 /**
  * The card visuals, without the list/link wrapper — shared by the real
  * dashboard card and the landing-page product mock.
@@ -110,7 +141,8 @@ export function ApplicationCardView({
           <Progress
             value={app.progress}
             aria-label="Application progress"
-            className="w-full"
+            className={cn("w-full", STATUS_PROGRESS[status].track)}
+            indicatorClassName={STATUS_PROGRESS[status].fill}
           />
         </div>
       </CardContent>

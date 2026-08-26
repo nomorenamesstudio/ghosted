@@ -27,6 +27,7 @@ import { EditApplicationForm } from "./EditApplicationForm";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GhostPulse, SkeletonGhostCard } from "./loading";
 import { StatusIcon } from "./status-icons";
+import { STATUS_PROGRESS } from "./ApplicationCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DisplayStatus } from "@/lib/utils/status";
 
@@ -252,7 +253,8 @@ export function ApplicationDetail({ id }: { id: string }) {
           <Progress
             value={app.progress}
             aria-label="Application progress"
-            className="flex-1"
+            className={cn("flex-1", STATUS_PROGRESS[app.displayStatus].track)}
+            indicatorClassName={STATUS_PROGRESS[app.displayStatus].fill}
           />
           <span className="text-sm font-semibold tabular-nums">
             {app.progress}%
