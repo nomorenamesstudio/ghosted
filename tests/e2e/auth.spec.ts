@@ -9,10 +9,10 @@ test("register, sign out, and log back in", async ({ page }) => {
   await expect(page).toHaveURL(/\/app$/);
   await expect(page.getByText("No applications yet")).toBeVisible();
 
-  // Sign out via the user menu → back to the login page.
+  // Sign out via the user menu → back to the landing page.
   await page.getByRole("button", { name: "User menu" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/$/);
 
   // Log back in with the same credentials.
   await loginViaUi(page, email, "password123");

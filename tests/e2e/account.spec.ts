@@ -44,7 +44,7 @@ test("settings: change password and sign in with it", async ({ page }) => {
   // Sign out and sign back in with the new password.
   await page.getByRole("button", { name: "User menu" }).click();
   await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/login/);
+  await expect(page).toHaveURL(/\/$/);
 
   await loginViaUi(page, email, "newpassword456");
   await expect(page).toHaveURL(/\/app$/);
