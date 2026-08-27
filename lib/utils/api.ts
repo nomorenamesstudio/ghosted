@@ -87,12 +87,15 @@ export async function requireSession(): Promise<string> {
 
 /**
  * Guard for state-changing (write) endpoints: per-user throttle, keyed by
- * user id so it works behind NAT / spoofed IPs. Default 60 writes/hour;
- * override via RATE_LIMIT_WRITES_MAX / RATE_LIMIT_WRITES_WINDOW_MINUTES.
+ * user id so it works behind NAT / spoofed IPs. Default 300 writes/hour —
+ * generous enough for bulk entry of applications (a real job-seeker can
+ * add dozens in a sitting) while still stopping automated abuse of a
+ * stolen session. Override via RATE_LIMIT_WRITES_MAX /
+ * RATE_LIMIT_WRITES_WINDOW_MINUTES.
  */
 export async function requireSessionForWrite(scope: string): Promise<string> {
   const userId = await requireSession();
-  const max = Number(process.env.RATE_LIMIT_WRITES_MAX ?? 60);
+  const max = Number(process.env.RATE_LIMIT_WRITES_MAX ?? 300);
   const windowMinutes = Number(process.env.RATE_LIMIT_WRITES_WINDOW_MINUTES ?? 60);
   const rl = rateLimitAccount(userId, `write:${scope}`, {
     max,

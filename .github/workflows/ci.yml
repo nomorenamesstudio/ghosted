@@ -12,6 +12,8 @@ env:
   # Non-secret value; real deployments must set AUTH_SECRET per environment.
   AUTH_SECRET: ci-only-non-secret-please-override
   NEXT_PUBLIC_APP_URL: http://localhost:3100
+  # Headroom for the e2e stress test, which bulk-creates 220 applications.
+  RATE_LIMIT_WRITES_MAX: 1000
 
 jobs:
   lint-typecheck:
