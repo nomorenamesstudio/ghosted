@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Coffee } from "lucide-react";
 import {
   DONATE_URL,
@@ -14,9 +14,6 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-
-/** Dispatched by the user menu's "Show donation banner" item. */
-export const DONATE_SHOW_EVENT = "ghosted:show-donate";
 
 /** The lucide Coffee icon paths (24×24 grid). */
 const CUP_PATHS =
@@ -69,13 +66,6 @@ const COFFEE_PATTERN = `url("data:image/svg+xml,${encodeURIComponent(
 
 export function DonateBanner({ offers }: { offers: number }) {
   const [state, setState] = useState(readDonateState);
-
-  // Re-show the banner on demand (e.g. from the user menu).
-  useEffect(() => {
-    const show = () => setState(null);
-    window.addEventListener(DONATE_SHOW_EVENT, show);
-    return () => window.removeEventListener(DONATE_SHOW_EVENT, show);
-  }, []);
 
   if (!shouldShowBanner(state, offers > 0)) return null;
 
