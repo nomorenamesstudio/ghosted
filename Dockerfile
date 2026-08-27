@@ -20,12 +20,15 @@ RUN pnpm build
 # run as the unprivileged `node` user.
 FROM base AS runner
 ENV NODE_ENV=production
+# package.json/lockfile must be present before `pnpm prune` can read the
+# manifest (otherwise ERR_PNPM_NO_PKG_MANIFEST).
+COPY --from=build /app/package.json ./package.json
+COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build /app/node_modules ./node_modules
 # Keep only production dependencies — removes eslint, vitest, playwright,
 # drizzle-kit, tsx, etc. from the shipped image.
 RUN pnpm prune --prod
 COPY --from=build /app/.next ./.next
-COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.mjs ./next.config.mjs
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/drizzle ./drizzle
