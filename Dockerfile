@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 
 FROM node:22-alpine AS base
-RUN corepack enable && corepack prepare pnpm@10.12.1 --activate
+# Pin pnpm deterministically — corepack can resolve "latest" (11.x) when the
+# packageManager field is absent, and pnpm 11 needs node:sqlite (Node 22.5+).
+# Node 22 ships with npm, so install the pinned version directly.
+RUN npm install -g pnpm@10.12.1
 WORKDIR /app
 
 # Install ALL dependencies (dev deps included — Next.js needs tailwindcss
