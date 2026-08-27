@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Coffee, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -28,6 +29,7 @@ function initials(name: string): string {
 
 export function UserMenu({ name, email }: { name: string; email: string }) {
   const { theme, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
 
   return (
     <DropdownMenu>
@@ -70,7 +72,12 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
         {/* Hidden form; the menu button submits it via the form attribute. */}
         <form id="sign-out-form" action={signOutAction} hidden />
         <DropdownMenuItem asChild>
-          <button type="submit" form="sign-out-form" className="w-full">
+          <button
+            type="submit"
+            form="sign-out-form"
+            className="w-full"
+            onClick={() => queryClient.clear()}
+          >
             <LogOut />
             Sign out
           </button>

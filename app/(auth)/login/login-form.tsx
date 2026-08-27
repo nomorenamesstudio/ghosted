@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ export function LoginForm({
 }) {
   const router = useRouter();
   const params = useSearchParams();
+  const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,10 @@ export function LoginForm({
         body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
+        // Purge the query cache: the QueryClient lives across client-side
+        // navigation, so without this a freshly logged-in user would keep
+        // seeing the previous user's cached applications/stats/milestones.
+        queryClient.clear();
         // Only follow same-origin relative callbackUrls — never allow the
         // login page to redirect the browser to an arbitrary external origin.
         const callbackUrl = params.get("callbackUrl");

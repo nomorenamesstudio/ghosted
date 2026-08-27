@@ -51,7 +51,7 @@ export function VerificationBanner({
             size="sm"
             onClick={resend}
             disabled={busy}
-            className="bg-amber-600 text-white hover:bg-amber-700"
+            className="bg-amber-700 text-white hover:bg-amber-800"
           >
             {busy ? "Sending…" : "Resend email"}
           </Button>

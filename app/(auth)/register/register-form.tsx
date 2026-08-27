@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,7 @@ import {
 
 export function RegisterForm() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +35,8 @@ export function RegisterForm() {
         body: JSON.stringify({ name, email, password }),
       });
       if (res.ok) {
+        // Purge the query cache so no previous user's data carries over.
+        queryClient.clear();
         // Registration auto-signs-in, so land directly on the dashboard.
         router.push("/app");
         router.refresh();
