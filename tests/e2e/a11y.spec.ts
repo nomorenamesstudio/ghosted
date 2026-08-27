@@ -23,6 +23,7 @@ test("a11y: public pages", async ({ page }) => {
     "/login",
     "/register",
     "/forgot-password",
+    "/verify-email",
     "/privacy",
     "/terms",
     "/imprint",
