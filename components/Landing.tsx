@@ -273,7 +273,7 @@ export function Landing() {
             <span className="font-semibold tracking-tight">
               Ghosted
               <sup className="ml-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
-                beta
+                β
               </sup>
             </span>
           </Link>

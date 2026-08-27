@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Ghost } from "lucide-react";
+import { BrandGhost } from "@/components/BrandGhost";
 
 export default function AuthLayout({
   children,
@@ -13,14 +13,12 @@ export default function AuthLayout({
           href="/"
           className="flex flex-col items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-100 text-violet-600 dark:bg-violet-950/40 dark:text-violet-300">
-            <Ghost className="h-7 w-7" aria-hidden />
-          </span>
+          <BrandGhost className="h-12 w-12" />
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight">
               Ghosted
               <sup className="ml-0.5 text-xs font-medium text-violet-700 dark:text-violet-300">
-                beta
+                β
               </sup>
             </h1>
             <p className="text-sm text-muted-foreground">For the Job Hunters</p>
