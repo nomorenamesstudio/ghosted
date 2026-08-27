@@ -50,15 +50,6 @@ export default function RootLayout({
             __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
-        {/* Umami analytics: production only (NODE_ENV is baked at build time,
-            so the dev server never emits this tag). */}
-        {process.env.NODE_ENV === "production" && (
-          <script
-            defer
-            src="https://cloud.umami.is/script.js"
-            data-website-id="95af29ee-d520-43aa-ad74-f50afc4f69a5"
-          />
-        )}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
