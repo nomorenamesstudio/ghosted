@@ -1,11 +1,21 @@
 import { Resend } from "resend";
 import { logger } from "@/lib/utils/logger";
 
+const IS_PROD = process.env.NODE_ENV === "production";
+
 let client: Resend | null = null;
 
 function getClient(): Resend | null {
   const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
+  if (!key) {
+    // In production, a missing key means verification/reset emails silently
+    // never arrive — fail loudly instead of pretending they were sent.
+    if (IS_PROD) {
+      logger.error("RESEND_API_KEY is not set — transactional emails will not send");
+      throw new Error("Email configuration error: RESEND_API_KEY is not set");
+    }
+    return null;
+  }
   if (!client) client = new Resend(key);
   return client;
 }
@@ -29,8 +39,17 @@ export async function sendEmail({
   text,
   html,
 }: EmailMessage): Promise<void> {
-  const from =
-    process.env.EMAIL_FROM ?? "Ghosted <onboarding@resend.dev>";
+  // In production, a missing EMAIL_FROM would silently send from the Resend
+  // test domain (onboarding@resend.dev), which breaks deliverability and can
+  // look like spam — require it explicitly.
+  const from = process.env.EMAIL_FROM;
+  if (!from) {
+    if (IS_PROD) {
+      logger.error("EMAIL_FROM is not set — emails would use the Resend test domain");
+      throw new Error("Email configuration error: EMAIL_FROM is not set");
+    }
+  }
+  const resolvedFrom = from ?? "Ghosted <onboarding@resend.dev>";
   const c = getClient();
   if (!c) {
     logger.info(
@@ -40,7 +59,7 @@ export async function sendEmail({
     return;
   }
   try {
-    await c.emails.send({ from, to, subject, text, html: html ?? text });
+    await c.emails.send({ from: resolvedFrom, to, subject, text, html: html ?? text });
     logger.info({ to, subject }, "email sent");
   } catch (err) {
     logger.error({ err, to, subject }, "email send failed");
@@ -48,7 +67,16 @@ export async function sendEmail({
 }
 
 function appUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const url = process.env.NEXT_PUBLIC_APP_URL;
+  if (!url) {
+    // A verification/reset link pointing at localhost would be dead on
+    // arrival in production — fail fast instead of emailing broken links.
+    if (IS_PROD) {
+      logger.error("NEXT_PUBLIC_APP_URL is not set — emailed links would be broken");
+      throw new Error("Email configuration error: NEXT_PUBLIC_APP_URL is not set");
+    }
+  }
+  return url ?? "http://localhost:3000";
 }
 
 /* ------------------------------------------------------------------ */

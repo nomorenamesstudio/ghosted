@@ -1,7 +1,11 @@
 import type { ApplicationStatus, MilestoneStatus } from "@/lib/db/schema";
 
 /** Manual terminal states: never overridden by milestone changes. */
-export const MANUAL_STATUSES: ApplicationStatus[] = ["rejected", "archived"];
+export const MANUAL_STATUSES: ApplicationStatus[] = [
+  "rejected",
+  "archived",
+  "offer",
+];
 
 /**
  * Auto-advance rule (documented in README):

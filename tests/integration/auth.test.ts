@@ -158,13 +158,14 @@ describe("POST /api/auth/login", () => {
         ),
       );
     }
-    // A fresh IP should still get through to the auth check.
+    // A fresh IP (with a fresh email, since the per-account throttle is
+    // independent of IP) should still get through to the auth check.
     vi.mocked(signIn).mockResolvedValue({ ok: true } as never);
     const res = await LOGIN(
       jsonRequest(
         `${base}/login`,
         "POST",
-        { email: "a@test.dev", password: "password123" },
+        { email: "fresh@test.dev", password: "password123" },
         ip(5),
       ),
     );

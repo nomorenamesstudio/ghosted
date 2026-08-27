@@ -4,7 +4,7 @@ import {
   listApplications,
 } from "@/lib/services/applications";
 import { createApplicationSchema, listApplicationsQuerySchema } from "@/lib/utils/validation";
-import { handleRouteError, jsonError, requireSession } from "@/lib/utils/api";
+import { handleRouteError, jsonError, requireSession, requireSessionForWrite } from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const userId = await requireSession();
+    const userId = await requireSessionForWrite("applications");
     const body = await req.json().catch(() => null);
     const parsed = createApplicationSchema.safeParse(body);
     if (!parsed.success) {

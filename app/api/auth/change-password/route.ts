@@ -7,7 +7,11 @@ import {
   rateLimited,
   requireSession,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import {
+  getClientIp,
+  rateLimit,
+  rateLimitSuccess,
+} from "@/lib/utils/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +19,7 @@ export async function POST(req: Request) {
   try {
     const userId = await requireSession();
 
-    const rl = rateLimit(getClientIp(req));
+    const rl = rateLimit(getClientIp(req), "change-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
     const body = await req.json().catch(() => null);
@@ -33,6 +37,7 @@ export async function POST(req: Request) {
       parsed.data.currentPassword,
       parsed.data.newPassword,
     );
+    rateLimitSuccess(getClientIp(req), "change-password");
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleRouteError(err);

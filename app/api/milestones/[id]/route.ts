@@ -4,7 +4,7 @@ import {
   updateMilestone,
 } from "@/lib/services/applications";
 import { updateMilestoneSchema } from "@/lib/utils/validation";
-import { handleRouteError, jsonError, requireSession } from "@/lib/utils/api";
+import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ export async function PATCH(
   { params }: { params: { id: string } },
 ) {
   try {
-    const userId = await requireSession();
+    const userId = await requireSessionForWrite("milestones");
     if (!UUID_RE.test(params.id)) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }
@@ -45,7 +45,7 @@ export async function DELETE(
   { params }: { params: { id: string } },
 ) {
   try {
-    const userId = await requireSession();
+    const userId = await requireSessionForWrite("milestones");
     if (!UUID_RE.test(params.id)) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }

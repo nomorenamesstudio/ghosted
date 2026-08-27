@@ -13,7 +13,12 @@ import {
   jsonError,
   rateLimited,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import {
+  getClientIp,
+  rateLimit,
+  rateLimitAccount,
+  rateLimitSuccess,
+} from "@/lib/utils/rate-limit";
 import { logAuthEvent } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +26,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = rateLimit(ip);
+    const rl = rateLimit(ip, "register");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
     const body = await req.json().catch(() => null);
@@ -37,6 +42,11 @@ export async function POST(req: Request) {
 
     const { email, password, name } = parsed.data;
 
+    // Header-independent per-account throttle: one sign-up per email window,
+    // regardless of spoofed IP headers.
+    const acct = rateLimitAccount(email, "register");
+    if (!acct.ok) return rateLimited(acct.retryAfterSeconds);
+
     const [existing] = await db
       .select({ id: users.id })
       .from(users)
@@ -47,10 +57,25 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const [user] = await db
-      .insert(users)
-      .values({ email, name, passwordHash, provider: "email" })
-      .returning();
+    let user;
+    try {
+      [user] = await db
+        .insert(users)
+        .values({ email, name, passwordHash, provider: "email" })
+        .returning();
+    } catch (err) {
+      // Unique-violation race (two concurrent sign-ups for the same email):
+      // the other request won, so this one is a 409, not a 500.
+      if (
+        typeof err === "object" &&
+        err !== null &&
+        "code" in err &&
+        (err as { code: unknown }).code === "23505"
+      ) {
+        return jsonError(409, "An account with this email already exists", "EMAIL_TAKEN");
+      }
+      throw err;
+    }
 
     logAuthEvent("register", { ip, email });
 
@@ -69,6 +94,11 @@ export async function POST(req: Request) {
       // Non-fatal: user can sign in on the login page.
       if (!(error instanceof AuthError)) throw error;
     }
+
+    // Success: reset the register window so a legit sign-up isn't blocked by
+    // earlier failed attempts from the same IP/email.
+    rateLimitSuccess(ip, "register");
+    rateLimitSuccess(email, "acct:register");
 
     return NextResponse.json({ ok: true }, { status: 201 });
   } catch (err) {

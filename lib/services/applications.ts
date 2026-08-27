@@ -323,6 +323,23 @@ export async function updateApplication(
   applicationId: string,
   input: UpdateApplicationInput,
 ): Promise<Application | null> {
+  // When archiving via a direct status update, remember the previous status
+  // so a later reopen can restore it (instead of always falling back to
+  // "applied").
+  let archivedFromStatus: Application["status"] | null | undefined;
+  if (input.status === "archived") {
+    const [existing] = await db
+      .select({ status: applications.status })
+      .from(applications)
+      .where(
+        and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+      )
+      .limit(1);
+    if (existing && existing.status !== "archived") {
+      archivedFromStatus = existing.status;
+    }
+  }
+
   const values: Partial<Application> = { updatedAt: new Date() };
   if (input.company !== undefined)
     values.company = sanitizeText(input.company) ?? input.company;
@@ -337,6 +354,9 @@ export async function updateApplication(
     values.contactPhone = sanitizeText(input.contactPhone);
   if (input.notes !== undefined) values.notes = sanitizeText(input.notes);
   if (input.status !== undefined) values.status = input.status;
+  if (archivedFromStatus !== undefined) {
+    values.archivedFromStatus = archivedFromStatus;
+  }
 
   const [updated] = await db
     .update(applications)
@@ -403,7 +423,9 @@ export async function reopenApplication(
       archivedFromStatus: null,
       updatedAt: new Date(),
     })
-    .where(eq(applications.id, applicationId))
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
     .returning();
   return updated ?? null;
 }
@@ -425,7 +447,9 @@ export async function toggleFavorite(
   const [updated] = await db
     .update(applications)
     .set({ isFavorite: !existing.isFavorite })
-    .where(eq(applications.id, applicationId))
+    .where(
+      and(eq(applications.id, applicationId), eq(applications.userId, userId)),
+    )
     .returning();
   return updated ?? null;
 }
@@ -436,13 +460,20 @@ export async function toggleFavorite(
 
 type Tx = PostgresJsDatabase<typeof schema>;
 
-async function findOwnedApplication(tx: Tx, userId: string, applicationId: string) {
+/**
+ * Lock the application row for the duration of the transaction
+ * (SELECT ... FOR UPDATE). Serializes concurrent milestone mutations on the
+ * same application so two writers cannot interleave step_order shifts and
+ * transiently duplicate step_order values.
+ */
+async function lockOwnedApplication(tx: Tx, userId: string, applicationId: string) {
   const [app] = await tx
     .select()
     .from(applications)
     .where(
       and(eq(applications.id, applicationId), eq(applications.userId, userId)),
     )
+    .for("update")
     .limit(1);
   return app ?? null;
 }
@@ -453,7 +484,7 @@ export async function addMilestone(
   input: CreateMilestoneInput,
 ): Promise<{ milestone: Milestone; application: ApplicationSummary } | null> {
   return db.transaction(async (tx) => {
-    const app = await findOwnedApplication(tx, userId, applicationId);
+    const app = await lockOwnedApplication(tx, userId, applicationId);
     if (!app) return null;
 
     const existing = sortByStepOrder(
@@ -517,7 +548,7 @@ export async function updateMilestone(
       .limit(1);
     if (!m) return null;
 
-    const app = await findOwnedApplication(tx, userId, m.applicationId);
+    const app = await lockOwnedApplication(tx, userId, m.applicationId);
     if (!app) return null;
 
     const values: Partial<Milestone> = {};
@@ -591,7 +622,7 @@ export async function deleteMilestone(
       .limit(1);
     if (!m) return null;
 
-    const app = await findOwnedApplication(tx, userId, m.applicationId);
+    const app = await lockOwnedApplication(tx, userId, m.applicationId);
     if (!app) return null;
 
     const existing = sortByStepOrder(

@@ -135,7 +135,7 @@ describe("isGhosted / displayStatusOf", () => {
 });
 
 describe("MANUAL_STATUSES", () => {
-  it("contains exactly rejected and archived", () => {
-    expect(MANUAL_STATUSES).toEqual(["rejected", "archived"]);
+  it("contains rejected, archived and offer (manual overrides)", () => {
+    expect(MANUAL_STATUSES).toEqual(["rejected", "archived", "offer"]);
   });
 });

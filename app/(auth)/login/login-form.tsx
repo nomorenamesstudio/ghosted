@@ -40,8 +40,14 @@ export function LoginForm({
         body: JSON.stringify({ email, password }),
       });
       if (res.ok) {
+        // Only follow same-origin relative callbackUrls — never allow the
+        // login page to redirect the browser to an arbitrary external origin.
         const callbackUrl = params.get("callbackUrl");
-        router.push(callbackUrl || "/app");
+        const safe =
+          callbackUrl && callbackUrl.startsWith("/") && !callbackUrl.startsWith("//")
+            ? callbackUrl
+            : "/app";
+        router.push(safe);
         router.refresh();
         return;
       }

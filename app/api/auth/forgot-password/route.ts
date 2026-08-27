@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { randomBytes, createHash } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq, isNotNull, lt, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { passwordResetTokens, users } from "@/lib/db/schema";
 import { forgotPasswordSchema } from "@/lib/utils/validation";
@@ -10,7 +10,11 @@ import {
   jsonError,
   rateLimited,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import {
+  getClientIp,
+  rateLimit,
+  rateLimitAccount,
+} from "@/lib/utils/rate-limit";
 import { logAuthEvent } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +26,7 @@ function hashToken(token: string): string {
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = rateLimit(ip);
+    const rl = rateLimit(ip, "forgot-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
     const body = await req.json().catch(() => null);
@@ -37,6 +41,12 @@ export async function POST(req: Request) {
     }
 
     const { email } = parsed.data;
+
+    // Per-email throttle independent of the IP header: limits reset-email
+    // flooding even under NAT or spoofed headers.
+    const acct = rateLimitAccount(email, "forgot-password");
+    if (!acct.ok) return rateLimited(acct.retryAfterSeconds);
+
     const ttlMinutes = Number(process.env.PASSWORD_RESET_TTL_MINUTES ?? 60);
 
     const [user] = await db
@@ -55,6 +65,21 @@ export async function POST(req: Request) {
         .limit(1);
 
       if (row?.passwordHash) {
+        // Purge this user's stale reset tokens (used or expired) so the
+        // table never grows unbounded, then issue a fresh one.
+        const now = new Date();
+        await db
+          .delete(passwordResetTokens)
+          .where(
+            and(
+              eq(passwordResetTokens.userId, user.id),
+              or(
+                isNotNull(passwordResetTokens.usedAt),
+                lt(passwordResetTokens.expiresAt, now),
+              ),
+            ),
+          );
+
         const rawToken = randomBytes(32).toString("hex");
         const expiresAt = new Date(Date.now() + ttlMinutes * 60_000);
         await db.insert(passwordResetTokens).values({

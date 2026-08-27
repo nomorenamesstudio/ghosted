@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { auth } from "@/lib/auth";
+import { rateLimitAccount } from "./rate-limit";
 import { logger } from "./logger";
 
 /** Consistent API error shape: { error, code, details? }. */
@@ -80,6 +81,30 @@ export async function requireSession(): Promise<string> {
   const userId = session?.user?.id;
   if (!userId) {
     throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
+  }
+  return userId;
+}
+
+/**
+ * Guard for state-changing (write) endpoints: per-user throttle, keyed by
+ * user id so it works behind NAT / spoofed IPs. Default 60 writes/hour;
+ * override via RATE_LIMIT_WRITES_MAX / RATE_LIMIT_WRITES_WINDOW_MINUTES.
+ */
+export async function requireSessionForWrite(scope: string): Promise<string> {
+  const userId = await requireSession();
+  const max = Number(process.env.RATE_LIMIT_WRITES_MAX ?? 60);
+  const windowMinutes = Number(process.env.RATE_LIMIT_WRITES_WINDOW_MINUTES ?? 60);
+  const rl = rateLimitAccount(userId, `write:${scope}`, {
+    max,
+    windowMs: windowMinutes * 60_000,
+  });
+  if (!rl.ok) {
+    throw new ApiError(
+      429,
+      "Too many requests, please try again later",
+      "RATE_LIMITED",
+      undefined,
+    );
   }
   return userId;
 }

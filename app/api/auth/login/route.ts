@@ -7,7 +7,12 @@ import {
   jsonError,
   rateLimited,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import {
+  getClientIp,
+  rateLimit,
+  rateLimitAccount,
+  rateLimitSuccess,
+} from "@/lib/utils/rate-limit";
 import { logAuthEvent } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +20,7 @@ export const dynamic = "force-dynamic";
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = rateLimit(ip);
+    const rl = rateLimit(ip, "login");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
     const body = await req.json().catch(() => null);
@@ -28,6 +33,11 @@ export async function POST(req: Request) {
         parsed.error.flatten(),
       );
     }
+
+    // Header-independent per-account throttle: stops password-stuffing even
+    // when the IP header is spoofed or shared behind NAT.
+    const acct = rateLimitAccount(parsed.data.email, "login");
+    if (!acct.ok) return rateLimited(acct.retryAfterSeconds);
 
     try {
       await signIn("credentials", {
@@ -47,6 +57,9 @@ export async function POST(req: Request) {
       throw error;
     }
 
+    // Success: reset both windows so only failures accumulate.
+    rateLimitSuccess(ip, "login");
+    rateLimitSuccess(parsed.data.email, "acct:login");
     logAuthEvent("login_success", { ip, email: parsed.data.email });
     return NextResponse.json({ ok: true });
   } catch (err) {

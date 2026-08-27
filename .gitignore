@@ -56,3 +56,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .pnpm-tool
+
+# Local review scratch files
+.tmp-review/

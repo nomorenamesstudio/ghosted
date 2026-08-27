@@ -16,14 +16,21 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build
 
-# Runtime image: apply migrations, then start Next.js.
+# Runtime image: prod-only dependencies (dev tools stay out of the image),
+# run as the unprivileged `node` user.
 FROM base AS runner
 ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
+# Keep only production dependencies — removes eslint, vitest, playwright,
+# drizzle-kit, tsx, etc. from the shipped image.
+RUN pnpm prune --prod
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.mjs ./next.config.mjs
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/drizzle ./drizzle
+# Next.js writes build/runtime cache under .next at runtime (ISR etc.).
+RUN chown -R node:node /app
+USER node
 EXPOSE 8080
 CMD ["sh", "-c", "node scripts/migrate-on-start.mjs && pnpm start"]

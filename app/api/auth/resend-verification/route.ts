@@ -6,7 +6,11 @@ import {
   rateLimited,
   requireSession,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import {
+  getClientIp,
+  rateLimit,
+  rateLimitAccount,
+} from "@/lib/utils/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -15,8 +19,12 @@ export async function POST(req: Request) {
   try {
     const userId = await requireSession();
 
-    const rl = rateLimit(getClientIp(req));
+    const rl = rateLimit(getClientIp(req), "resend-verification");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
+    // Per-account throttle: one verification email per window per user,
+    // independent of the IP header.
+    const acct = rateLimitAccount(userId, "resend-verification");
+    if (!acct.ok) return rateLimited(acct.retryAfterSeconds);
 
     const { raw, email } = await issueEmailVerification(userId);
     await sendVerificationEmail(email, raw);

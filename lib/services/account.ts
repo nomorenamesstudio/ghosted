@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
@@ -107,9 +107,20 @@ export async function deleteAccount(userId: string): Promise<void> {
  */
 export async function createEmailVerification(userId: string): Promise<string> {
   const ttlMinutes = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES ?? 60 * 24);
+  // Purge this user's stale tokens (used or expired) so the table never
+  // grows unbounded, then issue a fresh one.
+  const now = new Date();
   await db
     .delete(emailVerificationTokens)
-    .where(eq(emailVerificationTokens.userId, userId));
+    .where(
+      and(
+        eq(emailVerificationTokens.userId, userId),
+        or(
+          isNotNull(emailVerificationTokens.usedAt),
+          lt(emailVerificationTokens.expiresAt, now),
+        ),
+      ),
+    );
   const raw = randomBytes(32).toString("hex");
   await db.insert(emailVerificationTokens).values({
     userId,

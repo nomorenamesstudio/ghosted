@@ -11,7 +11,7 @@ import {
   jsonError,
   rateLimited,
 } from "@/lib/utils/api";
-import { getClientIp, rateLimit } from "@/lib/utils/rate-limit";
+import { getClientIp, rateLimit, rateLimitSuccess } from "@/lib/utils/rate-limit";
 import { logAuthEvent } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ function hashToken(token: string): string {
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = rateLimit(ip);
+    const rl = rateLimit(ip, "reset-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
     const body = await req.json().catch(() => null);
@@ -81,6 +81,7 @@ export async function POST(req: Request) {
       email: undefined,
       reason: "completed",
     });
+    rateLimitSuccess(ip, "reset-password");
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleRouteError(err);
