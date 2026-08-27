@@ -5,7 +5,7 @@
 const isProd = process.env.NODE_ENV === "production";
 
 const scriptSrc = isProd
-  ? "'self' 'unsafe-inline'" // inline theme no-flash script; no eval in prod
+  ? "'self' 'unsafe-inline' https://cloud.umami.is" // inline theme script + Umami analytics; no eval in prod
   : "'self' 'unsafe-inline' 'unsafe-eval'";
 
 const securityHeaders = [
@@ -25,7 +25,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      "connect-src 'self' https://cloud.umami.is",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
