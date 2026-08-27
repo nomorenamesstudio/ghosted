@@ -269,6 +269,22 @@ export async function getApplication(
   };
 }
 
+/** Unverified accounts may create at most this many applications total. */
+export const UNVERIFIED_APP_LIMIT = 3;
+
+/**
+ * Total number of applications owned by the user (including archived ones).
+ * Used to enforce the "unverified email ⇒ max 3 applications" cap — archived
+ * applications still count so the cap cannot be gamed by archiving.
+ */
+export async function countApplications(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(applications)
+    .where(eq(applications.userId, userId));
+  return row?.count ?? 0;
+}
+
 export async function createApplication(
   userId: string,
   input: CreateApplicationInput,

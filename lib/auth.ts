@@ -73,7 +73,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
-        return { id: user.id, email: user.email, name: user.name };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          emailVerified: user.emailVerified,
+        };
       },
     }),
     ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
@@ -101,13 +106,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const s = session as {
           name?: string;
           email?: string;
-          user?: { name?: string; email?: string };
+          emailVerified?: boolean;
+          user?: { name?: string; email?: string; emailVerified?: boolean };
         };
         if (typeof s.name === "string") token.name = s.name;
         if (typeof s.email === "string") token.email = s.email;
+        if (typeof s.emailVerified === "boolean") {
+          token.emailVerified = s.emailVerified;
+        }
         if (s.user) {
           if (typeof s.user.name === "string") token.name = s.user.name;
           if (typeof s.user.email === "string") token.email = s.user.email;
+          if (typeof s.user.emailVerified === "boolean") {
+            token.emailVerified = s.user.emailVerified;
+          }
         }
       }
 
@@ -115,7 +127,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user && account?.provider && account.provider !== "credentials") {
         const provider = account.provider as Provider;
         const providerId = String(user.id);
-
         let [dbUser] = await db
           .select()
           .from(users)
@@ -179,6 +190,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
         token.sub = dbUser.id;
         if (user.image) token.picture = user.image;
+        // OAuth providers verify the email themselves, so the account is
+        // always considered verified after linking/creating.
+        token.emailVerified = true;
+      }
+
+      // Credentials sign-in: carry the DB verified flag into the JWT so the
+      // client (verification banner) and server (application cap) both know.
+      if (
+        user &&
+        !(account?.provider && account.provider !== "credentials")
+      ) {
+        const userEmailVerified = (user as { emailVerified?: unknown })
+          .emailVerified;
+        token.emailVerified = userEmailVerified === true;
       }
 
       // Absolute session cap: 7 days from sign-in. Enforced here because
@@ -199,6 +224,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async session({ session, token }) {
       if (session.user && typeof token.sub === "string") {
         session.user.id = token.sub;
+        // The callback's `session.user` type is intersected with AdapterUser
+        // (emailVerified: Date | null) even under the JWT strategy, so cast.
+        if (typeof token.emailVerified === "boolean") {
+          (session.user as { emailVerified?: boolean }).emailVerified =
+            token.emailVerified;
+        }
       }
       return session;
     },

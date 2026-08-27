@@ -35,11 +35,20 @@ export async function createUser(
   email = `user-${crypto.randomUUID()}@test.dev`,
   name = "Test User",
   password = "password123",
+  options: { emailVerified?: boolean } = {},
 ): Promise<TestUser> {
   const passwordHash = await bcrypt.hash(password, TEST_BCRYPT_ROUNDS);
   const [user] = await db
     .insert(users)
-    .values({ email, name, passwordHash, provider: "email" })
+    .values({
+      email,
+      name,
+      passwordHash,
+      provider: "email",
+      // Verified by default so CRUD tests don't trip the 3-application cap;
+      // auth/verification tests opt out with { emailVerified: false }.
+      emailVerified: options.emailVerified ?? true,
+    })
     .returning();
   return { ...user, password };
 }

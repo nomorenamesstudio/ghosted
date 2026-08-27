@@ -248,7 +248,7 @@ describe("email verification", () => {
   });
 
   it("verifies the email with a valid token", async () => {
-    const user = await createUser("ver@test.dev");
+    const user = await createUser("ver@test.dev", "Test User", "password123", { emailVerified: false });
     const { raw } = await issueEmailVerification(user.id);
 
     const res = await VERIFY_EMAIL(
@@ -272,7 +272,7 @@ describe("email verification", () => {
   });
 
   it("rejects an invalid, expired or reused token", async () => {
-    const user = await createUser("ver2@test.dev");
+    const user = await createUser("ver2@test.dev", "Test User", "password123", { emailVerified: false });
 
     // Unknown token.
     const unknown = await VERIFY_EMAIL(
@@ -308,7 +308,7 @@ describe("email verification", () => {
   });
 
   it("changing the email resets verification and issues a new token", async () => {
-    const user = await createUser("oldmail@test.dev", "User", "password123");
+    const user = await createUser("oldmail@test.dev", "User", "password123", { emailVerified: false });
     // Verify first.
     const { raw } = await issueEmailVerification(user.id);
     await VERIFY_EMAIL(new Request(`${base}/verify-email?token=${raw}`));
@@ -341,7 +341,7 @@ describe("email verification", () => {
     expect(unauth.status).toBe(401);
 
     // Authenticated.
-    const user = await createUser("resend@test.dev");
+    const user = await createUser("resend@test.dev", "Test User", "password123", { emailVerified: false });
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await RESEND_VERIFICATION(
       jsonRequest(`${base}/resend-verification`, "POST", undefined, {

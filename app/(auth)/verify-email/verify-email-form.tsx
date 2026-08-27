@@ -17,7 +17,7 @@ import {
 export function VerifyEmailForm() {
   const params = useSearchParams();
   const router = useRouter();
-  const { status } = useSession();
+  const { status, update: updateSession } = useSession();
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
   // The effect can fire twice (StrictMode / searchParams identity) — a
@@ -37,6 +37,11 @@ export function VerifyEmailForm() {
       .then(async (res) => {
         if (res.ok) {
           setState("ok");
+          // Refresh the JWT so the emailVerified flag flips immediately
+          // (hides the verification banner without a re-login).
+          if (status === "authenticated") {
+            await updateSession({ emailVerified: true } as never);
+          }
         } else {
           const body = await res.json().catch(() => null);
           setState("error");
@@ -47,7 +52,7 @@ export function VerifyEmailForm() {
         setState("error");
         setError("Network error — please try again.");
       });
-  }, [params]);
+  }, [params, status, updateSession]);
 
   // Signed-in users who verified get dropped back into the app.
   useEffect(() => {

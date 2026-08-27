@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { UserMenu } from "@/components/UserMenu";
 import { AppBrand } from "@/components/AppBrand";
+import { VerificationBanner } from "@/components/VerificationBanner";
 
 export default async function DashboardLayout({
   children,
@@ -13,6 +14,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen">
+      <VerificationBanner />
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <AppBrand />

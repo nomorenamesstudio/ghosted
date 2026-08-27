@@ -295,12 +295,38 @@ describe("POST /api/applications", () => {
     expect(rows[0].userId).toBe(user.id);
   });
 
+  it("allows an unverified user exactly 3 applications, then blocks", async () => {
+    const user = await createUser("cap@test.dev", "Cap", "password123", {
+      emailVerified: false,
+    });
+    for (let i = 0; i < 3; i++) {
+      const { res } = await createApp(user.id, { company: `Acme ${i}` });
+      expect(res.status).toBe(201);
+    }
+    // 4th is blocked, even though the user is unverified.
+    const { res, json } = await createApp(user.id, { company: "Too many" });
+    expect(res.status).toBe(403);
+    expect(json.code).toBe("EMAIL_UNVERIFIED_LIMIT");
+    // Nothing was inserted.
+    const rows = await db.select().from(applications);
+    expect(rows).toHaveLength(3);
+  });
+
+  it("does not cap verified users", async () => {
+    const user = await createUser();
+    for (let i = 0; i < 5; i++) {
+      const { res } = await createApp(user.id, { company: `Acme ${i}` });
+      expect(res.status).toBe(201);
+    }
+    const rows = await db.select().from(applications);
+    expect(rows).toHaveLength(5);
+  });
+
   it("rejects missing required fields", async () => {
     const user = await createUser();
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await POST(jsonRequest(base, "POST", { company: "No role" }));
-    expect(res.status).toBe(400);
-    const json = await readJson(res);
+    expect(res.status).toBe(400);    const json = await readJson(res);
     expect(json.code).toBe("VALIDATION_ERROR");
   });
 
