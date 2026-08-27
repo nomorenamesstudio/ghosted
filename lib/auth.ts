@@ -121,6 +121,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.emailVerified = s.user.emailVerified;
           }
         }
+        // A profile update (e.g. email change) may have reset verification in
+        // the DB — refresh the flag so the banner and cap stay in sync
+        // without requiring a fresh sign-in.
+        if (typeof token.sub === "string") {
+          const [dbUser] = await db
+            .select({ emailVerified: users.emailVerified })
+            .from(users)
+            .where(eq(users.id, token.sub))
+            .limit(1);
+          if (dbUser) {
+            token.emailVerified = dbUser.emailVerified;
+          }
+        }
       }
 
       // OAuth sign-in: find-or-create our DB user and pin token.sub to OUR id.
