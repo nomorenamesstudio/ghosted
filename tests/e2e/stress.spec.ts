@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, uniqueEmail } from "./helpers";
+import { registerUser, uniqueEmail, markUserVerified } from "./helpers";
 
 /**
  * Stress test: hundreds of applications must lazy-load via the infinite
@@ -15,6 +15,8 @@ test("stress: hundreds of applications load via infinite scroll", async ({
 
   const email = uniqueEmail("stress");
   await registerUser(page, email);
+  // 220 applications exceed the unverified-account cap (3), so verify first.
+  await markUserVerified(email);
 
   const TOTAL = 220;
   for (let i = 0; i < TOTAL; i++) {

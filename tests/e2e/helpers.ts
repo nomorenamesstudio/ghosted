@@ -1,4 +1,23 @@
 import type { Page } from "@playwright/test";
+import postgres from "postgres";
+
+const testDbUrl =
+  process.env.TEST_DATABASE_URL ??
+  "postgres://ghosted:ghosted@localhost:5432/ghosted_test";
+
+/**
+ * Mark a user's email as verified directly in the test database. E2E specs
+ * that create many applications need this (unverified accounts are capped at
+ * 3); the verification flow itself is covered by integration tests.
+ */
+export async function markUserVerified(email: string): Promise<void> {
+  const sql = postgres(testDbUrl, { max: 1 });
+  try {
+    await sql`UPDATE users SET email_verified = true WHERE email = ${email}`;
+  } finally {
+    await sql.end();
+  }
+}
 
 /** Register a fresh user through the API (sets the session cookie). */
 export async function registerUser(

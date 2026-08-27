@@ -71,15 +71,17 @@ export function VerificationBanner() {
             aria-hidden
           />
           <div className="text-sm">
-            <p className="font-medium text-amber-900 dark:text-amber-100">
+            <p className="font-medium text-amber-950 dark:text-amber-50">
               Verify your email to keep tracking applications
             </p>
-            <p className="text-amber-800/80 dark:text-amber-200/70">
+            <p className="text-amber-900 dark:text-amber-100">
               Unverified accounts are limited to 3 applications. We emailed
               you a link — click it, or resend below.
             </p>
             {message && (
-              <p className="mt-1 text-amber-800 dark:text-amber-200">{message}</p>
+              <p className="mt-1 font-medium text-amber-950 dark:text-amber-50">
+                {message}
+              </p>
             )}
           </div>
         </div>
@@ -89,7 +91,7 @@ export function VerificationBanner() {
             size="sm"
             onClick={resend}
             disabled={busy}
-            className="border-amber-400/60 bg-transparent text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-900/50"
+            className="border-amber-500/60 text-amber-950 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-50 dark:hover:bg-amber-900/50"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {busy ? "Sending…" : "Resend email"}
@@ -98,7 +100,7 @@ export function VerificationBanner() {
             variant="ghost"
             size="sm"
             onClick={later}
-            className="text-amber-800 hover:bg-amber-100 dark:text-amber-200 dark:hover:bg-amber-900/50"
+            className="text-amber-950 hover:bg-amber-100 dark:text-amber-50 dark:hover:bg-amber-900/50"
           >
             Later
           </Button>
