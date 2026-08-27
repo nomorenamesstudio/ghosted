@@ -36,13 +36,19 @@ export function createDb(
   return drizzle(client, { schema });
 }
 
+let dbInstance: PostgresJsDatabase<typeof schema> | null = null;
+
 function getInstance(): PostgresJsDatabase<typeof schema> {
+  // Module-level cache (one pool per process, including production — the
+  // previous version only cached in non-production, leaking a new pool per
+  // query until Postgres refused new clients).
+  if (dbInstance) return dbInstance;
   if (globalForDb.__ghostedDb) return globalForDb.__ghostedDb;
-  const instance = createDb();
+  dbInstance = createDb();
   if (process.env.NODE_ENV !== "production") {
-    globalForDb.__ghostedDb = instance;
+    globalForDb.__ghostedDb = dbInstance;
   }
-  return instance;
+  return dbInstance;
 }
 
 /**
