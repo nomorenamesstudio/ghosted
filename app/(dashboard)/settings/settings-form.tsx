@@ -69,7 +69,7 @@ export function SettingsForm({
   const { update: updateSession } = useSession();
   const { theme, setTheme } = useTheme();
 
-  // Profile — Save/Cancel only appear once something changed (details-page
+  // Profile - Save/Cancel only appear once something changed (details-page
   // pattern). "saved*" is the last persisted state, "name/email" the draft.
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState(initialEmail);
@@ -108,7 +108,7 @@ export function SettingsForm({
       }
       setProfileMsg({
         type: "ok",
-        text: "Verification email sent — check your inbox.",
+        text: "Verification email sent - check your inbox.",
       });
     } catch (err) {
       setProfileMsg({ type: "error", text: (err as Error).message });
@@ -297,7 +297,7 @@ export function SettingsForm({
               ) : (
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-xs text-muted-foreground">
-                    Not verified yet — check your inbox.
+                    Not verified yet - check your inbox.
                   </p>
                   <Button
                     type="button"
@@ -391,7 +391,7 @@ export function SettingsForm({
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">
               This permanently deletes your account and all applications,
-              milestones and notes — including archived ones. It cannot be
+              milestones and notes - including archived ones. It cannot be
               undone.
             </p>
           </div>

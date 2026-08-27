@@ -33,9 +33,13 @@ export function ConfirmDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
-        <DialogHeader>
+        <DialogHeader className="space-y-3">
           <DialogTitle>{title}</DialogTitle>
-          {description && <DialogDescription>{description}</DialogDescription>}
+          {description && (
+            <DialogDescription className="text-base text-muted-foreground">
+              {description}
+            </DialogDescription>
+          )}
         </DialogHeader>
         <DialogFooter>
           <Button

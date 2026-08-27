@@ -20,7 +20,7 @@ export function VerifyEmailForm() {
   const { status, update: updateSession } = useSession();
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const [error, setError] = useState<string | null>(null);
-  // The effect can fire twice (StrictMode / searchParams identity) — a
+  // The effect can fire twice (StrictMode / searchParams identity) - a
   // second request would fail on the now-consumed token.
   const ranRef = useRef(false);
 
@@ -38,10 +38,11 @@ export function VerifyEmailForm() {
         if (res.ok) {
           setState("ok");
           // Refresh the JWT so the emailVerified flag flips immediately
-          // (hides the verification banner without a re-login).
-          if (status === "authenticated") {
-            await updateSession({ emailVerified: true } as never);
-          }
+          // (hides the verification banner without a re-login). Not gated on
+          // `status`: it's still "loading" on first run and the ranRef guard
+          // stops the effect re-running once it settles. update() is a
+          // harmless no-op when there is no session cookie.
+          await updateSession({ emailVerified: true } as never);
         } else {
           const body = await res.json().catch(() => null);
           setState("error");
@@ -50,7 +51,7 @@ export function VerifyEmailForm() {
       })
       .catch(() => {
         setState("error");
-        setError("Network error — please try again.");
+        setError("Network error - please try again.");
       });
   }, [params, status, updateSession]);
 
@@ -93,7 +94,7 @@ export function VerifyEmailForm() {
         <CardDescription>
           {state === "ok"
             ? status === "authenticated"
-              ? "You're all set — taking you back to your dashboard."
+              ? "You're all set - taking you back to your dashboard."
               : "Your email address is confirmed. You can now sign in."
             : "We couldn't verify this email address."}
         </CardDescription>

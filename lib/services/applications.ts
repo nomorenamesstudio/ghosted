@@ -269,8 +269,16 @@ export async function getApplication(
   };
 }
 
-/** Unverified accounts may create at most this many applications total. */
-export const UNVERIFIED_APP_LIMIT = 3;
+/**
+ * Unverified accounts may create at most this many applications total.
+ * Configurable via env (UNVERIFIED_APP_LIMIT) so the cap can be tuned
+ * without a deploy. Exported so the server can hand the same number to the
+ * client for the FAB gate.
+ */
+export const UNVERIFIED_APP_LIMIT = Math.max(
+  1,
+  Number(process.env.UNVERIFIED_APP_LIMIT ?? 3),
+);
 
 /**
  * Total number of applications owned by the user (including archived ones).

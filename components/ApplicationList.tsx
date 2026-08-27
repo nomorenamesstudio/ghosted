@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Ghost, Plus, Search } from "lucide-react";
 import type { DisplayStatus } from "@/lib/utils/status";
 import { AddApplicationModal } from "./AddApplicationModal";
+import { VerificationModal } from "./VerificationModal";
 import { ApplicationSection, SECTION_ORDER, SECTION_TITLES } from "./ApplicationSection";
 import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
@@ -23,9 +24,15 @@ const COLLAPSED_KEY = "ghosted-collapsed-sections";
 export function ApplicationList({
   status,
   onStatusChange,
+  emailVerified,
+  applicationCount,
+  unverifiedAppLimit,
 }: {
   status: "" | DisplayStatus;
   onStatusChange: (s: "" | DisplayStatus) => void;
+  emailVerified: boolean;
+  applicationCount: number;
+  unverifiedAppLimit: number;
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -33,6 +40,17 @@ export function ApplicationList({
     "updated_at",
   );
   const [addOpen, setAddOpen] = useState(false);
+  const [verifyOpen, setVerifyOpen] = useState(false);
+
+  // Unverified accounts are capped at unverifiedAppLimit applications. When
+  // the cap is reached the add button opens the verification modal instead of
+  // the form (the server enforces the cap too - this is purely UX).
+  const atAppLimit = !emailVerified && applicationCount >= unverifiedAppLimit;
+
+  function handleAddClick() {
+    if (atAppLimit) setVerifyOpen(true);
+    else setAddOpen(true);
+  }
 
   // Collapsed sections (persisted per browser).
   const [collapsed, setCollapsed] = useState<Set<DisplayStatus>>(() => {
@@ -142,7 +160,7 @@ export function ApplicationList({
             size="sm"
             data-testid="add-application-fab"
             className="w-full sm:ml-auto sm:w-auto"
-            onClick={() => setAddOpen(true)}
+            onClick={handleAddClick}
           >
             <Plus />
             Add application
@@ -180,11 +198,11 @@ export function ApplicationList({
                 <h2 className="text-lg font-semibold">No applications yet</h2>
                 <p className="mx-auto max-w-sm text-sm text-muted-foreground">
                   Ghosted is here to keep every application, interview and
-                  offer in one place — so nothing ever gets ghosted. Add your
+                  offer in one place - so nothing ever gets ghosted. Add your
                   first one and start the hunt! 🎯
                 </p>
               </div>
-              <Button onClick={() => setAddOpen(true)}>
+              <Button onClick={handleAddClick}>
                 <Plus />
                 Add your first application
               </Button>
@@ -193,6 +211,11 @@ export function ApplicationList({
       </div>
 
       <AddApplicationModal open={addOpen} onOpenChange={setAddOpen} />
+      <VerificationModal
+        open={verifyOpen}
+        onOpenChange={setVerifyOpen}
+        limit={unverifiedAppLimit}
+      />
     </div>
   );
 }
