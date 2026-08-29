@@ -15,24 +15,36 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
+
 export const metadata: Metadata = {
   title: "Ghosted - For the Job Hunters",
   description:
-    "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+    "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
+  metadataBase: new URL(siteUrl),
   openGraph: {
     title: "Ghosted - For the Job Hunters",
     description:
-      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+      "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
     type: "website",
     siteName: "Ghosted",
     locale: "en_US",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Ghosted - Never let a job application go quiet on you.",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Ghosted - For the Job Hunters",
     description:
-      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+      "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
+    images: ["/og.png"],
   },
 };
 

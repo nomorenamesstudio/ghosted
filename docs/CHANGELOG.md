@@ -5,6 +5,10 @@ All notable changes, by date and type.
 ## 2026-08-27
 
 ### Added
+- Social share image (`public/og.png`, 1200x630) replicating the landing hero
+  (violet gradient, ghost + email-tornado icon rings, "Ghosted" logotype with
+  aligned superscript beta, slogan), wired into `og:image` and
+  `twitter:image` (summary_large_image) meta tags via the root layout.
 - Email verification feature: verification banner (muted amber Card in the
   dashboard flow), verification modal shown at the app cap instead of the
   add-application form, `UNVERIFIED_APP_LIMIT` env var (default 3),
