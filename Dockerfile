@@ -29,12 +29,16 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=build /app/node_modules ./node_modules
 # Keep only production dependencies — removes eslint, vitest, playwright,
-# drizzle-kit, tsx, etc. from the shipped image.
-RUN pnpm prune --prod
+# drizzle-kit, tsx, etc. from the shipped image. confirmModulesPurge=false
+# skips pnpm's interactive "remove and reinstall" confirmation (build must
+# be non-TTY).
+RUN pnpm prune --prod --config.confirmModulesPurge=false
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/next.config.mjs ./next.config.mjs
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/drizzle ./drizzle
+# Static assets (favicon, og.png, etc.) are served from public/ at runtime.
+COPY --from=build /app/public ./public
 # Next.js writes build/runtime cache under .next at runtime (ISR etc.).
 RUN chown -R node:node /app
 USER node
