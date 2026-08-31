@@ -2,6 +2,20 @@
 
 All notable changes, by date and type.
 
+## 2026-08-31
+
+### Fixed
+- Login page is now force-dynamic: the Google/LinkedIn button visibility is
+  read from runtime env instead of being baked in at build time, so adding
+  `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` on Railway takes effect on the next
+  deploy without confusion about stale static HTML.
+
+### Changed
+- Login UI: Sign in button got a LogIn icon; Google button restyled with the
+  official multicolor Google G (18px) and reordered below the Sign in button
+  with the "or" divider between them (Google-brand white styling, dark-mode
+  aware).
+
 ## 2026-08-27
 
 ### Added

@@ -8,7 +8,7 @@
 | Framework      | Next.js 14 (App Router, RSC + client components)   |
 | ORM            | Drizzle + drizzle-kit (committed SQL migrations, no auto-sync in prod) |
 | Database       | PostgreSQL 16 (local Docker; Neon/Supabase-ready)  |
-| Auth           | Auth.js v5 (email/password + Google/LinkedIn OAuth, stubbed) |
+| Auth           | Auth.js v5 (email/password + Google OAuth; LinkedIn when configured) |
 | UI             | shadcn/ui-style components + Tailwind CSS          |
 | Client state   | TanStack Query (caching + optimistic updates)      |
 | Validation     | Zod v4                                             |
@@ -39,7 +39,7 @@ components/
   MilestoneTimeline / AddMilestoneModal / EditApplicationForm
   Dashboard / DashboardStats / DonateBanner
 lib/
-  auth.ts                 # Auth.js v5 config (JWT, bcrypt, OAuth stubs)
+  auth.ts                 # Auth.js v5 config (JWT, bcrypt, Google/LinkedIn OAuth)
   api.ts                  # typed client-side API + error handling
   db/                     # Drizzle schema + client
   services/applications.ts# transactional business logic (the core)

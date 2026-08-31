@@ -20,7 +20,7 @@ quiet on you (ghosted).
 | Framework      | Next.js 14 (App Router)                            |
 | ORM            | Drizzle + drizzle-kit (SQL migrations, no auto-sync in prod) |
 | Database       | PostgreSQL 16 (local Docker; Neon/Supabase-ready)  |
-| Auth           | Auth.js v5 (email/password + Google/LinkedIn OAuth, stubbed) |
+| Auth           | Auth.js v5 (email/password + Google OAuth; LinkedIn when configured) |
 | UI             | shadcn/ui-style components + Tailwind CSS          |
 | Client state   | TanStack Query (caching + optimistic updates)      |
 | Validation     | Zod v4                                             |
