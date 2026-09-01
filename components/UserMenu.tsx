@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Coffee, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,15 @@ function initials(name: string): string {
   );
 }
 
-export function UserMenu({ name, email }: { name: string; email: string }) {
+export function UserMenu({
+  name,
+  email,
+  image,
+}: {
+  name: string;
+  email: string;
+  image?: string;
+}) {
   const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
 
@@ -40,6 +48,7 @@ export function UserMenu({ name, email }: { name: string; email: string }) {
           className="rounded-full outline-none ring-offset-background transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
           <Avatar>
+            <AvatarImage src={image} alt={name || "User"} />
             <AvatarFallback>{initials(name)}</AvatarFallback>
           </Avatar>
         </button>
