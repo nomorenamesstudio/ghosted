@@ -4,9 +4,11 @@
 // the production build; keep the production CSP stricter.
 const isProd = process.env.NODE_ENV === "production";
 
+const umamiOrigin = "https://ramen.lostsignals.studio";
+
 const scriptSrc = isProd
-  ? "'self' 'unsafe-inline'" // inline theme no-flash script; no eval in prod
-  : "'self' 'unsafe-inline' 'unsafe-eval'";
+  ? `'self' 'unsafe-inline' ${umamiOrigin}` // inline theme no-flash script; no eval in prod
+  : `'self' 'unsafe-inline' 'unsafe-eval' ${umamiOrigin}`;
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -25,7 +27,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      "connect-src 'self'",
+      `connect-src 'self' ${umamiOrigin}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",

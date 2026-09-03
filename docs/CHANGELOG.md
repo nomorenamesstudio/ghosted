@@ -2,6 +2,15 @@
 
 All notable changes, by date and type.
 
+## 2026-09-03
+
+### Added
+- Self-hosted umami analytics (tracker served from `ramen.lostsignals.studio`):
+  script tag in the root layout head with `data-cache` and a
+  `data-domains` guard so only `ghosted.lostsignals.studio` traffic is
+  recorded; CSP in `next.config.mjs` whitelists the umami origin for
+  `script-src` and `connect-src` (tracker load + `/api/send` beacons).
+
 ## 2026-08-31
 
 ### Fixed

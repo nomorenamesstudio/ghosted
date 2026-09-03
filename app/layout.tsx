@@ -62,6 +62,14 @@ export default function RootLayout({
             __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
+        {/* Self-hosted umami analytics (tracker + beacon on ramen.lostsignals.studio). */}
+        <script
+          defer
+          src="https://ramen.lostsignals.studio/script.js"
+          data-website-id="c8f73665-dca1-464b-9427-a56f8b27c799"
+          data-cache="true"
+          data-domains="ghosted.lostsignals.studio"
+        />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
