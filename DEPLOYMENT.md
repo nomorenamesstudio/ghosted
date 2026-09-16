@@ -67,7 +67,7 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
    | `NEXT_PUBLIC_DONATE_URL` | your coffee/patreon page |
    | `NODE_ENV` | `production` |
    | `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MINUTES` | defaults fine (5/15) |
-   | `GHOSTED_AFTER_DAYS` | default 14 |
+   | `GHOSTED_AFTER_DAYS` | fallback only (per-user Patience level wins) |
 5. Deploy. The start command applies the SQL migrations automatically.
 6. **Custom domain**: Settings → Networking → Generate Domain
    (`*.up.railway.app`), then **Custom Domain** → add

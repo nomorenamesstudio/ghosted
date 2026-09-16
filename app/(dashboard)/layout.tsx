@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <div className="app-shell mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <AppBrand />
           <UserMenu
             name={session.user.name ?? ""}
@@ -23,7 +23,7 @@ export default async function DashboardLayout({
           />
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-4 pb-28">{children}</main>
+      <main className="app-shell mx-auto max-w-5xl px-4 pb-28">{children}</main>
     </div>
   );
 }

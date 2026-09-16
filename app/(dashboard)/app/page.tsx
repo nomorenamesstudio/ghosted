@@ -7,6 +7,7 @@ import {
   countApplications,
   UNVERIFIED_APP_LIMIT,
 } from "@/lib/services/applications";
+import { ghostedAfterDays } from "@/lib/utils/status";
 import { Dashboard } from "@/components/Dashboard";
 
 export default async function DashboardPage() {
@@ -17,11 +18,16 @@ export default async function DashboardPage() {
   // DB (never stale), plus the current application count so the client can
   // switch to the verification modal exactly when the cap is reached.
   const [dbUser] = await db
-    .select({ emailVerified: users.emailVerified })
+    .select({
+      emailVerified: users.emailVerified,
+      patienceLevel: users.patienceLevel,
+    })
     .from(users)
     .where(eq(users.id, session.user.id))
     .limit(1);
   const emailVerified = dbUser?.emailVerified ?? false;
+  // The board's ghosted column names the actual threshold.
+  const patienceDays = ghostedAfterDays(dbUser?.patienceLevel);
   const applicationCount = await countApplications(session.user.id);
 
   return (
@@ -29,6 +35,7 @@ export default async function DashboardPage() {
       emailVerified={emailVerified}
       applicationCount={applicationCount}
       unverifiedAppLimit={UNVERIFIED_APP_LIMIT}
+      patienceDays={patienceDays}
     />
   );
 }

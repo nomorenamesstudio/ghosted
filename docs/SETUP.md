@@ -70,7 +70,7 @@ cp .env.example .env
 | `RATE_LIMIT_WRITES_WINDOW_MINUTES` | 60 | Write-limit window |
 | `UNVERIFIED_APP_LIMIT` | 3 | Max applications for unverified accounts (server-enforced) |
 | `PASSWORD_RESET_TTL_MINUTES` | 60 | Reset token lifetime |
-| `GHOSTED_AFTER_DAYS` | 14 | Days untouched before applied/interviewing shows as ghosted |
+| `GHOSTED_AFTER_DAYS` | 14 | Fallback only: the ghosted threshold is per user now (Settings → Patience level: 14/10/7 days, default realistic) |
 
 ### Email (Resend)
 

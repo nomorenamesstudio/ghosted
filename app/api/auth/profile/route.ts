@@ -28,7 +28,12 @@ export async function PATCH(req: Request) {
     }
 
     return NextResponse.json({
-      data: { id: user.id, name: user.name, email: user.email },
+      data: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        patienceLevel: user.patienceLevel,
+      },
     });
   } catch (err) {
     return handleRouteError(err);

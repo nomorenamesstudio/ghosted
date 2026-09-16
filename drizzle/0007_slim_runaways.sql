@@ -1,0 +1,2 @@
+CREATE TYPE "public"."patience_level" AS ENUM('generous', 'realistic', 'impatient');--> statement-breakpoint
+ALTER TABLE "users" ADD COLUMN "patience_level" "patience_level" DEFAULT 'realistic' NOT NULL;

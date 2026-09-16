@@ -8,6 +8,7 @@ import {
   milestones,
   users,
   type Milestone,
+  type PatienceLevel,
   type User,
 } from "@/lib/db/schema";
 import { ApiError } from "@/lib/utils/api";
@@ -19,7 +20,7 @@ const hashToken = (t: string) =>
 /** Update profile fields (name/email). Throws 409 EMAIL_TAKEN on duplicates. */
 export async function updateProfile(
   userId: string,
-  input: { name?: string; email?: string },
+  input: { name?: string; email?: string; patienceLevel?: PatienceLevel },
 ): Promise<{ user: User; emailChanged: boolean }> {
   const [current] = await db
     .select()
@@ -33,8 +34,13 @@ export async function updateProfile(
     email?: string;
     emailVerified?: boolean;
     emailVerifiedAt?: Date | null;
+    patienceLevel?: PatienceLevel;
   } = {};
   if (input.name !== undefined) values.name = input.name;
+  // Changes how soon a silent application is shown as ghosted.
+  if (input.patienceLevel !== undefined) {
+    values.patienceLevel = input.patienceLevel;
+  }
   if (input.email !== undefined) {
     const [existing] = await db
       .select({ id: users.id })

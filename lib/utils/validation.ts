@@ -4,6 +4,8 @@ import {
   milestoneStatusEnum,
 } from "@/lib/db/schema";
 import { isSafeHttpUrl } from "./sanitize";
+import { normaliseDomain } from "./company-domain";
+import { PATIENCE_LEVELS } from "./status";
 
 /* ------------------------------------------------------------------ */
 /* Shared primitives                                                    */
@@ -56,10 +58,31 @@ const optionalDateSchema = z
 /* Applications                                                         */
 /* ------------------------------------------------------------------ */
 
+/**
+ * The employer's own website, used for the company logo. Accepts a full URL or
+ * a bare domain (`stripe.com`) and stores the normalised domain either way;
+ * empty string / null clears it.
+ */
+const optionalCompanyWebsiteSchema = z
+  .union([
+    z.literal(""),
+    z.null(),
+    z
+      .string()
+      .trim()
+      .max(253)
+      .refine((s) => normaliseDomain(s) !== null, {
+        message: "Enter a website like stripe.com",
+      }),
+  ])
+  .transform((v) => (v === "" || v === null ? null : normaliseDomain(v)))
+  .optional();
+
 export const createApplicationSchema = z.object({
   company: z.string().trim().min(1, "Company is required").max(200),
   role: z.string().trim().min(1, "Role is required").max(200),
   url: optionalUrlSchema,
+  companyWebsite: optionalCompanyWebsiteSchema,
   contactName: optionalLongText(200),
   contactEmail: optionalEmailText,
   contactPhone: optionalLongText(40),
@@ -71,6 +94,7 @@ export const updateApplicationSchema = z
     company: z.string().trim().min(1).max(200).optional(),
     role: z.string().trim().min(1).max(200).optional(),
     url: optionalUrlSchema,
+    companyWebsite: optionalCompanyWebsiteSchema,
     contactName: optionalLongText(200),
     contactEmail: optionalEmailText,
     contactPhone: optionalLongText(40),
@@ -137,10 +161,18 @@ export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").max(100).optional(),
     email: emailSchema.optional(),
+    /** Threshold for the automatic "ghosted" status (Settings). */
+    patienceLevel: z.enum(PATIENCE_LEVELS).optional(),
   })
-  .refine((v) => v.name !== undefined || v.email !== undefined, {
-    message: "At least one field must be provided",
-  });
+  .refine(
+    (v) =>
+      v.name !== undefined ||
+      v.email !== undefined ||
+      v.patienceLevel !== undefined,
+    {
+      message: "At least one field must be provided",
+    },
+  );
 
 export const changePasswordSchema = z
   .object({

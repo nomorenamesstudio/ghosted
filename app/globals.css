@@ -166,3 +166,10 @@
     animation: none;
   }
 }
+
+/* Board view uses the whole window: six columns need the room, and the header
+   is widened with them so it stays aligned with the board. Set from Dashboard
+   via `document.documentElement.dataset.view`. */
+html[data-view="board"] .app-shell {
+  max-width: none;
+}

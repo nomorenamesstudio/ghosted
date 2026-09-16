@@ -1,23 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStats } from "@/lib/api";
 import type { DisplayStatus } from "@/lib/utils/status";
 import { DashboardStats } from "./DashboardStats";
 import { DonateBanner } from "./DonateBanner";
 import { VerificationBanner } from "./VerificationBanner";
-import { ApplicationList } from "./ApplicationList";
+import { ApplicationList, type ViewMode } from "./ApplicationList";
 import { ScrollTopButton } from "./ScrollTopButton";
 
+const VIEW_KEY = "ghosted-view";
+
+/**
+ * Which view is active lives here, not in ApplicationList, because the board
+ * needs more than the list does: the page shell widens to the full window and
+ * the stat cards step aside to give the columns the room.
+ *
+ * The board is the default; a stored preference is applied *after* mount, since
+ * reading localStorage during the first render would paint a different toggle on
+ * the client than the server sent — a hydration mismatch.
+ */
 export function Dashboard({
   emailVerified,
   applicationCount,
   unverifiedAppLimit,
+  patienceDays,
 }: {
   emailVerified: boolean;
   applicationCount: number;
   unverifiedAppLimit: number;
+  /** Ghosted threshold from the user's patience level (Settings). */
+  patienceDays: number;
 }) {
   const { data: stats } = useQuery({
     queryKey: ["stats"],
@@ -26,6 +40,37 @@ export function Dashboard({
 
   // Status filter, shared between the clickable stat cards and the dropdown.
   const [status, setStatus] = useState<"" | DisplayStatus>("");
+  // The board is the default view.
+  const [view, setView] = useState<ViewMode>("board");
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(VIEW_KEY);
+      if (stored === "board" || stored === "list") setView(stored);
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
+
+  // The shell (header + main) is widened by a rule keyed on this attribute, so
+  // the layout stays a server component.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (view === "board") root.dataset.view = "board";
+    else delete root.dataset.view;
+    return () => {
+      delete root.dataset.view;
+    };
+  }, [view]);
+
+  function changeView(next: ViewMode) {
+    setView(next);
+    try {
+      localStorage.setItem(VIEW_KEY, next);
+    } catch {
+      /* ignore storage errors */
+    }
+  }
 
   return (
     <>
@@ -41,17 +86,25 @@ export function Dashboard({
           limit={unverifiedAppLimit}
         />
         <DonateBanner offers={stats?.data?.offers ?? 0} />
-        <DashboardStats
-          stats={stats?.data}
-          activeStatus={status}
-          onSelect={setStatus}
-        />
+        {/* Stats are a list-view summary (they filter the sections); on the
+            board the columns already show every count, so they stay out of
+            the way. */}
+        {view === "list" && (
+          <DashboardStats
+            stats={stats?.data}
+            activeStatus={status}
+            onSelect={setStatus}
+          />
+        )}
         <ApplicationList
           status={status}
           onStatusChange={setStatus}
+          view={view}
+          onViewChange={changeView}
           emailVerified={emailVerified}
           applicationCount={applicationCount}
           unverifiedAppLimit={unverifiedAppLimit}
+          patienceDays={patienceDays}
         />
       </div>
       <ScrollTopButton />

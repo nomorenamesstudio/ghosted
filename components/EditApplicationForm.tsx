@@ -40,6 +40,7 @@ interface FormState {
   company: string;
   role: string;
   url: string;
+  companyWebsite: string;
   contactName: string;
   contactEmail: string;
   contactPhone: string;
@@ -52,6 +53,7 @@ function snapshot(f: FormState) {
     company: f.company,
     role: f.role,
     url: f.url || null,
+    companyWebsite: f.companyWebsite || null,
     contactName: f.contactName || null,
     contactEmail: f.contactEmail || null,
     contactPhone: f.contactPhone || null,
@@ -65,6 +67,7 @@ function fromApp(app: ApplicationDetail): FormState {
     company: app.company,
     role: app.role,
     url: app.url ?? "",
+    companyWebsite: app.companyWebsite ?? "",
     contactName: app.contactName ?? "",
     contactEmail: app.contactEmail ?? "",
     contactPhone: app.contactPhone ?? "",
@@ -164,6 +167,22 @@ export function EditApplicationForm({ app }: { app: ApplicationDetail }) {
             onChange={(e) => onChange({ url: e.target.value })}
           />
         </Field>
+        <div className="space-y-2">
+          {/* Not `type="url"`: a bare domain is the expected input here, and
+              the browser would refuse to submit "stripe.com". */}
+          <Label htmlFor="edit-company-website">Company website</Label>
+          <Input
+            id="edit-company-website"
+            inputMode="url"
+            autoComplete="url"
+            value={form.companyWebsite}
+            onChange={(e) => onChange({ companyWebsite: e.target.value })}
+            placeholder="https://…"
+          />
+          <p className="text-xs text-muted-foreground">
+            Used for the company logo when the posting link is a job board.
+          </p>
+        </div>
 
         <div className="space-y-3">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">

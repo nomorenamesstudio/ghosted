@@ -12,10 +12,22 @@ describe("calcProgress", () => {
     ).toBe(100);
   });
 
-  it("returns 100% for rejected status", () => {
+  it("reports the state reached for a rejected application, not 100%", () => {
+    // Regression: a rejection used to jump the bar to 100%, which reads as
+    // "completed" when the application was actually cut short.
     expect(
-      calcProgress({ status: "rejected", milestones: [], totalSteps: 5 }),
-    ).toBe(100);
+      calcProgress({
+        status: "rejected",
+        milestones: [m("done"), m("done"), m("done"), m("pending"), m("pending")],
+        totalSteps: 5,
+      }),
+    ).toBe(60);
+  });
+
+  it("treats a rejection like an archive: last state reached", () => {
+    const milestones = [m("done"), m("done"), m("pending"), m("pending"), m("pending")];
+    expect(calcProgress({ status: "rejected", milestones, totalSteps: 5 })).toBe(40);
+    expect(calcProgress({ status: "archived", milestones, totalSteps: 5 })).toBe(40);
   });
 
   it("returns 0% with no milestones", () => {

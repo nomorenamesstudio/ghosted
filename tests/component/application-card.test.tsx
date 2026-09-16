@@ -9,6 +9,7 @@ const app: ApplicationListItem = {
   company: "Acme Corp",
   role: "Frontend Engineer",
   url: null,
+  companyWebsite: null,
   contactName: null,
   contactEmail: null,
   contactPhone: null,
@@ -42,5 +43,13 @@ describe("ApplicationCard", () => {
       "href",
       `/applications/${app.id}`,
     );
+  });
+
+  it("shows a company avatar with the company initial as its fallback", () => {
+    render(<ApplicationCard app={app} />);
+    // Radix only mounts the <img> once it has loaded, and images never load in
+    // jsdom, so the monogram is what is on screen here. The image wiring itself
+    // is covered in company-avatar.test.tsx.
+    expect(screen.getByText("A")).toBeInTheDocument();
   });
 });

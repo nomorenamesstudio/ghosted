@@ -6,6 +6,7 @@ import * as schema from "@/lib/db/schema";
 import {
   applications,
   milestones,
+  users,
   type Application,
   type Milestone,
 } from "@/lib/db/schema";
@@ -23,7 +24,7 @@ import { ApiError } from "@/lib/utils/api";
 import {
   deriveStatus,
   displayStatusOf,
-  GHOSTED_AFTER_DAYS,
+  ghostedAfterDays,
   type DisplayStatus,
 } from "@/lib/utils/status";
 import type {
@@ -106,13 +107,24 @@ function escapeLike(input: string): string {
 /* Applications                                                         */
 /* ------------------------------------------------------------------ */
 
+/** The user's patience setting, i.e. days before an application is ghosted. */
+export async function ghostedDaysFor(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ level: users.patienceLevel })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return ghostedAfterDays(row?.level);
+}
+
 export async function listApplications(
   userId: string,
   filters: ListFilters,
 ): Promise<ListResult> {
   const { status, search, sort, page, limit } = filters;
 
-  const cutoff = Date.now() - GHOSTED_AFTER_DAYS * 24 * 60 * 60 * 1000;
+  const days = await ghostedDaysFor(userId);
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
 
   const conditions = [eq(applications.userId, userId)];
   if (status === "ghosted") {
@@ -221,7 +233,7 @@ export async function listApplications(
         }),
         currentRound: currentRound(ms),
         milestoneCount: ms.length,
-        displayStatus: displayStatusOf(app.status, app.updatedAt),
+        displayStatus: displayStatusOf(app.status, app.updatedAt, days),
       });
     }
   }
@@ -250,6 +262,8 @@ export async function getApplication(
     .limit(1);
   if (!app) return null;
 
+  const days = await ghostedDaysFor(userId);
+
   const ms = sortByStepOrder(
     await db
       .select()
@@ -265,7 +279,7 @@ export async function getApplication(
       milestones: ms,
       totalSteps: app.totalSteps,
     }),
-    displayStatus: displayStatusOf(app.status, app.updatedAt),
+    displayStatus: displayStatusOf(app.status, app.updatedAt, days),
   };
 }
 
@@ -312,6 +326,7 @@ export async function createApplication(
         company: sanitizeText(input.company) ?? input.company,
         role: sanitizeText(input.role) ?? input.role,
         url: input.url || null,
+        companyWebsite: input.companyWebsite ?? null,
         contactName: sanitizeText(input.contactName),
         contactEmail: sanitizeText(input.contactEmail),
         contactPhone: sanitizeText(input.contactPhone),
@@ -370,6 +385,8 @@ export async function updateApplication(
   if (input.role !== undefined)
     values.role = sanitizeText(input.role) ?? input.role;
   if (input.url !== undefined) values.url = input.url || null;
+  if (input.companyWebsite !== undefined)
+    values.companyWebsite = input.companyWebsite ?? null;
   if (input.contactName !== undefined)
     values.contactName = sanitizeText(input.contactName);
   if (input.contactEmail !== undefined)
@@ -424,6 +441,45 @@ export async function softDeleteApplication(
  * Reopen: restore an archived application to the exact status it had before
  * archiving (falls back to 'applied' when unknown).
  */
+/**
+ * Send the timeline back to the start: every step returns to `pending` and
+ * loses its date, so progress reads 0% again without losing the step titles
+ * the user wrote. The application's own status is re-derived from the reset
+ * steps, which lands it back at `applied`.
+ */
+export async function resetTimeline(
+  userId: string,
+  applicationId: string,
+): Promise<{ application: Application; milestones: Milestone[] } | null> {
+  return db.transaction(async (tx) => {
+    const app = await lockOwnedApplication(tx, userId, applicationId);
+    if (!app) return null;
+
+    await tx
+      .update(milestones)
+      .set({ status: "pending", date: null })
+      .where(eq(milestones.applicationId, applicationId));
+
+    const all = sortByStepOrder(
+      await tx
+        .select()
+        .from(milestones)
+        .where(eq(milestones.applicationId, applicationId)),
+    );
+    const [updatedApp] = await tx
+      .update(applications)
+      .set({
+        status: deriveStatus(app.status, all),
+        totalSteps: all.length,
+        updatedAt: new Date(),
+      })
+      .where(eq(applications.id, applicationId))
+      .returning();
+
+    return { application: updatedApp, milestones: all };
+  });
+}
+
 export async function reopenApplication(
   userId: string,
   applicationId: string,
@@ -704,6 +760,8 @@ export async function getStats(userId: string): Promise<DashboardStats> {
     .from(applications)
     .where(eq(applications.userId, userId));
 
+  const days = await ghostedDaysFor(userId);
+
   const stats: DashboardStats = {
     total: 0,
     active: 0,
@@ -717,7 +775,7 @@ export async function getStats(userId: string): Promise<DashboardStats> {
     if (r.status === "archived") continue;
     stats.total += 1;
 
-    const display = displayStatusOf(r.status, r.updatedAt);
+    const display = displayStatusOf(r.status, r.updatedAt, days);
     if (display === "ghosted") {
       stats.ghosted += 1;
       continue;

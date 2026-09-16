@@ -2,6 +2,92 @@
 
 All notable changes, by date and type.
 
+## 2026-09-17
+
+### Added
+- **Patience level** setting (Settings → between Appearance and Profile): how
+  long an application may sit silent before it is shown as ghosted — Generous
+  (14 days), Realistic (10 days) or Impatient mode (7 days) — each with its own
+  face in the dropdown (grinning / slightly smiling / angry). Stored per user
+  (`users.patience_level`, default `realistic`), saved on change, and applied
+  everywhere the threshold matters: the list and board grouping, the status
+  filter, and the dashboard's ghosted count.
+- **Kanban board view** for the application list, switchable from the toolbar
+  and the **default view** (List / Board, remembered per browser). Columns run in pipeline order —
+  Applied → Interviewing → Offers, then Ghosted, Rejected, Archived — and cards
+  are dragged between them to change status, with a "Move to" menu on every card
+  as the touch/keyboard route. Columns take a 300px floor and then share any
+  spare width evenly, so a wide window is filled instead of leaving a gap after
+  the last column (and six of them on a laptop scroll rather than squash).
+  Board-specific behaviour vs the list: the page
+  and header widen to the full window, the stat cards and the status filter step
+  aside (the columns *are* the statuses), every column stays visible when empty
+  (so there is always a drop target), `archived` is always shown, and the
+  derived `ghosted` column accepts no drops. Columns share the list's query
+  keys, search and sort, so switching views never refetches and both stay in
+  sync.
+- **Step-back guard on the board**: dragging a card *backwards* through the
+  pipeline asks first, and the question depends on the stage it came from —
+  back from Offers asks whether to record the round that happened (`Add step and
+  move`), while Interviewing → Applied asks whether to **reset the timeline**
+  (`POST /api/applications/:id/milestones/reset`: every step back to pending,
+  dates cleared, progress 0%). Both dialogs also offer a tertiary `Leave it as
+  is, but move` that moves the card without touching the timeline, and Cancel
+  writes nothing at all. Moves out of an outcome status (un-ghosting, reopening
+  an archived application) are progress, not a step back, and are not
+  interrupted.
+- Company avatars on application cards **and on the application detail page**
+  (a larger chip next to the headline, with a matching loading skeleton): each
+  shows a 24px/32px logo chip in front of the company name, falling back to a
+  neutral monogram of the company's first letter. Logos are resolved lazily on first view, cached in
+  the new `company_logos` table (keyed by domain, so two applications at the
+  same company share one row) and served from our own origin by
+  `GET /logos/:applicationId` with `immutable` caching versioned by the
+  application's `updatedAt`.
+- New optional **Company website** field on the add and edit forms (stored as a
+  normalised domain, `stripe.com`), which feeds the logo lookup and overrides
+  every guess - the fix for a pasted job-board link or an ambiguous company name
+  like "Acme". Left empty, the resolution chain runs exactly as before.
+- Job-board links are recognised and stripped before a lookup
+  (`linkedin.com/jobs/...`, `boards.greenhouse.io/acme/...`,
+  `acme.myworkdayjobs.com`), so the employer's logo is used rather than the
+  posting board's. A company that yields no icon is cached as a miss, so a
+  logo-less company is not re-fetched on every render.
+
+### Changed
+- **Card layout rework** (list and board): one structure in both views — the
+  logo, company name and its favourite star on the first line, the role breaking
+  onto a second line at the same left edge, the status badge pinned to the card's
+  top-right corner, then a full-width hairline, and under it the "last round /
+  updated" line with the progress bar to its right (stacked, with the board's
+  "Move to" menu at the bottom-right, inside a kanban column). The company name
+  is a step smaller (`text-sm`) and the logo is sized to match the two-line
+  identity block (36px).
+- The ghosted threshold is now 10 days by default (was 14 — that is the new
+  "generous" level) because every user starts on `realistic`. Applications that
+  still looked active while 10–14 days stale now show under Ghosted until the
+  level is changed in Settings. `GHOSTED_AFTER_DAYS` is no longer the source of
+  truth — it is the fallback for code paths with no user in hand.
+
+### Fixed
+- The board keeps its left padding on mobile: scroll snapping ignored the
+  container's padding, so it auto-scrolled 16px on load — the first column sat
+  flush against the screen edge and the padding reappeared as dead space at the
+  right (`scroll-px-4` now matches the padding).
+- A rejected application no longer reports 100% progress — it shows the state it
+  actually reached (3 of 5 steps → 60%), the same way an archived application
+  already did. Offers still read 100%: that one is the successful end.
+- The step-back dialogs no longer spill their text past the dialog edge: three
+  actions in one footer made the dialog's grid column wider than the dialog
+  itself, which pushed the title and description outside its padding. The
+  tertiary "Leave it as is, but move" now sits above the footer, and the footer
+  keeps the app's standard Cancel + primary shape.
+- The board no longer strands itself on "No applications yet" after a search
+  that matches nothing is cleared. The columns own the queries, so they now stay
+  mounted (hidden while the empty state is on screen) instead of being unmounted
+  with it - with nothing mounted, clearing the search had nothing left to
+  refetch.
+
 ## 2026-09-03
 
 ### Added

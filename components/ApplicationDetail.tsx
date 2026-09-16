@@ -26,6 +26,7 @@ import { MilestoneTimeline } from "./MilestoneTimeline";
 import { EditApplicationForm } from "./EditApplicationForm";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GhostPulse, SkeletonGhostCard } from "./loading";
+import { CompanyAvatar } from "./CompanyAvatar";
 import { StatusIcon } from "./status-icons";
 import { STATUS_PROGRESS } from "./ApplicationCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -133,6 +134,7 @@ export function ApplicationDetail({ id }: { id: string }) {
         <div>
           <Skeleton className="h-4 w-32" />
           <div className="mt-2 flex items-center gap-3">
+            <Skeleton className="h-8 w-8 rounded-lg" />
             <Skeleton className="h-8 w-48" />
             <Skeleton className="h-5 w-24 rounded-full" />
           </div>
@@ -181,6 +183,12 @@ export function ApplicationDetail({ id }: { id: string }) {
         </Link>
         <div className="mt-2 flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
+            <CompanyAvatar
+              applicationId={app.id}
+              company={app.company}
+              version={app.updatedAt}
+              size="md"
+            />
             <h1 className="text-2xl font-bold">{app.company}</h1>
             <span className="text-lg text-muted-foreground">{app.role}</span>
             <StatusBadge status={app.displayStatus} />
@@ -253,6 +261,7 @@ export function ApplicationDetail({ id }: { id: string }) {
           <Progress
             value={app.progress}
             aria-label="Application progress"
+            segments={app.milestones.length}
             className={cn("flex-1", STATUS_PROGRESS[app.displayStatus].track)}
             indicatorClassName={STATUS_PROGRESS[app.displayStatus].fill}
           />

@@ -36,6 +36,27 @@
       "when": 1787664415204,
       "tag": "0004_exotic_rawhide_kid",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789578727142,
+      "tag": "0005_complex_dark_beast",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789580532410,
+      "tag": "0006_lowly_proudstar",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789587558595,
+      "tag": "0007_slim_runaways",
+      "breakpoints": true
     }
   ]
 }

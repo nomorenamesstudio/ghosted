@@ -10,6 +10,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CompanyAvatar } from "./CompanyAvatar";
 import { Progress } from "@/components/ui/progress";
 import { StatusIcon } from "./status-icons";
 import type { DisplayStatus } from "@/lib/utils/status";
@@ -86,13 +87,25 @@ export const STATUS_PROGRESS: Record<
 /**
  * The card visuals, without the list/link wrapper — shared by the real
  * dashboard card and the landing-page product mock.
+ *
+ * `compact` drops the desktop one-line layout for the narrow kanban columns:
+ * the viewport breakpoints in the default layout are no use inside a 300px
+ * column, where the card must always stack.
+ *
+ * `reserveActions` leaves room at the end of the progress row for a control the
+ * board floats there (its "Move to" menu), so the bar stops short of it instead
+ * of running underneath.
  */
 export function ApplicationCardView({
   app,
   className,
+  compact = false,
+  reserveActions = false,
 }: {
   app: ApplicationListItem;
   className?: string;
+  compact?: boolean;
+  reserveActions?: boolean;
 }) {
   const status = app.displayStatus;
   return (
@@ -104,51 +117,71 @@ export function ApplicationCardView({
         className,
       )}
     >
-      <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-medium">{app.company}</span>
-            <span className="truncate text-sm text-muted-foreground">
-              {app.role}
-            </span>
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            {app.isFavorite && (
-              <Star
-                className="h-3.5 w-3.5 fill-amber-400 text-amber-500"
-                aria-hidden
-              />
-            )}
-            <Badge
-              variant={STATUS_VARIANT[status]}
-              className="gap-1 capitalize"
-            >
-              <StatusIcon status={status} className="h-3 w-3" />
-              {status}
-            </Badge>
-            {app.currentRound && (
-              <span>
-                Last round: {app.currentRound}
-              </span>
-            )}
-            <span>Updated {formatDistanceToNow(new Date(app.updatedAt), { addSuffix: true })}</span>
+      <CardContent
+        className={cn("flex flex-col gap-3", compact ? "p-3" : "p-4")}
+      >
+        {/* Identity block: everything is indented past the logo, and the status
+            badge is pinned to the card's top-right corner. */}
+        <div className="flex min-w-0 items-start gap-2">
+          <CompanyAvatar
+            applicationId={app.id}
+            company={app.company}
+            version={app.updatedAt}
+            size="lg"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium">{app.company}</span>
+              {app.isFavorite && (
+                <Star
+                  className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-500"
+                  aria-hidden
+                />
+              )}
+              <Badge
+                variant={STATUS_VARIANT[status]}
+                className="ml-auto shrink-0 gap-1 capitalize"
+              >
+                <StatusIcon status={status} className="h-3 w-3" />
+                {status}
+              </Badge>
+            </div>
+            <p className="truncate text-xs text-muted-foreground">{app.role}</p>
           </div>
         </div>
-        {/* Mobile: the progress sits under the text as a full-width row;
-            desktop: a right-aligned column next to the text. */}
-        <div className="flex w-full shrink-0 items-center gap-2 sm:w-32 sm:flex-col sm:items-end sm:gap-1">
-          <span className="text-xs font-semibold tabular-nums">
-            {app.progress}%
-          </span>
-          <Progress
-            value={app.progress}
-            aria-label="Application progress"
+
+        {/* Hairline across the full card, then the dates and the progress:
+            side by side on the wide list card, stacked in a kanban column. */}
+        <div
+          className={cn(
+            "flex flex-col gap-2 border-t pt-2",
+            !compact && "sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+          )}
+        >
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            {app.currentRound && <span>Last round: {app.currentRound}</span>}
+            <span>
+              Updated {formatDistanceToNow(new Date(app.updatedAt), { addSuffix: true })}
+            </span>
+          </div>
+          <div
             className={cn(
-              "flex-1 sm:w-full sm:flex-none",
-              STATUS_PROGRESS[status].track,
+              "flex shrink-0 items-center gap-2",
+              !compact ? "sm:w-48" : "w-full",
+              reserveActions && "pr-9",
             )}
-            indicatorClassName={STATUS_PROGRESS[status].fill}
-          />
+          >
+            <span className="text-xs font-semibold tabular-nums">
+              {app.progress}%
+            </span>
+            <Progress
+              value={app.progress}
+              aria-label="Application progress"
+              segments={app.milestoneCount}
+              className={cn("flex-1", STATUS_PROGRESS[status].track)}
+              indicatorClassName={STATUS_PROGRESS[status].fill}
+            />
+          </div>
         </div>
       </CardContent>
     </Card>

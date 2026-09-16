@@ -17,8 +17,11 @@ import {
   DELETE as DELETE_APP,
 } from "@/app/api/applications/[id]/route";
 import { POST as REOPEN_APP } from "@/app/api/applications/[id]/reopen/route";
+import { POST as RESET_TIMELINE } from "@/app/api/applications/[id]/milestones/reset/route";
 import { POST as TOGGLE_FAVORITE } from "@/app/api/applications/[id]/favorite/route";
 import { PATCH as PATCH_MILESTONE } from "@/app/api/milestones/[id]/route";
+import { PATCH as PATCH_PROFILE } from "@/app/api/auth/profile/route";
+import { GET as GET_STATS } from "@/app/api/dashboard/stats/route";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import {
@@ -507,6 +510,96 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const list2 = await GET(new Request(`${base}?page=1`));
     expect((await readJson(list2)).data as unknown[]).toHaveLength(1);
+  });
+
+  it("uses the user's patience level as the ghosted threshold", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    // Nine days of silence: past impatient (7), still inside realistic (10)
+    // and generous (14).
+    await db
+      .update(applications)
+      .set({ updatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000) })
+      .where(eq(applications.id, app.id));
+
+    const listed = async (status: string) => {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await GET(
+        new Request(`${base}?status=${status}&page=1&limit=10`),
+      );
+      return ((await readJson(res)).data as unknown[]).length;
+    };
+    const ghostedCount = async () => {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await GET_STATS();
+      const body = (await readJson(res)) as { data: { ghosted: number } };
+      return body.data.ghosted;
+    };
+    const setPatience = async (level: string) => {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await PATCH_PROFILE(
+        jsonRequest("http://localhost/api/auth/profile", "PATCH", {
+          patienceLevel: level,
+        }),
+      );
+      expect(res.status, level).toBe(200);
+    };
+
+    // Default is realistic: nine days is not enough.
+    expect(await listed("ghosted")).toBe(0);
+    expect(await listed("applied")).toBe(1);
+    expect(await ghostedCount()).toBe(0);
+
+    await setPatience("impatient");
+    expect(await listed("ghosted")).toBe(1);
+    expect(await listed("applied")).toBe(0);
+    expect(await ghostedCount()).toBe(1);
+
+    await setPatience("generous");
+    expect(await listed("ghosted")).toBe(0);
+    expect(await listed("applied")).toBe(1);
+    expect(await ghostedCount()).toBe(0);
+  });
+
+  it("resets a timeline: every step pending, dates cleared, status re-derived", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    // Advance it: two more steps done (3/5), status interviewing.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const detail = await GET_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+    const milestones = (
+      (await readJson(detail)).data as {
+        milestones: Array<{ id: string }>;
+      }
+    ).milestones;
+    for (const m of milestones.slice(1, 3)) {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      await PATCH_MILESTONE(
+        jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
+          status: "done",
+        }),
+        { params: { id: m.id } },
+      );
+    }
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await RESET_TIMELINE(
+      new Request(`${base}/${app.id}/milestones/reset`, { method: "POST" }),
+      { params: { id: app.id } },
+    );
+    expect(res.status).toBe(200);
+    const body = await readJson(res);
+    expect(body.data).toMatchObject({ id: app.id, status: "applied" });
+    const reset = body.milestones as Array<{ status: string; date: unknown }>;
+    expect(reset).toHaveLength(5);
+    // Titles are kept, progress is not.
+    expect(reset.every((m) => m.status === "pending" && m.date === null)).toBe(
+      true,
+    );
   });
 
   it("reopening restores a manual rejected status too", async () => {

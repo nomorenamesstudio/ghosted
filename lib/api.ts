@@ -69,6 +69,8 @@ export interface CreateApplicationInput {
   company: string;
   role: string;
   url?: string | null;
+  /** Employer's site, used for the logo - a bare domain (`stripe.com`) is fine. */
+  companyWebsite?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -79,6 +81,7 @@ export interface UpdateApplicationInput {
   company?: string;
   role?: string;
   url?: string | null;
+  companyWebsite?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -182,6 +185,11 @@ export function deleteApplication(id: string): Promise<void> {
 /** Restore an archived application to its pre-archive status. */
 export function reopenApplication(id: string): Promise<{ data: Application }> {
   return request(`/api/applications/${id}/reopen`, { method: "POST" });
+}
+
+/** Every step back to `pending` with its date cleared - the process starts over. */
+export function resetTimeline(id: string): Promise<{ data: Application }> {
+  return request(`/api/applications/${id}/milestones/reset`, { method: "POST" });
 }
 
 /** Toggle the favourite flag (favourites are pinned to the top of lists). */

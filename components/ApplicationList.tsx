@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Ghost, Plus, Search } from "lucide-react";
-import type { DisplayStatus } from "@/lib/utils/status";
+import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { STATUS_ORDER, STATUS_TITLES, type DisplayStatus } from "@/lib/utils/status";
 import { AddApplicationModal } from "./AddApplicationModal";
 import { VerificationModal } from "./VerificationModal";
-import { ApplicationSection, SECTION_ORDER, SECTION_TITLES } from "./ApplicationSection";
+import { ApplicationSection } from "./ApplicationSection";
+import { ApplicationsEmptyState } from "./ApplicationsEmptyState";
+import { KanbanBoard } from "./KanbanBoard";
 import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
 import { Button } from "@/components/ui/button";
@@ -21,18 +23,27 @@ import {
 const ALL = "__all__";
 const COLLAPSED_KEY = "ghosted-collapsed-sections";
 
+export type ViewMode = "list" | "board";
+
 export function ApplicationList({
   status,
   onStatusChange,
+  view,
+  onViewChange,
   emailVerified,
   applicationCount,
   unverifiedAppLimit,
+  patienceDays,
 }: {
   status: "" | DisplayStatus;
   onStatusChange: (s: "" | DisplayStatus) => void;
+  /** Owned by Dashboard: it also decides the page width and the stat cards. */
+  view: ViewMode;
+  onViewChange: (view: ViewMode) => void;
   emailVerified: boolean;
   applicationCount: number;
   unverifiedAppLimit: number;
+  patienceDays: number;
 }) {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -97,7 +108,7 @@ export function ApplicationList({
   // The archived section only renders when explicitly filtered.
   const renderedStatuses = status
     ? [status]
-    : SECTION_ORDER.filter((s) => s !== "archived");
+    : STATUS_ORDER.filter((s) => s !== "archived");
 
   const allKnown = renderedStatuses.every(
     (s) => typeof totals[s] === "number",
@@ -121,28 +132,31 @@ export function ApplicationList({
           />
         </div>
         <div className="flex flex-1 flex-wrap items-center gap-2">
-          <Select
-            value={status || ALL}
-            onValueChange={(v) =>
-              onStatusChange(v === ALL ? "" : (v as DisplayStatus))
-            }
-          >
-            <SelectTrigger
-              className="min-w-0 flex-1 sm:w-[170px] sm:flex-none"
-              aria-label="Filter by status"
+          {/* No status filter on the board: the columns *are* the statuses. */}
+          {view === "list" && (
+            <Select
+              value={status || ALL}
+              onValueChange={(v) =>
+                onStatusChange(v === ALL ? "" : (v as DisplayStatus))
+              }
             >
-              <SelectValue placeholder="All statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL}>All statuses</SelectItem>
-              {SECTION_ORDER.map((s) => (
-                <SelectItem key={s} value={s} className="capitalize">
-                  <StatusIcon status={s} className="mr-2 h-4 w-4" />
-                  {SECTION_TITLES[s]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                className="min-w-0 flex-1 sm:w-[170px] sm:flex-none"
+                aria-label="Filter by status"
+              >
+                <SelectValue placeholder="All statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>All statuses</SelectItem>
+                {STATUS_ORDER.map((s) => (
+                  <SelectItem key={s} value={s} className="capitalize">
+                    <StatusIcon status={s} className="mr-2 h-4 w-4" />
+                    {STATUS_TITLES[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
             <SelectTrigger
               className="min-w-0 flex-1 sm:w-[160px] sm:flex-none"
@@ -156,6 +170,32 @@ export function ApplicationList({
               <SelectItem value="progress">Progress</SelectItem>
             </SelectContent>
           </Select>
+          <div
+            role="group"
+            aria-label="View"
+            className="flex items-center gap-0.5 rounded-md border p-0.5"
+          >
+            <Button
+              variant={view === "list" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              aria-pressed={view === "list"}
+              onClick={() => onViewChange("list")}
+            >
+              <List className="h-4 w-4" />
+              List
+            </Button>
+            <Button
+              variant={view === "board" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 px-2"
+              aria-pressed={view === "board"}
+              onClick={() => onViewChange("board")}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Board
+            </Button>
+          </div>
           <Button
             size="sm"
             data-testid="add-application-fab"
@@ -168,47 +208,40 @@ export function ApplicationList({
         </div>
       </div>
 
-      <div className="space-y-6" data-testid="application-sections">
-        {!allKnown && <GhostPulse />}
-        {renderedStatuses.map((s) => (
-          <ApplicationSection
-            key={s}
-            status={s}
-            search={debouncedSearch}
-            sort={sort}
-            // While a status filter is active the single visible section is
-            // forced open, and toggling is disabled so the persisted manual
-            // collapse state survives until the filter is cleared again.
-            collapsed={status ? false : collapsed.has(s)}
-            onToggle={status ? () => {} : () => toggleSection(s)}
-            onTotalChange={reportTotal}
-          />
-        ))}
-        {/* Sections stay mounted (even when empty) so their queries stay
-            alive and mutations can surface new applications. */}
-        {allEmpty &&
-          (hasActiveFilters ? (
-            <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-              No applications match your filters.
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center">
-              <Ghost className="h-14 w-14 text-violet-300" aria-hidden />
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold">No applications yet</h2>
-                <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                  Ghosted is here to keep every application, interview and
-                  offer in one place - so nothing ever gets ghosted. Add your
-                  first one and start the hunt! 🎯
-                </p>
-              </div>
-              <Button onClick={handleAddClick}>
-                <Plus />
-                Add your first application
-              </Button>
-            </div>
+      {view === "board" ? (
+        <KanbanBoard
+          search={debouncedSearch}
+          sort={sort}
+          onAdd={handleAddClick}
+          patienceDays={patienceDays}
+        />
+      ) : (
+        <div className="space-y-6" data-testid="application-sections">
+          {!allKnown && <GhostPulse />}
+          {renderedStatuses.map((s) => (
+            <ApplicationSection
+              key={s}
+              status={s}
+              search={debouncedSearch}
+              sort={sort}
+              // While a status filter is active the single visible section is
+              // forced open, and toggling is disabled so the persisted manual
+              // collapse state survives until the filter is cleared again.
+              collapsed={status ? false : collapsed.has(s)}
+              onToggle={status ? () => {} : () => toggleSection(s)}
+              onTotalChange={reportTotal}
+            />
           ))}
-      </div>
+          {/* Sections stay mounted (even when empty) so their queries stay
+              alive and mutations can surface new applications. */}
+          {allEmpty && (
+            <ApplicationsEmptyState
+              filtered={hasActiveFilters}
+              onAdd={handleAddClick}
+            />
+          )}
+        </div>
+      )}
 
       <AddApplicationModal open={addOpen} onOpenChange={setAddOpen} />
       <VerificationModal

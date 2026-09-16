@@ -7,17 +7,20 @@ export interface ProgressInput {
 }
 
 /**
- * Progress calculation per spec:
- * - 'offer' or 'rejected' → 100%
- * - otherwise: round(doneCount / totalSteps * 100), where doneCount is the
- *   number of 'done' milestones capped at totalSteps.
+ * Progress calculation:
+ * - 'offer' → 100%: the application succeeded, so the bar is full;
+ * - everything else, including the terminal 'rejected' and 'archived', reports
+ *   the state actually reached: round(doneCount / totalSteps * 100), where
+ *   doneCount is the number of 'done' milestones capped at totalSteps. A
+ *   rejection is not progress - it should show how far the application got, the
+ *   same way an archived one does.
  */
 export function calcProgress({
   status,
   milestones,
   totalSteps,
 }: ProgressInput): number {
-  if (status === "offer" || status === "rejected") return 100;
+  if (status === "offer") return 100;
 
   const safeTotal = totalSteps > 0 ? totalSteps : 1;
   const doneCount = Math.min(

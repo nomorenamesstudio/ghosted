@@ -7,6 +7,10 @@ import {
   BadgeCheck,
   Database,
   Download,
+  FaceAngry,
+  FaceGrinning,
+  FaceSlightlySmiling,
+  Hourglass,
   KeyRound,
   Mail,
   Moon,
@@ -17,6 +21,12 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { PatienceLevel } from "@/lib/db/schema";
+import {
+  PATIENCE_LABELS,
+  PATIENCE_LEVELS,
+} from "@/lib/utils/status";
 import { useTheme } from "@/components/theme-provider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
@@ -37,6 +47,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Msg = { type: "ok" | "error"; text: string } | null;
 
@@ -56,14 +73,26 @@ function Message({ state }: { state: Msg }) {
   );
 }
 
+/**
+ * One face per patience level - the friendlier the face, the longer the app
+ * waits before it is called ghosted.
+ */
+const PATIENCE_ICONS: Record<PatienceLevel, LucideIcon> = {
+  generous: FaceGrinning,
+  realistic: FaceSlightlySmiling,
+  impatient: FaceAngry,
+};
+
 export function SettingsForm({
   name: initialName,
   email: initialEmail,
   emailVerified,
+  patienceLevel: initialPatience,
 }: {
   name: string;
   email: string;
   emailVerified: boolean;
+  patienceLevel: PatienceLevel;
 }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -94,6 +123,38 @@ export function SettingsForm({
 
   // Verification resend.
   const [resendBusy, setResendBusy] = useState(false);
+
+  // Patience level — a single choice, so it saves on change (like the theme
+  // switch) rather than needing a Save button.
+  const [patience, setPatience] = useState<PatienceLevel>(initialPatience);
+  const [patienceBusy, setPatienceBusy] = useState(false);
+  const [patienceMsg, setPatienceMsg] = useState<Msg>(null);
+
+  async function savePatience(next: PatienceLevel) {
+    const previous = patience;
+    setPatience(next);
+    setPatienceBusy(true);
+    setPatienceMsg(null);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ patienceLevel: next }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Failed to save patience level");
+      }
+      // The dashboard derives ghosted from this, so drop its cached data.
+      router.refresh();
+      setPatienceMsg({ type: "ok", text: "Patience level updated." });
+    } catch (err) {
+      setPatience(previous);
+      setPatienceMsg({ type: "error", text: (err as Error).message });
+    } finally {
+      setPatienceBusy(false);
+    }
+  }
 
   async function resendVerification() {
     setResendBusy(true);
@@ -255,6 +316,45 @@ export function SettingsForm({
               ].join(" ")}
             />
           </button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Hourglass className="h-4 w-4" />
+            Patience level
+          </CardTitle>
+          <CardDescription>
+            Sets the threshold for the automatic ghosted status.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Select
+            value={patience}
+            onValueChange={(v) => savePatience(v as PatienceLevel)}
+            disabled={patienceBusy}
+          >
+            <SelectTrigger
+              id="settings-patience"
+              className="w-full sm:w-[240px]"
+              aria-label="Patience level"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PATIENCE_LEVELS.map((level) => {
+                const Icon = PATIENCE_ICONS[level];
+                return (
+                  <SelectItem key={level} value={level}>
+                    <Icon className="mr-2 h-4 w-4" aria-hidden />
+                    {PATIENCE_LABELS[level]}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+          <Message state={patienceMsg} />
         </CardContent>
       </Card>
 

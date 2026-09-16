@@ -3,7 +3,16 @@ import {
   deriveStatus,
   displayStatusOf,
   isGhosted,
+  isStepBack,
+  stepBackKind,
   MANUAL_STATUSES,
+  BOARD_ORDER,
+  STATUS_ORDER,
+  PATIENCE_DAYS,
+  PATIENCE_LABELS,
+  PATIENCE_LEVELS,
+  DEFAULT_PATIENCE_LEVEL,
+  ghostedAfterDays,
 } from "@/lib/utils/status";
 
 const m = (stepOrder: number, status: "pending" | "done" | "skipped") => ({
@@ -114,8 +123,9 @@ describe("isGhosted / displayStatusOf", () => {
   });
 
   it("false just under the threshold", () => {
-    // 14 days minus one minute → recent enough.
-    const justUnder = new Date(now - 14 * 24 * 60 * 60 * 1000 + 60_000);
+    // One minute inside the default threshold (realistic, 10 days).
+    const days = PATIENCE_DAYS[DEFAULT_PATIENCE_LEVEL];
+    const justUnder = new Date(now - days * 24 * 60 * 60 * 1000 + 60_000);
     expect(isGhosted("applied", justUnder)).toBe(false);
   });
 
@@ -137,5 +147,113 @@ describe("isGhosted / displayStatusOf", () => {
 describe("MANUAL_STATUSES", () => {
   it("contains rejected, archived and offer (manual overrides)", () => {
     expect(MANUAL_STATUSES).toEqual(["rejected", "archived", "offer"]);
+  });
+});
+
+describe("column orders", () => {
+  it("runs the board in pipeline order and the list by importance", () => {
+    expect(BOARD_ORDER).toEqual([
+      "applied",
+      "interviewing",
+      "offer",
+      "ghosted",
+      "rejected",
+      "archived",
+    ]);
+    // The list keeps offers at the top - same statuses, different reading.
+    expect(STATUS_ORDER[0]).toBe("offer");
+    expect([...STATUS_ORDER].sort()).toEqual([...BOARD_ORDER].sort());
+  });
+});
+
+describe("isStepBack", () => {
+  it("spots a move against the pipeline", () => {
+    expect(isStepBack("offer", "interviewing")).toBe(true);
+    expect(isStepBack("offer", "applied")).toBe(true);
+    expect(isStepBack("interviewing", "applied")).toBe(true);
+  });
+
+  it("lets ordinary progress through", () => {
+    expect(isStepBack("applied", "interviewing")).toBe(false);
+    expect(isStepBack("applied", "offer")).toBe(false);
+    expect(isStepBack("interviewing", "offer")).toBe(false);
+    expect(isStepBack("interviewing", "interviewing")).toBe(false);
+  });
+
+  it("does not treat leaving an outcome as a step back", () => {
+    // Un-ghosting or reopening an archived application is progress, not a
+    // regression - no extra step should be demanded for it.
+    expect(isStepBack("ghosted", "applied")).toBe(false);
+    expect(isStepBack("archived", "interviewing")).toBe(false);
+    expect(isStepBack("rejected", "offer")).toBe(false);
+  });
+
+  it("does not treat filing away as a step back", () => {
+    expect(isStepBack("offer", "rejected")).toBe(false);
+    expect(isStepBack("offer", "archived")).toBe(false);
+  });
+});
+
+describe("stepBackKind", () => {
+  it("asks to add a step when coming back from Offers", () => {
+    expect(stepBackKind("offer", "interviewing")).toBe("add-step");
+    expect(stepBackKind("offer", "applied")).toBe("add-step");
+  });
+
+  it("asks to reset the timeline when an application starts over", () => {
+    expect(stepBackKind("interviewing", "applied")).toBe("reset");
+  });
+
+  it("asks nothing for progress, outcomes or the same status", () => {
+    expect(stepBackKind("applied", "interviewing")).toBeNull();
+    expect(stepBackKind("applied", "offer")).toBeNull();
+    expect(stepBackKind("interviewing", "offer")).toBeNull();
+    expect(stepBackKind("interviewing", "interviewing")).toBeNull();
+    expect(stepBackKind("offer", "rejected")).toBeNull();
+    expect(stepBackKind("offer", "archived")).toBeNull();
+    expect(stepBackKind("ghosted", "applied")).toBeNull();
+    expect(stepBackKind("archived", "interviewing")).toBeNull();
+    expect(stepBackKind("rejected", "offer")).toBeNull();
+  });
+});
+
+describe("patience level", () => {
+  it("maps each level to its threshold", () => {
+    expect(PATIENCE_DAYS.generous).toBe(14);
+    expect(PATIENCE_DAYS.realistic).toBe(10);
+    expect(PATIENCE_DAYS.impatient).toBe(7);
+    expect(ghostedAfterDays("generous")).toBe(14);
+    expect(ghostedAfterDays("realistic")).toBe(10);
+    expect(ghostedAfterDays("impatient")).toBe(7);
+  });
+
+  it("defaults to realistic when nothing is set", () => {
+    expect(DEFAULT_PATIENCE_LEVEL).toBe("realistic");
+    expect(ghostedAfterDays(null)).toBe(10);
+    expect(ghostedAfterDays(undefined)).toBe(10);
+    expect(ghostedAfterDays()).toBe(10);
+  });
+
+  it("labels every level, with its day count", () => {
+    for (const level of PATIENCE_LEVELS) {
+      expect(PATIENCE_LABELS[level]).toContain(String(PATIENCE_DAYS[level]));
+    }
+  });
+
+  it("moves the ghosted line with the level", () => {
+    const nineDaysAgo = new Date(Date.now() - 9 * 24 * 60 * 60 * 1000);
+    const twelveDaysAgo = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+
+    // 9 days old: only the impatient user has given up on it.
+    expect(isGhosted("applied", nineDaysAgo, ghostedAfterDays("impatient"))).toBe(true);
+    expect(isGhosted("applied", nineDaysAgo, ghostedAfterDays("realistic"))).toBe(false);
+    expect(isGhosted("applied", nineDaysAgo, ghostedAfterDays("generous"))).toBe(false);
+
+    // 12 days old: generous still waits, realistic and impatient do not.
+    expect(isGhosted("applied", twelveDaysAgo, ghostedAfterDays("generous"))).toBe(false);
+    expect(isGhosted("applied", twelveDaysAgo, ghostedAfterDays("realistic"))).toBe(true);
+    expect(
+      displayStatusOf("interviewing", twelveDaysAgo, ghostedAfterDays("impatient")),
+    ).toBe("ghosted");
   });
 });

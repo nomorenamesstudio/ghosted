@@ -29,6 +29,19 @@ export const milestoneStatusEnum = pgEnum("milestone_status", [
   "skipped",
 ]);
 
+/** Outcome of a company-logo lookup: `ok` holds bytes, `none` caches a miss. */
+export const logoStatusEnum = pgEnum("logo_status", ["ok", "none"]);
+
+/**
+ * How long a silent application waits before it is shown as ghosted.
+ * `generous` 14 days, `realistic` 10, `impatient` 7 - see lib/utils/status.ts.
+ */
+export const patienceLevelEnum = pgEnum("patience_level", [
+  "generous",
+  "realistic",
+  "impatient",
+]);
+
 export const users = pgTable(
   "users",
   {
@@ -41,6 +54,10 @@ export const users = pgTable(
     providerId: text("provider_id"),
     emailVerified: boolean("email_verified").notNull().default(false),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /** Threshold for the automatic "ghosted" status; every user has one. */
+    patienceLevel: patienceLevelEnum("patience_level")
+      .notNull()
+      .default("realistic"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -58,6 +75,13 @@ export const applications = pgTable(
     company: text("company").notNull(),
     role: text("role").notNull(),
     url: text("url"),
+    /**
+     * Employer's own domain, normalised on write (`stripe.com`), and only used
+     * to resolve the company logo. It is the reliable answer when the job URL
+     * is a board link, and it overrides every guess (see
+     * lib/utils/company-domain.ts).
+     */
+    companyWebsite: text("company_website"),
     contactName: text("contact_name"),
     contactEmail: text("contact_email"),
     contactPhone: text("contact_phone"),
@@ -99,6 +123,36 @@ export const milestones = pgTable(
     index("milestones_application_id_idx").on(t.applicationId),
     index("milestones_app_step_idx").on(t.applicationId, t.stepOrder),
   ],
+);
+
+/**
+ * Company logo cache, keyed by registrable domain rather than by application:
+ * two applications at the same company share one row, and the row survives
+ * application edits. Rows are written lazily on first view (see
+ * lib/services/company-logos.ts); a `none` row is a cached negative so a
+ * company without a favicon is not re-fetched on every render.
+ *
+ * Bytes live here (small, 1-15KB favicons) instead of object storage: they
+ * then inherit the normal Postgres backups and add no second dependency to
+ * the render path. Drizzle has no `bytea` column type, so the payload is
+ * base64 text - the 33% overhead is irrelevant at this size.
+ */
+export const companyLogos = pgTable(
+  "company_logos",
+  {
+    domain: text("domain").primaryKey(),
+    status: logoStatusEnum("status").notNull(),
+    /** Where the bytes came from: `google` or `duckduckgo`. */
+    source: text("source"),
+    contentType: text("content_type"),
+    bytesBase64: text("bytes_base64"),
+    byteSize: integer("byte_size"),
+    fetchedAt: timestamp("fetched_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    attempts: integer("attempts").notNull().default(1),
+  },
+  (t) => [index("company_logos_status_idx").on(t.status)],
 );
 
 export const passwordResetTokens = pgTable(
@@ -184,4 +238,7 @@ export type Milestone = typeof milestones.$inferSelect;
 export type NewMilestone = typeof milestones.$inferInsert;
 export type ApplicationStatus = (typeof applicationStatusEnum.enumValues)[number];
 export type MilestoneStatus = (typeof milestoneStatusEnum.enumValues)[number];
+export type PatienceLevel = (typeof patienceLevelEnum.enumValues)[number];
 export type Provider = (typeof providerEnum.enumValues)[number];
+export type CompanyLogo = typeof companyLogos.$inferSelect;
+export type LogoStatus = (typeof logoStatusEnum.enumValues)[number];

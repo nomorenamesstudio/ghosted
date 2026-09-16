@@ -9,6 +9,7 @@ import {
   registerSchema,
   resetPasswordSchema,
   listApplicationsQuerySchema,
+  updateProfileSchema,
 } from "@/lib/utils/validation";
 
 describe("createApplicationSchema", () => {
@@ -19,6 +20,46 @@ describe("createApplicationSchema", () => {
       url: "https://acme.example/jobs/1",
     });
     expect(r.success).toBe(true);
+  });
+
+  it("normalises the company website to a domain", () => {
+    const bare = createApplicationSchema.safeParse({
+      company: "Acme",
+      role: "Engineer",
+      companyWebsite: "stripe.com",
+    });
+    expect(bare.success && bare.data.companyWebsite).toBe("stripe.com");
+
+    const full = createApplicationSchema.safeParse({
+      company: "Acme",
+      role: "Engineer",
+      companyWebsite: "https://www.stripe.com/jobs?team=infra",
+    });
+    expect(full.success && full.data.companyWebsite).toBe("stripe.com");
+
+    const cleared = createApplicationSchema.safeParse({
+      company: "Acme",
+      role: "Engineer",
+      companyWebsite: "",
+    });
+    expect(cleared.success && cleared.data.companyWebsite).toBeNull();
+
+    const absent = createApplicationSchema.safeParse({
+      company: "Acme",
+      role: "Engineer",
+    });
+    expect(absent.success && absent.data.companyWebsite).toBeUndefined();
+  });
+
+  it("rejects a company website that is not a domain", () => {
+    for (const companyWebsite of ["not a domain", "localhost", "10.0.0.5", "acme"]) {
+      const r = createApplicationSchema.safeParse({
+        company: "Acme",
+        role: "Engineer",
+        companyWebsite,
+      });
+      expect(r.success, companyWebsite).toBe(false);
+    }
   });
 
   it("rejects missing company/role", () => {
@@ -226,5 +267,28 @@ describe("listApplicationsQuerySchema", () => {
     expect(listApplicationsQuerySchema.safeParse({ status: "nope" }).success).toBe(false);
     expect(listApplicationsQuerySchema.safeParse({ limit: "500" }).success).toBe(false);
     expect(listApplicationsQuerySchema.safeParse({ page: "0" }).success).toBe(false);
+  });
+});
+
+describe("updateProfileSchema", () => {
+  it("accepts a patience level on its own", () => {
+    const r = updateProfileSchema.safeParse({ patienceLevel: "impatient" });
+    expect(r.success && r.data.patienceLevel).toBe("impatient");
+    expect(
+      updateProfileSchema.safeParse({ patienceLevel: "generous" }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an unknown level", () => {
+    expect(
+      updateProfileSchema.safeParse({ patienceLevel: "whatever" }).success,
+    ).toBe(false);
+    expect(updateProfileSchema.safeParse({ patienceLevel: 7 }).success).toBe(
+      false,
+    );
+  });
+
+  it("still requires something to update", () => {
+    expect(updateProfileSchema.safeParse({}).success).toBe(false);
   });
 });

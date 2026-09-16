@@ -31,6 +31,7 @@ export function AddApplicationModal({
   const [company, setCompany] = useState("");
   const [role, setRole] = useState("");
   const [url, setUrl] = useState("");
+  const [companyWebsite, setCompanyWebsite] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +43,7 @@ export function AddApplicationModal({
       setCompany("");
       setRole("");
       setUrl("");
+      setCompanyWebsite("");
       setNotes("");
       setError(null);
       onOpenChange(false);
@@ -60,6 +62,7 @@ export function AddApplicationModal({
       company,
       role,
       url: url || null,
+      companyWebsite: companyWebsite || null,
       notes: notes || null,
     });
   }
@@ -101,6 +104,17 @@ export function AddApplicationModal({
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="add-company-website">Company website</Label>
+            <Input
+              id="add-company-website"
+              inputMode="url"
+              autoComplete="url"
+              value={companyWebsite}
+              onChange={(e) => setCompanyWebsite(e.target.value)}
               placeholder="https://…"
             />
           </div>
