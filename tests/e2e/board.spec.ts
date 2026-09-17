@@ -60,6 +60,34 @@ test("a card changes column from its move menu", async ({ page }) => {
   await expect(applied.getByText("Acme Corp")).toHaveCount(0);
 });
 
+test("the controls sit in the header on a wide screen, not in a row", async ({
+  page,
+}) => {
+  const email = uniqueEmail("board-header");
+  await registerUser(page, email);
+  await createAppViaApi(page, "Acme Corp", "Engineer");
+
+  // Playwright's default viewport is 1280px, which is exactly the xl
+  // breakpoint the header placement starts at.
+  await page.goto("/app");
+  const header = page.getByTestId("header-slot");
+  await expect(header.getByPlaceholder("Search company or role…")).toBeVisible();
+  await expect(header.getByLabel("Sort applications")).toBeVisible();
+  await expect(header.getByLabel("View")).toBeVisible();
+  await expect(header.getByTestId("add-application-fab")).toBeVisible();
+
+  // List view keeps them in their own row, at any width.
+  await page
+    .locator('[role="group"][aria-label="View"]')
+    .getByRole("button", { name: "List" })
+    .click();
+  await expect(page.getByTestId("application-sections")).toBeVisible();
+  await expect(
+    page.getByTestId("header-slot").getByPlaceholder("Search company or role…"),
+  ).toHaveCount(0);
+  await expect(page.getByPlaceholder("Search company or role…")).toBeVisible();
+});
+
 test("the list view is still reachable and remembered", async ({ page }) => {
   const email = uniqueEmail("board-toggle");
   await registerUser(page, email);

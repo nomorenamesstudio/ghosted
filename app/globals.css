@@ -3,8 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light mode: the page is a soft grey so white cards and tinted surfaces
+     read as surfaces. A pure-white page made the columns, hairlines and the
+     paler status tints nearly invisible. */
   :root {
-    --background: 0 0% 100%;
+    --background: 240 8% 92%;
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
@@ -12,17 +15,17 @@
     --popover-foreground: 240 10% 3.9%;
     --primary: 262 71% 52%;
     --primary-foreground: 0 0% 98%;
-    --secondary: 240 4.8% 95.9%;
+    --secondary: 240 6% 88%;
     --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 5% 38%;
-    --accent: 240 4.8% 95.9%;
+    --muted: 240 6% 88%;
+    --muted-foreground: 240 5% 33%;
+    --accent: 240 6% 88%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 72% 42%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 10% 3.9%;
+    --border: 240 6% 78%;
+    --input: 240 6% 78%;
+    --ring: 262 71% 52%;
     --radius: 0.5rem;
   }
 

@@ -4,6 +4,34 @@ All notable changes, by date and type.
 
 ## 2026-09-17
 
+### Changed
+- **Board controls live in the header on a wide screen** (xl, 1280px+): search,
+  sort, the List/Board switch and "Add application" portal into a right-aligned
+  slot beside the account menu, so the header is sticky while the columns get
+  the full width beneath it. Below that width — and in list view — they keep
+  their own row, and nothing changes for list view at any width.
+
+### Fixed
+- **Light mode is legible now.** The page was pure white and so were the cards,
+  columns and borders, which left the paler status tints and the progress tracks
+  nearly invisible on a bright screen. The page is off-white (`--background`
+  95%), columns and cards are white on top of it, hairlines went from 90% to 80%
+  lightness, `--muted` surfaces to 88% and `--muted-foreground` text to 33%; the
+  status tints moved from `*-50/70` to `*-100` and the progress tracks from
+  `*-200/60` to `*-300`. Dark mode is untouched. Verified numerically (border
+  vs page 1.32 → 1.46:1, progress track vs card 1.12 → 1.45:1, meta text 6.96:1)
+  because axe only audits text contrast, not surfaces.
+- The **List / Board switch shows which view is active**. It was built from
+  `Button variant="secondary"`, which sits within ~1.1:1 of its own background
+  in both themes — the selected side looked unselected. It is now a segmented
+  control (`components/ViewToggle.tsx`): a raised card-coloured chip with a
+  shadow on a muted track.
+- The footer is as wide as the header in board view (it carries the same
+  `app-shell` class now, so the full-width rule reaches it).
+- The empty kanban column's "Drop an application here" prompt sits directly
+  under the column header instead of vertically centred — in a long column it
+  used to float in the middle of nothing.
+
 ### Added
 - **Patience level** setting (Settings → between Appearance and Profile): how
   long an application may sit silent before it is shown as ghosted — Generous

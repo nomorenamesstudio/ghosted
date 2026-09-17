@@ -13,9 +13,19 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="app-shell mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+      {/* Same surface as the board columns (bg-card / dark:bg-muted/20): the
+          header and the columns read as one white frame around the grey page. */}
+      <header className="sticky top-0 z-40 border-b bg-card backdrop-blur dark:bg-muted/20">
+        <div className="app-shell mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
           <AppBrand />
+          {/* On a wide screen the board portals its search, sort, view switch and
+              "Add application" button in here, right-aligned beside the account
+              menu, so the board gets the full width under the header. */}
+          <div
+            id="dashboard-header-slot"
+            data-testid="header-slot"
+            className="ml-auto hidden items-center gap-2 xl:flex"
+          />
           <UserMenu
             name={session.user.name ?? ""}
             email={session.user.email ?? ""}

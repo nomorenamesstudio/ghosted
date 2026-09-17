@@ -29,12 +29,12 @@ const STATUS_VARIANT: Record<
 
 /** Very light per-status background tint on the cards. */
 const STATUS_TINT: Partial<Record<DisplayStatus, string>> = {
-  applied: "bg-sky-50/70 dark:bg-sky-950/20",
-  interviewing: "bg-amber-50/70 dark:bg-amber-950/20",
-  offer: "bg-emerald-50/70 dark:bg-emerald-950/20",
-  rejected: "bg-red-50/70 dark:bg-red-950/20",
-  ghosted: "bg-violet-50/70 dark:bg-violet-950/20",
-  archived: "bg-muted/50 dark:bg-muted/20",
+  applied: "bg-sky-100 dark:bg-sky-950/20",
+  interviewing: "bg-amber-100 dark:bg-amber-950/20",
+  offer: "bg-emerald-100 dark:bg-emerald-950/20",
+  rejected: "bg-red-100 dark:bg-red-950/20",
+  ghosted: "bg-violet-100 dark:bg-violet-950/20",
+  archived: "bg-muted/60 dark:bg-muted/20",
 };
 
 /** Muted border matching each status color (pairs with the tint). */
@@ -59,23 +59,23 @@ export const STATUS_PROGRESS: Record<
   { track: string; fill: string }
 > = {
   applied: {
-    track: "bg-sky-200/60 dark:bg-sky-900/50",
+    track: "bg-sky-300 dark:bg-sky-900/50",
     fill: "bg-sky-500 dark:bg-sky-400",
   },
   interviewing: {
-    track: "bg-amber-200/60 dark:bg-amber-900/50",
+    track: "bg-amber-300 dark:bg-amber-900/50",
     fill: "bg-amber-500 dark:bg-amber-400",
   },
   offer: {
-    track: "bg-emerald-200/60 dark:bg-emerald-900/50",
+    track: "bg-emerald-300 dark:bg-emerald-900/50",
     fill: "bg-emerald-500 dark:bg-emerald-400",
   },
   rejected: {
-    track: "bg-red-200/60 dark:bg-red-900/50",
+    track: "bg-red-300 dark:bg-red-900/50",
     fill: "bg-red-500 dark:bg-red-400",
   },
   ghosted: {
-    track: "bg-violet-200/60 dark:bg-violet-900/50",
+    track: "bg-violet-300 dark:bg-violet-900/50",
     fill: "bg-violet-500 dark:bg-violet-400",
   },
   archived: {

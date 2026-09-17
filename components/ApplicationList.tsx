@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Plus, Search } from "lucide-react";
 import { STATUS_ORDER, STATUS_TITLES, type DisplayStatus } from "@/lib/utils/status";
 import { AddApplicationModal } from "./AddApplicationModal";
 import { VerificationModal } from "./VerificationModal";
 import { ApplicationSection } from "./ApplicationSection";
+import { ViewToggle } from "./ViewToggle";
 import { ApplicationsEmptyState } from "./ApplicationsEmptyState";
 import { KanbanBoard } from "./KanbanBoard";
 import { GhostPulse } from "./loading";
@@ -24,6 +26,11 @@ const ALL = "__all__";
 const COLLAPSED_KEY = "ghosted-collapsed-sections";
 
 export type ViewMode = "list" | "board";
+
+/** Hairline between the control groups when they live in the header. */
+function Divider() {
+  return <span aria-hidden className="h-6 w-px shrink-0 bg-border" />;
+}
 
 export function ApplicationList({
   status,
@@ -117,10 +124,44 @@ export function ApplicationList({
     allKnown && renderedStatuses.every((s) => (totals[s] ?? 0) === 0);
   const hasActiveFilters = Boolean(debouncedSearch || status);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <div className="relative sm:max-w-xs sm:flex-1">
+  // Board controls move into the app header on a wide screen: they are then
+  // always in reach (the header is sticky) and the columns get the whole width
+  // below it. Below the breakpoint - and in list view - they keep their own row.
+  const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
+  const [isWideScreen, setIsWideScreen] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1280px)");
+    const update = () => setIsWideScreen(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    setHeaderSlot(document.getElementById("dashboard-header-slot"));
+  }, []);
+
+  const controlsInHeader =
+    view === "board" && isWideScreen && headerSlot !== null;
+
+  const toolbar = (
+      <div
+        className={
+          // One branch or the other, never merged: `flex-col` and `flex-row`
+          // both present let CSS order decide, which stacked the header row.
+          controlsInHeader
+            ? "flex items-center gap-2"
+            : "flex flex-col gap-2 sm:flex-row sm:items-center"
+        }
+      >
+        <div
+          className={
+            controlsInHeader
+              ? "relative w-[300px] flex-none"
+              : "relative sm:max-w-xs sm:flex-1"
+          }
+        >
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
@@ -170,43 +211,31 @@ export function ApplicationList({
               <SelectItem value="progress">Progress</SelectItem>
             </SelectContent>
           </Select>
-          <div
-            role="group"
-            aria-label="View"
-            className="flex items-center gap-0.5 rounded-md border p-0.5"
-          >
-            <Button
-              variant={view === "list" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 px-2"
-              aria-pressed={view === "list"}
-              onClick={() => onViewChange("list")}
-            >
-              <List className="h-4 w-4" />
-              List
-            </Button>
-            <Button
-              variant={view === "board" ? "secondary" : "ghost"}
-              size="sm"
-              className="h-7 px-2"
-              aria-pressed={view === "board"}
-              onClick={() => onViewChange("board")}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Board
-            </Button>
-          </div>
+          <ViewToggle view={view} onChange={onViewChange} />
+          {/* Header placement groups the controls: search/sort/view, then the
+              action, then the account menu — separated by hairlines. */}
+          {controlsInHeader && <Divider />}
           <Button
             size="sm"
             data-testid="add-application-fab"
-            className="w-full sm:ml-auto sm:w-auto"
+            className={
+              controlsInHeader
+                ? "w-auto"
+                : "w-full sm:ml-auto sm:w-auto"
+            }
             onClick={handleAddClick}
           >
             <Plus />
             Add application
           </Button>
+          {controlsInHeader && <Divider />}
         </div>
       </div>
+  );
+
+  return (
+    <div className="space-y-4">
+      {controlsInHeader ? createPortal(toolbar, headerSlot) : toolbar}
 
       {view === "board" ? (
         <KanbanBoard

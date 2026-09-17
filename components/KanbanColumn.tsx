@@ -89,10 +89,12 @@ export function KanbanColumn({
       }}
       onDrop={handleDrop}
       className={cn(
-        // 300px is a floor, not a fixed width: with room to spare the columns
-        // share it evenly and fill the window, and when there is not enough
-        // (six of them on a laptop) the board scrolls instead of squashing.
-        "flex min-w-[300px] flex-1 snap-start flex-col rounded-xl border bg-muted/20 transition-colors",
+        // White in light mode (surfaces read against the grey page), with the
+        // same subtle lift over the page in dark mode. 300px is a floor, not a
+        // fixed width: with room to spare the columns share it evenly and fill
+        // the window, and when there is not enough (six of them on a laptop)
+        // the board scrolls instead of squashing.
+        "flex min-w-[300px] flex-1 snap-start flex-col rounded-xl border bg-card transition-colors dark:bg-muted/20",
         over && droppable && "border-violet-400/70 bg-violet-100/40 dark:bg-violet-950/40",
       )}
     >
@@ -120,7 +122,9 @@ export function KanbanColumn({
         ) : items.length === 0 ? (
           <p
             className={cn(
-              "m-auto rounded-lg border border-dashed px-4 py-6 text-center text-xs text-muted-foreground",
+              // Top of the column, not centred: a 10-card column elsewhere used
+              // to leave this floating in the middle of nothing.
+              "rounded-lg border border-dashed px-4 py-6 text-center text-xs text-muted-foreground",
               over && droppable && "border-violet-400/70 text-foreground",
             )}
           >
