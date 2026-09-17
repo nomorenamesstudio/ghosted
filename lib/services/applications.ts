@@ -379,7 +379,12 @@ export async function updateApplication(
     }
   }
 
-  const values: Partial<Application> = { updatedAt: new Date() };
+  // `updated_at` is what the ghosted clock and the "Updated …" line read, so it
+  // only moves when the application's *state* does. Editing notes, the company
+  // website or contact details is bookkeeping, not progress: it must not
+  // un-ghost an application or make it look freshly touched.
+  const values: Partial<Application> = {};
+  if (input.status !== undefined) values.updatedAt = new Date();
   if (input.company !== undefined)
     values.company = sanitizeText(input.company) ?? input.company;
   if (input.role !== undefined)

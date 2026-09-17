@@ -30,18 +30,28 @@ export function CompanyAvatar({
   applicationId,
   company,
   version,
+  cacheKey,
   size = "sm",
   className,
 }: {
   applicationId: string;
   company: string;
-  /** Application `updatedAt` - bumps the URL so an edit cannot serve a stale logo. */
+  /** Application `updatedAt` - bumps the URL so a state change cannot serve a stale logo. */
   version?: string | number | Date | null;
+  /**
+   * The fields the lookup itself reads (job URL and company website). Editing
+   * one of those no longer moves `updatedAt`, so the cached image would go
+   * stale without them in the URL.
+   */
+  cacheKey?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
 }) {
   const stamp = version ? new Date(version).getTime() : null;
-  const src = `/logos/${applicationId}${stamp ? `?v=${stamp}` : ""}`;
+  const params = new URLSearchParams();
+  if (stamp) params.set("v", String(stamp));
+  if (cacheKey) params.set("c", cacheKey);
+  const src = `/logos/${applicationId}${params.size ? `?${params}` : ""}`;
   const initial = company.trim().charAt(0).toUpperCase() || "?";
   const s = SIZES[size];
 

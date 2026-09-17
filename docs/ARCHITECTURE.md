@@ -75,7 +75,14 @@ middleware.ts             # Cache-Control: no-store on all /api/*
    progress unless the status is a manual terminal state (`rejected`,
    `archived`, `offer`). All milestones done -> offer; 2+ done ->
    interviewing; otherwise applied.
-5. **Ghosted**: an application in `applied|interviewing` untouched for longer
+5. **`updated_at` moves only when the state does**: status changes (including
+   archive and reopen) and timeline changes (add/edit/delete a milestone, reset
+   the timeline) refresh it; descriptive edits — company, role, job URL, company
+   website, contacts, notes — deliberately do not, so bookkeeping cannot fake
+   progress. It drives the ghosted clock, the "Updated …" line and the
+   last-updated sort, and because it no longer moves on a website edit, that
+   field is part of the company-logo cache key instead.
+6. **Ghosted**: an application in `applied|interviewing` untouched for longer
    than the user's **patience level** (Settings: generous 14 / realistic 10 /
    impatient 7 days, default realistic) is shown as ghosted - a display
    overlay, not a stored status. `GHOSTED_AFTER_DAYS` remains only as the

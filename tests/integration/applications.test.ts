@@ -232,7 +232,7 @@ describe("GET /api/applications", () => {
     const user = await createUser();
     const { app } = await createApp(user.id, { company: "StaleCo" });
 
-    // Simulate 15 days without updates (threshold is 14 days).
+    // Simulate 15 days without updates (default threshold is 10 days).
     const old = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
     await db
       .update(applications)
@@ -256,10 +256,27 @@ describe("GET /api/applications", () => {
     const a = await GET(new Request(`${base}?status=applied&page=1`));
     expect((await readJson(a)).data as unknown[]).toHaveLength(0);
 
-    // Any edit revives it (updated_at refreshes → no longer ghosted).
+    // Bookkeeping edits do not revive it: notes, contacts and the company
+    // website are not progress, so updated_at must not move.
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
-      jsonRequest(`${base}/${app.id}`, "PATCH", { notes: "revived" }),
+      jsonRequest(`${base}/${app.id}`, "PATCH", {
+        notes: "note to self",
+        companyWebsite: "staleco.com",
+      }),
+      { params: { id: app.id } },
+    );
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const untouched = await GET(new Request(`${base}?page=1`));
+    expect(
+      ((await readJson(untouched)).data as Array<Record<string, unknown>>)[0]
+        .displayStatus,
+    ).toBe("ghosted");
+
+    // Moving it along the pipeline does revive it.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    await PATCH_APP(
+      jsonRequest(`${base}/${app.id}`, "PATCH", { status: "interviewing" }),
       { params: { id: app.id } },
     );
     authMock.mockResolvedValueOnce(mockSession(user.id));
@@ -267,7 +284,7 @@ describe("GET /api/applications", () => {
     const afterData = (await readJson(after)).data as Array<
       Record<string, unknown>
     >;
-    expect(afterData[0].displayStatus).toBe("applied");
+    expect(afterData[0].displayStatus).toBe("interviewing");
   });
 });
 
@@ -560,6 +577,57 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect(await listed("ghosted")).toBe(0);
     expect(await listed("applied")).toBe(1);
     expect(await ghostedCount()).toBe(0);
+  });
+
+  it("a descriptive edit is not an update", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    // Twelve days of silence: ghosted under the default (realistic, 10 days).
+    const stale = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+    await db
+      .update(applications)
+      .set({ updatedAt: stale })
+      .where(eq(applications.id, app.id));
+
+    // Adding a company website (or notes, contacts, the job URL) is bookkeeping:
+    // it must not move updated_at, so the application stays ghosted.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const patched = await PATCH_APP(
+      jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
+        companyWebsite: "stripe.com",
+        notes: "Referral from Sam",
+      }),
+      { params: { id: app.id } },
+    );
+    expect(patched.status).toBe(200);
+    const edited = (await readJson(patched)).data as {
+      companyWebsite: string | null;
+      updatedAt: string;
+    };
+    expect(edited.companyWebsite).toBe("stripe.com");
+    expect(new Date(edited.updatedAt).getTime()).toBe(stale.getTime());
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const ghosted = await GET(
+      new Request(`${base}?status=ghosted&page=1&limit=10`),
+    );
+    expect(
+      ((await readJson(ghosted)).data as Array<{ id: string }>).map((a) => a.id),
+    ).toContain(app.id);
+
+    // A state change does count.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const moved = await PATCH_APP(
+      jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
+        status: "interviewing",
+      }),
+      { params: { id: app.id } },
+    );
+    const afterMove = (await readJson(moved)).data as { updatedAt: string };
+    expect(new Date(afterMove.updatedAt).getTime()).toBeGreaterThan(
+      stale.getTime(),
+    );
   });
 
   it("resets a timeline: every step pending, dates cleared, status re-derived", async () => {

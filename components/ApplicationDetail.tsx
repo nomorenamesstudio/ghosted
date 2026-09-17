@@ -187,6 +187,7 @@ export function ApplicationDetail({ id }: { id: string }) {
               applicationId={app.id}
               company={app.company}
               version={app.updatedAt}
+              cacheKey={`${app.url ?? ""}|${app.companyWebsite ?? ""}`}
               size="md"
             />
             <h1 className="text-2xl font-bold">{app.company}</h1>

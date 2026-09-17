@@ -12,6 +12,12 @@ All notable changes, by date and type.
   their own row, and nothing changes for list view at any width.
 
 ### Fixed
+- **Only state changes count as an update.** Editing the company website, notes
+  or contact details no longer moves `updated_at`, so bookkeeping can no longer
+  un-ghost a silent application, rewrite its "Updated …" line or reshuffle the
+  list sorted by last updated. Status changes (including archive and reopen) and
+  timeline changes still count — and because the website edit no longer versions
+  the logo image, the lookup inputs are now part of the logo URL's cache key.
 - **Light mode is legible now.** The page was pure white and so were the cards,
   columns and borders, which left the paler status tints and the progress tracks
   nearly invisible on a bright screen. The page is off-white (`--background`

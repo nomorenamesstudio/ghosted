@@ -127,6 +127,7 @@ export function ApplicationCardView({
             applicationId={app.id}
             company={app.company}
             version={app.updatedAt}
+            cacheKey={`${app.url ?? ""}|${app.companyWebsite ?? ""}`}
             size="lg"
           />
           <div className="min-w-0 flex-1">
