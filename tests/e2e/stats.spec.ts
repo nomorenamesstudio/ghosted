@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { createAppViaApi, registerUser, uniqueEmail } from "./helpers";
+import {
+  createAppViaApi,
+  registerUser,
+  uniqueEmail,
+  useListView,
+} from "./helpers";
 
 test("dashboard stats update after a milestone-driven status change", async ({
   page,
@@ -7,6 +12,7 @@ test("dashboard stats update after a milestone-driven status change", async ({
   const email = uniqueEmail("stats");
   await registerUser(page, email);
   await page.goto("/app");
+  await useListView(page);
   await expect(page.getByTestId("stat-total")).toHaveText("0");
 
   const id = await createAppViaApi(page, "Globex", "Engineer");

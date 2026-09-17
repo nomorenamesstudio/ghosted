@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { registerUser, uniqueEmail, markUserVerified } from "./helpers";
+import {
+  markUserVerified,
+  registerUser,
+  uniqueEmail,
+  useListView,
+} from "./helpers";
 
 /**
  * Stress test: hundreds of applications must lazy-load via the infinite
@@ -32,6 +37,7 @@ test("stress: hundreds of applications load via infinite scroll", async ({
   }
 
   await page.goto("/app");
+  await useListView(page);
   const cards = page.locator("[data-testid^=section-] li");
 
   // First page only (PAGE_SIZE = 50).

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import postgres from "postgres";
 
 const testDbUrl =
@@ -17,6 +17,19 @@ export async function markUserVerified(email: string): Promise<void> {
   } finally {
     await sql.end();
   }
+}
+
+/**
+ * The dashboard opens on the Kanban board now. Specs that assert list behaviour
+ * (sections, stat cards, infinite scroll over the sections) switch to List
+ * first - the choice is remembered per browser, so once is enough.
+ */
+export async function useListView(page: Page): Promise<void> {
+  await page
+    .locator('[role="group"][aria-label="View"]')
+    .getByRole("button", { name: "List" })
+    .click();
+  await expect(page.getByTestId("application-sections")).toBeVisible();
 }
 
 /** Register a fresh user through the API (sets the session cookie). */

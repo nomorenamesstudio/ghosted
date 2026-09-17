@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { createAppViaApi, registerUser, uniqueEmail } from "./helpers";
+import {
+  createAppViaApi,
+  registerUser,
+  uniqueEmail,
+  useListView,
+} from "./helpers";
 
 test("search and filter return expected results", async ({ page }) => {
   const email = uniqueEmail("search");
@@ -8,6 +13,7 @@ test("search and filter return expected results", async ({ page }) => {
   await createAppViaApi(page, "Globex", "Designer");
 
   await page.goto("/app");
+  await useListView(page);
 
   // Both apps live in the "Applied" section; empty sections are hidden.
   const appliedSection = page.getByTestId("section-applied");
@@ -45,6 +51,7 @@ test("stat cards filter like the dropdown and stay in sync", async ({
   await createAppViaApi(page, "Globex", "Designer");
 
   await page.goto("/app");
+  await useListView(page);
   await expect(page.getByTestId("stat-total")).toHaveText("2");
 
   // The stat value divs live inside the stat-card buttons.
