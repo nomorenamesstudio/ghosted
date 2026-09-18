@@ -14,6 +14,7 @@ import {
   DEFAULT_PATIENCE_LEVEL,
   ghostedAfterDays,
 } from "@/lib/utils/status";
+import type { Milestone } from "@/lib/db/schema";
 
 const m = (stepOrder: number, status: "pending" | "done" | "skipped") => ({
   stepOrder,
@@ -145,8 +146,24 @@ describe("isGhosted / displayStatusOf", () => {
 });
 
 describe("MANUAL_STATUSES", () => {
-  it("contains rejected, archived and offer (manual overrides)", () => {
-    expect(MANUAL_STATUSES).toEqual(["rejected", "archived", "offer"]);
+  it("holds the states a user owns, ghosted included", () => {
+    // Ghosted is both: filed by hand here, and shown by the clock for silent
+    // applied/interviewing applications.
+    expect(MANUAL_STATUSES).toEqual([
+      "rejected",
+      "archived",
+      "offer",
+      "ghosted",
+    ]);
+  });
+
+  it("does not re-derive a hand-set ghosted application", () => {
+    const milestones = [
+      { status: "done" as const },
+      { status: "pending" as const },
+    ] as Milestone[];
+    expect(deriveStatus("ghosted", milestones)).toBe("ghosted");
+    expect(displayStatusOf("ghosted", new Date())).toBe("ghosted");
   });
 });
 

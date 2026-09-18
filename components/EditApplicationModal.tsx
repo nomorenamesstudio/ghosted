@@ -9,7 +9,7 @@ import {
 } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/db/schema";
-import { STATUS_ORDER, STATUS_TITLES } from "@/lib/utils/status";
+import { SETTABLE_STATUSES, STATUS_TITLES } from "@/lib/utils/status";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -228,7 +228,7 @@ export function EditApplicationModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_ORDER.map((s) => (
+                {SETTABLE_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
                     <StatusIcon status={s} className="mr-2 h-4 w-4" />
                     {STATUS_TITLES[s]}
@@ -237,9 +237,8 @@ export function EditApplicationModal({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Applied / interviewing / offer are derived from your milestones
-              (all done → offer, 2+ done → interviewing); rejected &amp;
-              archived are manual.
+              Applied, interviewing and offer are also derived from your
+              milestones; ghosted, rejected and archived are yours to set.
             </p>
           </div>
 

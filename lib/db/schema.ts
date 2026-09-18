@@ -21,6 +21,12 @@ export const applicationStatusEnum = pgEnum("application_status", [
   "offer",
   "rejected",
   "archived",
+  /**
+   * Ghosted is both: a user can file an application here by hand, and the
+   * display layer shows applied/interviewing applications as ghosted once they
+   * go quiet for the user's patience window (see lib/utils/status.ts).
+   */
+  "ghosted",
 ]);
 
 export const milestoneStatusEnum = pgEnum("milestone_status", [

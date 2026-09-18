@@ -57,6 +57,13 @@
       "when": 1789587558595,
       "tag": "0007_slim_runaways",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1789749399993,
+      "tag": "0008_chief_power_man",
+      "breakpoints": true
     }
   ]
 }

@@ -82,7 +82,13 @@ middleware.ts             # Cache-Control: no-store on all /api/*
    progress. It drives the ghosted clock, the "Updated …" line and the
    last-updated sort, and because it no longer moves on a website edit, that
    field is part of the company-logo cache key instead.
-6. **Ghosted**: an application in `applied|interviewing` untouched for longer
+6. **Ghosted is two things at once**: a status the user can set by hand (in
+   `MANUAL_STATUSES`, so a milestone edit cannot re-derive it away) and a
+   display overlay the clock applies to `applied|interviewing` applications that
+   go quiet past the patience window. The `ghosted` filter returns both, and
+   `applied`/`interviewing` exclude the silent ones so a card never shows in two
+   columns.
+7. **Ghosted (the clock)**: an application in `applied|interviewing` untouched for longer
    than the user's **patience level** (Settings: generous 14 / realistic 10 /
    impatient 7 days, default realistic) is shown as ghosted - a display
    overlay, not a stored status. `GHOSTED_AFTER_DAYS` remains only as the

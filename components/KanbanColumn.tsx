@@ -44,7 +44,9 @@ export function KanbanColumn({
   onTotalChange: (status: DisplayStatus, total: number) => void;
 }) {
   const [over, setOver] = useState(false);
-  const droppable = status !== "ghosted";
+  // Ghosted accepts drops: it is a state a user can file a card into, as well
+  // as one the clock applies on its own.
+  const droppable = true;
 
   const {
     items,
@@ -106,7 +108,7 @@ export function KanbanColumn({
         </span>
         {status === "ghosted" && (
           <span className="ml-auto text-[10px] font-normal normal-case">
-            auto · silent for {patienceDays} days
+            auto after {patienceDays} days, or by hand
           </span>
         )}
       </header>

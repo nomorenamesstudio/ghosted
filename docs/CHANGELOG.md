@@ -4,6 +4,15 @@ All notable changes, by date and type.
 
 ## 2026-09-17
 
+### Fixed
+- **"Ghosted" is a real status now.** It existed only as a time-derived
+  overlay, so the edit form offered it and the API rejected the payload. It is
+  in the status enum (`0008`), a user-owned state alongside rejected and
+  archived, and the board's Ghosted column accepts drops. The clock still runs:
+  an applied or interviewing application that goes quiet past the patience
+  window is shown as ghosted, and filtering by ghosted returns both the
+  hand-filed ones and the silent ones.
+
 ### Changed
 - **Application details page reworked.** The progress bar is gone — the timeline
   already says where the application stands. "Add milestone" moved from a button

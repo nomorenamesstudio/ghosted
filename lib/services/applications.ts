@@ -128,10 +128,16 @@ export async function listApplications(
 
   const conditions = [eq(applications.userId, userId)];
   if (status === "ghosted") {
-    // Stale applied|interviewing apps.
+    // Filed here by hand, or applied|interviewing and gone quiet past the
+    // user's patience window.
     conditions.push(
-      inArray(applications.status, ["applied", "interviewing"]),
-      sql`${applications.updatedAt} < ${new Date(cutoff).toISOString()}`,
+      or(
+        eq(applications.status, "ghosted"),
+        and(
+          inArray(applications.status, ["applied", "interviewing"]),
+          sql`${applications.updatedAt} < ${new Date(cutoff).toISOString()}`,
+        ),
+      )!,
     );
   } else if (status === "applied" || status === "interviewing") {
     // Recent apps of this status (stale ones are shown as ghosted).

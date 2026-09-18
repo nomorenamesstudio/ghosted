@@ -9,6 +9,7 @@ export const MANUAL_STATUSES: ApplicationStatus[] = [
   "rejected",
   "archived",
   "offer",
+  "ghosted",
 ];
 
 /**
@@ -111,6 +112,16 @@ export const STATUS_ORDER: DisplayStatus[] = [
  * top down by importance.
  */
 export const BOARD_ORDER: DisplayStatus[] = [
+  "applied",
+  "interviewing",
+  "offer",
+  "ghosted",
+  "rejected",
+  "archived",
+];
+
+/** Statuses a user can set by hand, in pipeline order (ghosted included). */
+export const SETTABLE_STATUSES: ApplicationStatus[] = [
   "applied",
   "interviewing",
   "offer",
