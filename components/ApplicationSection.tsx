@@ -86,7 +86,7 @@ export function ApplicationSection({
         />
       </button>
 
-      {error && <p className="mb-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="mb-2 text-sm text-destructive-readable">{error}</p>}
 
       {!collapsed && (
         <ul className="space-y-2">

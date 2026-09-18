@@ -14,13 +14,17 @@ const badgeVariants = cva(
         destructive:
           "border-transparent bg-destructive text-destructive-foreground shadow",
         outline: "text-foreground",
+        // -200 fills: the cards carry a -100 status tint, so a -100 badge
+        // disappeared into its own card.
         success:
-          "border-transparent bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-100",
+          "border-transparent bg-emerald-200 text-emerald-900 dark:bg-emerald-900 dark:text-emerald-100",
         warning:
-          "border-transparent bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100",
-        info: "border-transparent bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-100",
+          "border-transparent bg-amber-200 text-amber-900 dark:bg-amber-900 dark:text-amber-100",
+        info: "border-transparent bg-sky-200 text-sky-900 dark:bg-sky-900 dark:text-sky-100",
         violet:
-          "border-transparent bg-violet-100 text-violet-800 dark:bg-violet-900 dark:text-violet-100",
+          "border-transparent bg-violet-200 text-violet-900 dark:bg-violet-900 dark:text-violet-100",
+        danger:
+          "border-transparent bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-100",
         muted:
           "border-transparent bg-muted text-muted-foreground",
       },

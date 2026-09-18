@@ -18,7 +18,7 @@
     --secondary: 240 6% 88%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 6% 88%;
-    --muted-foreground: 240 5% 33%;
+    --muted-foreground: 240 5% 28%;
     --accent: 240 6% 88%;
     --accent-foreground: 240 5.9% 10%;
     --destructive: 0 72% 42%;
@@ -175,4 +175,14 @@
    via `document.documentElement.dataset.view`. */
 html[data-view="board"] .app-shell {
   max-width: none;
+}
+
+/* --destructive is a button *background* (a dark red in dark mode), which fails
+   as text on a dark surface. This is the same red tuned to be readable as text
+   in both themes; axe flagged the difference at 1.98:1. */
+.text-destructive-readable {
+  color: hsl(0 72% 42%);
+}
+.dark .text-destructive-readable {
+  color: hsl(0 84% 65%);
 }

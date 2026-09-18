@@ -5,6 +5,28 @@ All notable changes, by date and type.
 ## 2026-09-17
 
 ### Changed
+- **Application details page reworked.** The progress bar is gone — the timeline
+  already says where the application stands. "Add milestone" moved from a button
+  above the timeline into the timeline itself, as its last entry — a bordered
+  secondary button with the + in it — behind a dashed connector. Milestones open
+  **in place, like an accordion** (title, status, date, comment, save/cancel and
+  delete inline) instead of a modal thrown over the timeline; the row itself is
+  the header, with `aria-expanded`/`aria-controls`, and only one is open at a
+  time. The next step still to do opens by default, so the page lands on the
+  thing you came to fill in; once you pick a row yourself (or save), it stops
+  moving under you. The Details card is read-only now (label/value rows, links for the
+  posting, website, email and phone, "—" for anything unset) and editing happens
+  in a modal, so the page no longer looks like a settings screen. The card sizes
+  to its own content — it used to stretch down to match the timeline's height —
+  and carries one kebab menu (edit, favourite, archive/reopen) in its header,
+  replacing the star and menu that sat in the page header plus the duplicate
+  Edit button that was on the card.
+- **The role field autocompletes from roles you have used before**, most
+  recently used first (`GET /api/applications/roles`). The suggestion list is
+  the app's own popover surface (`bg-popover`, `shadow-md`, `bg-accent` for the
+  active row) with full keyboard support — a native `<datalist>` was tried first
+  and is drawn by the browser with OS chrome, ignoring the app's tokens. Used in
+  the add and edit modals.
 - **Board controls live in the header on a wide screen** (xl, 1280px+): search,
   sort, the List/Board switch and "Add application" portal into a right-aligned
   slot beside the account menu, so the header is sticky while the columns get

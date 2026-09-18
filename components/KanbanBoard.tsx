@@ -179,7 +179,7 @@ export function KanbanBoard({
 
   return (
     <div className="space-y-2">
-      {moveError && <p className="text-sm text-destructive">{moveError}</p>}
+      {moveError && <p className="text-sm text-destructive-readable">{moveError}</p>}
       {!allKnown && <GhostPulse />}
       {/* The columns stay mounted even when every one of them is empty: they
           own the queries, so unmounting them (on a search that matches nothing)

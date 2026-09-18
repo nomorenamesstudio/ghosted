@@ -22,16 +22,14 @@ test("dashboard stats update after a milestone-driven status change", async ({
   await expect(page.getByTestId("stat-applied")).toHaveText("1");
   await expect(page.getByTestId("stat-interviewing")).toHaveText("0");
 
-  // Complete the "Technical Interview" milestone (3rd of the 5 defaults)
-  // via its "…" menu.
+  // Complete the "Technical Interview" milestone (3rd of the 5 defaults) by
+  // opening its timeline row and saving: a pending step saves as done.
   await page.goto(`/applications/${id}`);
   const timeline = page.getByTestId("milestone-timeline");
   await timeline
-    .locator("li")
-    .nth(2)
-    .getByRole("button", { name: "Actions for Technical Interview" })
+    .getByRole("button", { name: /Technical Interview/ })
     .click();
-  await page.getByRole("menuitem", { name: "Mark done" }).click();
+  await page.getByRole("button", { name: /Save & mark done/ }).click();
 
   // Auto-advance: status becomes interviewing.
   await expect(page.getByTestId("status-badge")).toHaveText("interviewing");

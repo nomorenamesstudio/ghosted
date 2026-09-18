@@ -144,6 +144,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 /* Endpoints                                                           */
 /* ------------------------------------------------------------------ */
 
+/** Role titles this user has used before, most recent first. */
+export function getRoles(): Promise<{ data: string[] }> {
+  return request("/api/applications/roles");
+}
+
 export function getApplications(params: ListParams = {}): Promise<ApplicationsResult> {
   const qs = new URLSearchParams();
   if (params.status) qs.set("status", params.status);

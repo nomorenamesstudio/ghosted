@@ -111,7 +111,7 @@ export function KanbanColumn({
         )}
       </header>
 
-      {error && <p className="px-3 pt-2 text-sm text-destructive">{error}</p>}
+      {error && <p className="px-3 pt-2 text-sm text-destructive-readable">{error}</p>}
 
       <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
         {isPending && items.length === 0 ? (

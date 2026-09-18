@@ -100,6 +100,12 @@ Counts: `total` (non-archived), `active` (applied + interviewing, excluding
 ghosted), `interviewing`, `offers`, `rejected`, `ghosted` (applied/interviewing
 silent for longer than the user's Patience level). Archived apps count nowhere.
 
+### GET /api/applications/roles
+
+Role titles the signed-in user has used, most recently used first (up to 20).
+Feeds the autocomplete on the role field — read from the applications
+themselves, so there is nothing extra to keep in sync.
+
 ## Company logos
 
 ### GET /logos/:applicationId

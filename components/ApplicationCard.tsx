@@ -17,12 +17,21 @@ import type { DisplayStatus } from "@/lib/utils/status";
 
 const STATUS_VARIANT: Record<
   DisplayStatus,
-  "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "info" | "muted" | "violet"
+  | "default"
+  | "secondary"
+  | "destructive"
+  | "outline"
+  | "success"
+  | "warning"
+  | "info"
+  | "muted"
+  | "violet"
+  | "danger"
 > = {
   applied: "info",
   interviewing: "warning",
   offer: "success",
-  rejected: "destructive",
+  rejected: "danger",
   archived: "muted",
   ghosted: "violet",
 };

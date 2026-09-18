@@ -9,6 +9,7 @@ import {
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RoleInput } from "./RoleInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -89,11 +90,11 @@ export function AddApplicationModal({
           </div>
           <div className="space-y-2">
             <Label htmlFor="add-role">Role *</Label>
-            <Input
+            <RoleInput
               id="add-role"
               required
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={setRole}
               placeholder="Senior Frontend Engineer"
             />
           </div>
@@ -128,7 +129,7 @@ export function AddApplicationModal({
             />
           </div>
           {error && (
-            <p role="alert" className="text-sm text-destructive">
+            <p role="alert" className="text-sm text-destructive-readable">
               {error}
             </p>
           )}

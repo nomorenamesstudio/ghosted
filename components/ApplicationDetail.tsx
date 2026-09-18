@@ -14,21 +14,21 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MilestoneTimeline } from "./MilestoneTimeline";
-import { EditApplicationForm } from "./EditApplicationForm";
+import { ApplicationDetailsCard } from "./ApplicationDetailsCard";
+import { EditApplicationModal } from "./EditApplicationModal";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { GhostPulse, SkeletonGhostCard } from "./loading";
 import { CompanyAvatar } from "./CompanyAvatar";
 import { StatusIcon } from "./status-icons";
-import { STATUS_PROGRESS } from "./ApplicationCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { DisplayStatus } from "@/lib/utils/status";
 
@@ -38,6 +38,7 @@ export const STATUS_BADGE_VARIANT: Record<
   | "warning"
   | "success"
   | "destructive"
+  | "danger"
   | "muted"
   | "outline"
   | "violet"
@@ -45,7 +46,7 @@ export const STATUS_BADGE_VARIANT: Record<
   applied: "info",
   interviewing: "warning",
   offer: "success",
-  rejected: "destructive",
+  rejected: "danger",
   archived: "muted",
   ghosted: "violet",
 };
@@ -63,17 +64,12 @@ export function StatusBadge({ status }: { status: DisplayStatus }) {
   );
 }
 
-function scrollToForm() {
-  document
-    .getElementById("application-details")
-    ?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
 export function ApplicationDetail({ id }: { id: string }) {
   const router = useRouter();
   const qc = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const { data, isPending, isError, error } = useQuery({
     queryKey: ["application", id],
@@ -165,7 +161,7 @@ export function ApplicationDetail({ id }: { id: string }) {
           <ArrowLeft className="mr-1 inline h-4 w-4" />
           Back to dashboard
         </Link>
-        <p role="alert" className="mt-4 text-destructive">
+        <p role="alert" className="mt-4 text-destructive-readable">
           {(error as Error).message}
         </p>
       </div>
@@ -173,6 +169,55 @@ export function ApplicationDetail({ id }: { id: string }) {
   }
 
   const app = data.data;
+
+  // One kebab inside the details card: edit, favourite, archive/reopen. It used
+  // to be split between a star and a menu in the page header, plus an Edit
+  // button in the card — three places for the same set of actions.
+  const cardActions = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="Application actions">
+          <MoreVertical />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+          <Pencil />
+          Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onSelect={() => favorite.mutate()}
+          disabled={favorite.isPending}
+        >
+          <Star
+            className={cn(
+              "h-4 w-4",
+              app.isFavorite && "fill-amber-400 text-amber-500",
+            )}
+          />
+          {app.isFavorite ? "Remove from favourites" : "Add to favourites"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {app.status === "archived" ? (
+          <DropdownMenuItem
+            onSelect={() => reopen.mutate()}
+            disabled={reopen.isPending}
+          >
+            <RotateCcw />
+            Reopen
+          </DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem
+            onSelect={() => setConfirmArchive(true)}
+            disabled={archive.isPending}
+          >
+            <Archive />
+            Archive
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="space-y-6 pt-6">
@@ -192,92 +237,38 @@ export function ApplicationDetail({ id }: { id: string }) {
             />
             <h1 className="text-2xl font-bold">{app.company}</h1>
             <span className="text-lg text-muted-foreground">{app.role}</span>
-            <StatusBadge status={app.displayStatus} />
-            {app.displayStatus === "ghosted" && (
-              <span className="text-xs text-muted-foreground">
-                No updates in a while — any change revives it.
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={
-                app.isFavorite ? "Remove from favourites" : "Add to favourites"
+            {/* Native tooltip: the explanation is supplementary, and spelling it
+                out beside the badge crowded the header. */}
+            <span
+              title={
+                app.displayStatus === "ghosted"
+                  ? "No updates in a while — any change revives it."
+                  : undefined
               }
-              aria-pressed={app.isFavorite}
-              onClick={() => favorite.mutate()}
-              disabled={favorite.isPending}
             >
-              <Star
-                className={cn(
-                  "h-5 w-5",
-                  app.isFavorite && "fill-amber-400 text-amber-500",
-                )}
-              />
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Application actions"
-                >
-                  <MoreVertical />
-                </Button>
-              </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={scrollToForm}>
-                <Pencil />
-                Edit
-              </DropdownMenuItem>
-              {app.status === "archived" ? (
-                <DropdownMenuItem
-                  onSelect={() => reopen.mutate()}
-                  disabled={reopen.isPending}
-                >
-                  <RotateCcw />
-                  Reopen
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem
-                  onSelect={() => setConfirmArchive(true)}
-                  disabled={archive.isPending}
-                >
-                  <Archive />
-                  Archive
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <StatusBadge status={app.displayStatus} />
+            </span>
           </div>
         </div>
         {actionError && (
-          <p role="alert" className="mt-2 text-sm text-destructive">
+          <p role="alert" className="mt-2 text-sm text-destructive-readable">
             {actionError}
           </p>
         )}
-        <div className="mt-3 flex max-w-md items-center gap-3">
-          <Progress
-            value={app.progress}
-            aria-label="Application progress"
-            segments={app.milestones.length}
-            className={cn("flex-1", STATUS_PROGRESS[app.displayStatus].track)}
-            indicatorClassName={STATUS_PROGRESS[app.displayStatus].fill}
-          />
-          <span className="text-sm font-semibold tabular-nums">
-            {app.progress}%
-          </span>
-        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+      {/* items-start: the details card sizes to its own content instead of
+          stretching down to match however long the timeline happens to be. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
         <MilestoneTimeline appId={app.id} milestones={app.milestones} />
-        <div id="application-details" className="scroll-mt-20">
-          <EditApplicationForm app={app} />
-        </div>
+        <ApplicationDetailsCard app={app} actions={cardActions} />
       </div>
+
+      <EditApplicationModal
+        app={app}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
 
       <ConfirmDialog
         open={confirmArchive}

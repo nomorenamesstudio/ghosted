@@ -23,15 +23,18 @@ test("create an application and add a milestone", async ({ page }) => {
   await card.click();
   await expect(page).toHaveURL(/\/applications\//);
   const timeline = page.getByTestId("milestone-timeline");
+  // The timeline ends with the "Add milestone" row, which is not a step.
+  const steps = timeline.locator('li:not([data-testid="timeline-add"])');
   await expect(timeline.getByText("Application")).toBeVisible();
   await expect(timeline.getByText("Offer/Decision")).toBeVisible();
-  await expect(timeline.locator("li")).toHaveCount(5);
+  await expect(steps).toHaveCount(5);
+  await expect(page.getByTestId("timeline-add")).toBeVisible();
 
-  // Add a custom milestone at the end.
+  // Add a custom milestone at the end, from the timeline itself.
   await page.getByRole("button", { name: "Add milestone" }).click();
   const milestoneDialog = page.getByRole("dialog");
   await milestoneDialog.getByLabel("Title *").fill("On-site Interview");
   await milestoneDialog.getByRole("button", { name: "Add milestone" }).click();
   await expect(timeline.getByText("On-site Interview")).toBeVisible();
-  await expect(timeline.locator("li")).toHaveCount(6);
+  await expect(steps).toHaveCount(6);
 });

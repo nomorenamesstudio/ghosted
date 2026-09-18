@@ -70,6 +70,13 @@ test("a11y: authenticated pages, both themes", async ({ page }) => {
     await page.getByRole("heading", { level: 1 }).waitFor();
     await audit(page, `/applications/[id] (${theme})`);
 
+    // The details form lives in a modal now, so audit it open.
+    await page.getByRole("button", { name: "Application actions" }).click();
+    await page.getByRole("menuitem", { name: "Edit" }).click();
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await audit(page, `/applications/[id] edit modal (${theme})`);
+    await page.keyboard.press("Escape");
+
     await page.goto("/settings");
     await audit(page, `/settings (${theme})`);
   }

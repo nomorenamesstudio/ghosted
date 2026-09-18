@@ -299,6 +299,29 @@ export const UNVERIFIED_APP_LIMIT = Math.max(
  * Used to enforce the "unverified email ⇒ max 3 applications" cap — archived
  * applications still count so the cap cannot be gamed by archiving.
  */
+/**
+ * Role titles this user has already used, most recently used first — the
+ * autocomplete behind the role field. Bookkeeping is not involved: it reads the
+ * applications themselves, so there is nothing extra to keep in sync.
+ */
+export async function listUsedRoles(
+  userId: string,
+  limit = 20,
+): Promise<string[]> {
+  const rows = await db
+    .select({
+      role: applications.role,
+      lastUsed: sql<string>`max(${applications.updatedAt})`,
+    })
+    .from(applications)
+    .where(eq(applications.userId, userId))
+    .groupBy(applications.role)
+    .orderBy(sql`max(${applications.updatedAt}) desc`)
+    .limit(limit);
+
+  return rows.map((r) => r.role).filter(Boolean);
+}
+
 export async function countApplications(userId: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
