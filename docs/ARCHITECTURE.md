@@ -22,6 +22,7 @@
 app/
   page.tsx                # public landing page (/) - signed-in users → /app
   logos/[id]/route.ts     # company logo bytes (cacheable, outside /api)
+  avatars/[hash]/route.ts # gravatar bytes (cacheable, outside /api)
   (auth)/                 # login, register, forgot/reset password, verify email
   (dashboard)/            # protected shell: stats + list + detail + settings
   api/
@@ -46,6 +47,7 @@ lib/
   db/                     # Drizzle schema + client
   services/applications.ts# transactional business logic (the core)
   services/company-logos.ts# logo cache-aside (DB + favicon services)
+  services/gravatar.ts    # gravatar lookup, asked once at sign-in
   utils/                  # progress, reorder, status, sanitize, validation,
                           # rate-limit, api error helpers, logger
 scripts/                  # create-test-db, seed, migrate-on-start
@@ -184,3 +186,21 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   `acme.com`), which is exactly why the explicit field exists and comes first.
   Only the resulting domain is ever sent to a favicon service, so a
   user-supplied URL cannot steer a server-side fetch (no SSRF surface).
+- **Email/password users get a Gravatar, resolved once at sign-in — and only
+  if one exists**: `d=404` makes Gravatar answer 404 instead of substituting a
+  placeholder, so a user without an account keeps the initials fallback the
+  menu already renders. The lookup runs in the `jwt` callback guarded by
+  `account?.provider === "credentials"`, because that callback also fires on
+  every session read and must stay network-free; the answer then rides in the
+  session as `user.image` (Auth.js maps `token.picture` → `session.user.image`).
+  Consequently there is no `users.image` column: the picture — Google's or
+  Gravatar's — exists only inside the JWT, exactly as it did before.
+- **Gravatar bytes are proxied through `/avatars/:hash`, not hotlinked**:
+  Gravatar's own `Cache-Control` is `max-age=300`, so a hotlinked avatar makes
+  every browser re-ask them every five minutes. The proxy re-serves the same
+  bytes with `private, max-age=604800, stale-while-revalidate=86400`, misses
+  with `private, max-age=3600`. The route sits outside `/api` for the same
+  reason `/logos/:id` does — middleware forces `no-store` on that whole prefix —
+  and re-validates the upstream body (status, raster-only content type, 512KB
+  cap) rather than trusting the status code, since an HTML error page cached as
+  an image is worse than no avatar at all.

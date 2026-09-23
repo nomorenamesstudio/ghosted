@@ -134,6 +134,33 @@ host, then board/parent/slug guesses. Only a validated domain is ever sent to
 those two fixed hosts - a user-supplied URL is never fetched, so there is no
 SSRF surface.
 
+### GET /avatars/:hash
+
+The signed-in user's Gravatar for their email address, keyed by the MD5 of the
+trimmed, lowercased address (`lib/utils/gravatar.ts`). Same reasoning as
+`/logos/:id` for living outside `/api`, plus one of its own: Gravatar's own
+cache is only `max-age=300`, so proxying is what makes a week-long cache
+possible — and gravatar.com never sees the visitor.
+
+- Requires a session; unauthenticated requests, a malformed hash (anything that
+  is not 32 hex characters) and an upstream error all get a plain `404`. A
+  Gravatar is public by construction, so this is not a security boundary — it
+  just keeps the route from being an open image relay.
+- `200` returns the avatar (`image/png`, `image/jpeg`, `image/webp` or
+  `image/gif`) with `Cache-Control: private, max-age=604800,
+  stale-while-revalidate=86400` and `X-Content-Type-Options: nosniff`. SVG is
+  never served: third-party SVG from our own origin is a script-execution path.
+- `404` (this email has no Gravatar, or the upstream body failed validation) is
+  returned with `Cache-Control: private, max-age=3600`, and the client's
+  `AvatarFallback` shows the user's initials.
+
+Upstream is always `https://www.gravatar.com/avatar/<hash>?d=404&s=160&r=g` —
+`d=404` rather than a placeholder image, so "no Gravatar" is a 404 we can fall
+back from instead of a picture we would have to pass off as the user. The same
+lookup runs once at sign-in (`lib/services/gravatar.ts`); a hit puts
+`/avatars/<hash>` in `session.user.image`, a miss leaves it unset so no image
+request is made at all.
+
 ### POST /api/applications/:id/milestones/reset
 
 Sends an application's timeline back to the start: every step returns to

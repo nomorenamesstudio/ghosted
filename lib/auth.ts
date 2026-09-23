@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
 import { users, type Provider } from "@/lib/db/schema";
+import { resolveGravatarPath } from "@/lib/services/gravatar";
 import { logger } from "@/lib/utils/logger";
 
 export const SESSION_IDLE_SECONDS = 30 * 24 * 60 * 60; // 30 days idle
@@ -217,6 +218,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const userEmailVerified = (user as { emailVerified?: unknown })
           .emailVerified;
         token.emailVerified = userEmailVerified === true;
+
+        // Email/password users have no provider photo, so ask Gravatar once,
+        // here — and only here. `account` is present at sign-in only, while
+        // this callback also runs on every session read, which must stay
+        // network-free. A miss leaves token.picture unset, so the menu keeps
+        // rendering its initials; a hit points at our own /avatars/<hash>
+        // proxy, which is what the browser then caches for a week.
+        if (
+          account?.provider === "credentials" &&
+          !token.picture &&
+          typeof user.email === "string"
+        ) {
+          const gravatar = await resolveGravatarPath(user.email);
+          if (gravatar) token.picture = gravatar;
+        }
       }
 
       // Absolute session cap: 7 days from sign-in. Enforced here because

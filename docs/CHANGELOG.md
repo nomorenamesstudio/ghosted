@@ -2,6 +2,29 @@
 
 All notable changes, by date and type.
 
+## 2026-09-23
+
+### Added
+- **Gravatar for email/password users.** Accounts created with an email address
+  now show their Gravatar in the user menu; Google/LinkedIn users keep the
+  provider photo, and an email with no Gravatar keeps the initials exactly as
+  before. The lookup asks Gravatar with `d=404`, so "no account" comes back as a
+  404 rather than a placeholder picture we would have to pass off as the user,
+  and it runs once — in the `jwt` callback, guarded by
+  `account?.provider === "credentials"`, because that callback also fires on
+  every session read and must stay network-free. A hit stores `/avatars/<hash>`
+  in `session.user.image`; a miss leaves it unset, so a user with no Gravatar
+  makes no image request at all. Requesting an avatar never sends the browser to
+  gravatar.com: `GET /avatars/:hash` proxies the bytes through our own origin,
+  because Gravatar's own cache is only `max-age=300` and every browser would
+  otherwise re-ask them every five minutes. Ours is `private, max-age=604800,
+  stale-while-revalidate=86400` on a hit and `private, max-age=3600` on a miss
+  (an account can be created on Gravatar at any time), with the upstream body
+  re-validated before it is served — raster types only, 512KB cap, nosniff — so
+  an HTML error page can never be cached as an avatar. No schema change: the
+  picture lives in the JWT, as the Google one always has. Covered by
+  `tests/unit/gravatar.test.ts` and `tests/integration/avatars.test.ts`.
+
 ## 2026-09-17
 
 ### Fixed
