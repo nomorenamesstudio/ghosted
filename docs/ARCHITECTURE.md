@@ -208,14 +208,33 @@ middleware.ts             # Cache-Control: no-store on all /api/*
 ## Performance notes
 
 Measured on a production build (`next build` + `next start` in a throwaway copy —
-never against the dev server's `.next`), 22 applications, 1440×900:
+never against the dev server's `.next`), 22 applications, 1440×900.
 
-| route | First Load JS | requests | notes |
-| --- | --- | --- | --- |
-| `/` landing (signed out) | ~137 kB | 27 | session request gone; its chunk list (raw) fell 382 kB → 325 kB once the mock cards stopped shipping the dashboard's client card |
-| `/login` (signed out) | ~132 kB | 25 | mounts `AppProviders` |
-| `/app` (signed in) | 181–196 kB | 77 | 2 session + 6 per-status lists + 1 stats + 22 logos |
-| `/privacy` (static) | 101 kB | — | was 111 kB + 2 session requests |
+**Read the per-route JS column with care.** Repeated runs of the *same* code
+differ by up to ~38 kB on that number (async chunks and timing), so it is only
+useful for order-of-magnitude checks. The numbers worth trusting are the ones
+traced to a source: a request count, a response size, a chunk list from the build
+manifest, or a query count from the code.
+
+| route | requests | notes |
+| --- | --- | --- |
+| `/` landing (signed out) | 26 | session request gone (was 2); build manifest chunk total for the route 325 kB raw, was 382 kB |
+| `/login` (signed out) | 29 | mounts `AppProviders` |
+| `/app` (signed in) | 77 | 2 session + 6 per-status lists + 1 stats + 22 logos — the fan-out is unchanged and is the biggest win still on the table |
+| `/privacy` (static) | — | 101 kB of JS, no session request (was 111 kB + 2) |
+
+What the refactor actually changed, each traced to a measurement:
+
+| change | evidence |
+| --- | --- |
+| static pages no longer load the auth/query runtime | `/privacy`: two `/api/auth/session` requests → none |
+| independent reads run concurrently | 4 call sites serialized → parallel (dashboard page, list count/page, app+milestones, stats rows+patience) |
+| per-section counts folded into the page query | 26 → 20 queries per dashboard load (6 sections × 1 count removed) |
+| list payload narrowed to the card's fields | 12,344 → 7,703 bytes for a full board load (−38%), shape pinned by `tests/integration/list-payload.test.ts` |
+| landing mock cards render without the client card | route chunk list 382 → 325 kB raw (date-fns, Radix Progress, avatar chunk) |
+| move/create invalidate only the affected columns | 6 → 2–3 section refetches per drag |
+| stats counted in SQL | one aggregate instead of one row per application per load and per mutation |
+| milestone shifts and renumbering | one statement per operation instead of one `UPDATE` per moved row |
 
 One more decision worth keeping: **the application card has one shell, shared by
 the dashboard and the landing page.** `ApplicationCardShell` is a server
