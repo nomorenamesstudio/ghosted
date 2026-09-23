@@ -39,6 +39,22 @@ All notable changes, by date and type.
   wrapping row, so they shared a line on wide cards and split on narrow ones —
   the same card read differently at different widths. They are a column now.
 
+### Fixed
+- **Tapping a form field on an iPhone no longer zooms the page.** iOS Safari
+  zooms whenever a focused text control's font size is under 16px, and every
+  control in the app is `text-sm` (14px), so the layout jumped into a zoomed
+  state the user had to pinch back out of. The controls are raised to 16px
+  instead of the viewport being locked: `maximum-scale=1` would have removed
+  pinch-zoom for everyone (WCAG 1.4.4), and 16px is the accessible minimum for
+  form text anyway. The rule is scoped to `(hover: none) and (pointer: coarse)`
+  so the desktop design keeps its 14px labels, and it exempts checkboxes, radios
+  and range sliders, which never trigger the zoom. It needs `!important`:
+  Tailwind v3 emits utilities unlayered, so a single class outranks a bare type
+  selector — without it the `input`s moved to 16px while the milestone dialog's
+  `textarea` and `select` stayed at 14px, leaving the bug alive in the fields
+  nobody tested. `tests/e2e/mobile-zoom.spec.ts` now holds the invariant at a
+  phone viewport across login, register, the dashboard and that dialog.
+
 ## 2026-09-17
 
 ### Fixed

@@ -186,3 +186,29 @@ html[data-view="board"] .app-shell {
 .dark .text-destructive-readable {
   color: hsl(0 84% 65%);
 }
+
+/* iOS Safari zooms the whole page when a focused text control's font size is
+   under 16px, and every control here is `text-sm` (14px) — so tapping any field
+   on an iPhone threw the layout into a zoomed state the user then had to pinch
+   back out. Raising the control is the fix that costs nothing: locking the
+   viewport with `maximum-scale=1` would kill pinch-zoom for everyone (WCAG
+   1.4.4), and 16px is the accessible minimum for form text anyway.
+
+   Scoped to coarse pointers (phones, tablets) so the desktop design keeps its
+   14px labels: the zoom is a touch-only behaviour, and non-text controls such
+   as checkboxes and range sliders never trigger it.
+
+   `!important` is load-bearing, not laziness. Tailwind v3 emits its utilities
+   *unlayered*, so a single class outranks a bare type selector, and an
+   unclassed `textarea`/`select` otherwise stays at 14px while the `input`s
+   (whose `:not(...)` filters happen to raise their specificity) move to 16px —
+   measured, and exactly the kind of near-miss that leaves the bug alive in the
+   one field nobody tested. `!important` also keeps this rule immune to whatever
+   font-size utility gets added to a control next. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
