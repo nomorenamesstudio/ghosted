@@ -54,6 +54,35 @@ All notable changes, by date and type.
   controls, since hiding them would leave no way to clear the filter. Covered by
   `tests/e2e/empty-board.spec.ts`.
 
+### Performance
+- **Independent database reads now run concurrently.** The dashboard page's
+  user row and application count, the list query's `count(*)` and its page of
+  rows, `getApplication`'s patience lookup and milestones, and `getStats`' rows
+  and patience lookup were each awaited one after the other for no reason — they
+  depend on the same inputs and on nothing else, and the service contained no
+  `Promise.all` at all. The list case matters most: it runs once per board
+  column, so six round-trips per dashboard load became six saved ones.
+- **Analytics is loaded after hydration.** Umami was a bare `<script defer>` in
+  `<head>`, opening a third-party connection while the page's own JS and fonts
+  were still competing for bandwidth. It is `next/script` with
+  `strategy="afterInteractive"` now, and nothing on the page waits on it.
+- **Static pages no longer ship the auth and query runtime.** `SessionProvider`,
+  `QueryClientProvider` and the cache-clearer lived in the root layout, so the
+  landing page and the legal pages — no session, no queries — hydrated both and
+  fetched `/api/auth/session` on every visit, crawlers included. They now live in
+  `AppProviders`, mounted by the `(dashboard)` and `(auth)` groups, with one
+  QueryClient per mount so crossing that boundary starts a clean cache. Measured
+  on `/privacy`: 111 kB → 101 kB of JS, and two session requests → none.
+- **Moving a card refreshes the columns it could have changed, not all six.** A
+  plain status change knows both ends, and a stale application is displayed in
+  "applied"/"interviewing" *and* in "ghosted", so a move now invalidates exactly
+  those sections (the ones the optimistic detach proved the card was in, plus its
+  destination) instead of the whole `["applications"]` prefix — four fewer
+  requests and roughly a dozen fewer queries per drag. Mutations whose effect on
+  status the client cannot predict (a step-back re-derives the status from the
+  timeline) deliberately keep invalidating everything. Creating an application
+  narrows to its own section the same way.
+
 ### Fixed
 - **Dismissing the verification banner no longer breaks hydration.** The "Later"
   dismissal was read straight out of localStorage in a `useState` initialiser,

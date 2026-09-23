@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Footer } from "@/components/Footer";
@@ -62,10 +63,14 @@ export default function RootLayout({
             __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
           }}
         />
-        {/* Self-hosted umami analytics (tracker + beacon on ramen.lostsignals.studio). */}
-        <script
-          defer
+        {/* Self-hosted umami analytics (tracker + beacon on
+            ramen.lostsignals.studio). Loaded after hydration rather than with a
+            bare `defer` in <head>: analytics is never worth competing with the
+            page's own JS and fonts for bandwidth on first load, and nothing on
+            the page waits on it. */}
+        <Script
           src="https://ramen.lostsignals.studio/script.js"
+          strategy="afterInteractive"
           data-website-id="c8f73665-dca1-464b-9427-a56f8b27c799"
           data-cache="true"
           data-domains="ghosted.lostsignals.studio"

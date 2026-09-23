@@ -162,11 +162,6 @@ export async function listApplications(
   }
   const where = and(...conditions);
 
-  const [{ count }] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(applications)
-    .where(where);
-
   let orderBy: SQL[];
   switch (sort ?? "updated_at") {
     case "company":
@@ -205,13 +200,23 @@ export async function listApplications(
       ];
   }
 
-  const apps = await db
-    .select()
-    .from(applications)
-    .where(where)
-    .orderBy(...orderBy)
-    .limit(limit)
-    .offset((page - 1) * limit);
+  // The count and the page are independent of each other — only the ordering
+  // depends on the filters — so they go out together instead of one after the
+  // other. This runs once per board column (six times on a dashboard load), so
+  // the saved round-trip is multiplied by six.
+  const [[{ count }], apps] = await Promise.all([
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(applications)
+      .where(where),
+    db
+      .select()
+      .from(applications)
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(limit)
+      .offset((page - 1) * limit),
+  ]);
 
   const data: ApplicationListItem[] = [];
   if (apps.length > 0) {
@@ -268,14 +273,16 @@ export async function getApplication(
     .limit(1);
   if (!app) return null;
 
-  const days = await ghostedDaysFor(userId);
-
-  const ms = sortByStepOrder(
-    await db
+  // Both the patience lookup and the milestones are keyed on what we just
+  // fetched, and on nothing else, so they are fetched together.
+  const [days, msRows] = await Promise.all([
+    ghostedDaysFor(userId),
+    db
       .select()
       .from(milestones)
       .where(eq(milestones.applicationId, app.id)),
-  );
+  ]);
+  const ms = sortByStepOrder(msRows);
 
   return {
     ...app,
@@ -789,12 +796,15 @@ export interface DashboardStats {
 }
 
 export async function getStats(userId: string): Promise<DashboardStats> {
-  const rows = await db
-    .select({ status: applications.status, updatedAt: applications.updatedAt })
-    .from(applications)
-    .where(eq(applications.userId, userId));
-
-  const days = await ghostedDaysFor(userId);
+  // Independent: the rows to count and the patience window used to derive
+  // "ghosted" from them.
+  const [rows, days] = await Promise.all([
+    db
+      .select({ status: applications.status, updatedAt: applications.updatedAt })
+      .from(applications)
+      .where(eq(applications.userId, userId)),
+    ghostedDaysFor(userId),
+  ]);
 
   const stats: DashboardStats = {
     total: 0,

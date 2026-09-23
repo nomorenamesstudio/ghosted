@@ -17,18 +17,23 @@ export default async function DashboardPage() {
   // Server-side authority for the FAB gate: emailVerified straight from the
   // DB (never stale), plus the current application count so the client can
   // switch to the verification modal exactly when the cap is reached.
-  const [dbUser] = await db
-    .select({
-      emailVerified: users.emailVerified,
-      patienceLevel: users.patienceLevel,
-    })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
+  //
+  // Both reads only need the session, so they go out together: they used to be
+  // two round-trips, one after the other, on every dashboard render.
+  const [[dbUser], applicationCount] = await Promise.all([
+    db
+      .select({
+        emailVerified: users.emailVerified,
+        patienceLevel: users.patienceLevel,
+      })
+      .from(users)
+      .where(eq(users.id, session.user.id))
+      .limit(1),
+    countApplications(session.user.id),
+  ]);
   const emailVerified = dbUser?.emailVerified ?? false;
   // The board's ghosted column names the actual threshold.
   const patienceDays = ghostedAfterDays(dbUser?.patienceLevel);
-  const applicationCount = await countApplications(session.user.id);
 
   return (
     <Dashboard
