@@ -212,10 +212,20 @@ never against the dev server's `.next`), 22 applications, 1440×900:
 
 | route | First Load JS | requests | notes |
 | --- | --- | --- | --- |
-| `/` landing (signed out) | ~137 kB | 27 | session request gone |
+| `/` landing (signed out) | ~137 kB | 27 | session request gone; its chunk list (raw) fell 382 kB → 325 kB once the mock cards stopped shipping the dashboard's client card |
 | `/login` (signed out) | ~132 kB | 25 | mounts `AppProviders` |
 | `/app` (signed in) | 181–196 kB | 77 | 2 session + 6 per-status lists + 1 stats + 22 logos |
 | `/privacy` (static) | 101 kB | — | was 111 kB + 2 session requests |
+
+One more decision worth keeping: **the application card has one shell, shared by
+the dashboard and the landing page.** `ApplicationCardShell` is a server
+component holding the markup and the per-status colour tokens (now in
+`lib/utils/card-styles.ts`, since a server component cannot import values from a
+client one); `ApplicationCardView` wraps it with the client-only pieces — live
+relative timestamp, Radix avatar, Radix progress — and the landing passes a plain
+`<img>` and a static bar. That is what keeps the four decorative mock cards from
+pulling date-fns and two Radix primitives onto the first page a stranger loads,
+without a copied card that would drift.
 
 Decisions worth keeping:
 
