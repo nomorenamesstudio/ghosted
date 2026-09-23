@@ -261,6 +261,13 @@ Deliberately not done, with the measurement that settled it:
   per-column paging contract `useApplicationSection` and the infinite scroll are
   built on, plus the "every column has reported in" logic behind the empty state.
   It wants its own session rather than a tail-end change.
+- **The list carries only what a card renders.** `ApplicationListItem` is the
+  thirteen fields the card uses — not the whole row — and the milestones joined
+  into it are narrowed to the three the progress maths reads. On a board of 22
+  applications that took the six per-status responses from 12.3 kB to 7.7 kB.
+  The type lives in the service beside the query that produces it and is
+  re-exported by `lib/api.ts`; declaring it in both places is how it drifted once.
 - **Milestone reorder/shift** still issues one `UPDATE` per row inside its
-  transaction, and the list response still serializes whole rows where the card
-  needs a handful of fields. Both are contained, neither is on the load path.
+  transaction. It is a contained change, but it edits the ordering data every
+  milestone view depends on, and it runs per user action rather than per page
+  load — so it wants its own session rather than a tail-end edit.

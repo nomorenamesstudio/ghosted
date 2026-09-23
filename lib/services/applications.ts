@@ -8,6 +8,7 @@ import {
   milestones,
   users,
   type Application,
+  type ApplicationStatus,
   type Milestone,
 } from "@/lib/db/schema";
 import { calcProgress } from "@/lib/utils/progress";
@@ -54,7 +55,30 @@ export interface ApplicationDetail extends Application {
   displayStatus: DisplayStatus;
 }
 
-export interface ApplicationListItem extends Application {
+/**
+ * One card's worth of data: what the board and the list actually render, and the
+ * exact shape the list query selects.
+ *
+ * Deliberately narrower than the whole `applications` row. The list endpoint
+ * used to serialize every column — `notes`, the three contact fields, `userId`,
+ * `createdAt`, `archivedFromStatus` — none of which a card reads; the detail page
+ * fetches the full row through `getApplication`. On a board of 22 applications
+ * that was 12 kB of JSON across the six per-status requests.
+ *
+ * Defined here, next to the query that produces it, and re-exported by
+ * `lib/api.ts` for the client. It used to be declared in both places, which is
+ * how the two drifted apart.
+ */
+export interface ApplicationListItem {
+  id: string;
+  company: string;
+  role: string;
+  status: ApplicationStatus;
+  updatedAt: Application["updatedAt"];
+  isFavorite: boolean;
+  url: string | null;
+  companyWebsite: string | null;
+  totalSteps: number;
   progress: number;
   currentRound: string | null;
   milestoneCount: number;
@@ -77,7 +101,7 @@ export interface ListFilters {
 
 function summary(
   app: Pick<Application, "id" | "status" | "totalSteps">,
-  ms: Milestone[],
+  ms: MilestoneForList[],
 ): ApplicationSummary {
   return {
     id: app.id,
@@ -92,7 +116,7 @@ function summary(
   };
 }
 
-function currentRound(ms: Milestone[]): string | null {
+function currentRound(ms: MilestoneForList[]): string | null {
   const done = ms.filter((m) => m.status === "done");
   if (done.length > 0) {
     return [...done].sort((a, b) => b.stepOrder - a.stepOrder)[0].title;
@@ -103,6 +127,14 @@ function currentRound(ms: Milestone[]): string | null {
 function escapeLike(input: string): string {
   return input.replace(/[\\%_]/g, (m) => `\\${m}`);
 }
+
+/**
+ * The milestone fields the list's card maths reads — and all the list query
+ * selects. A page of 50 applications can carry a few hundred milestone rows, so
+ * the unread columns (notes, dates, ids) are worth leaving in the database. Full
+ * `Milestone` rows still satisfy it, which is what the detail path passes.
+ */
+type MilestoneForList = Pick<Milestone, "status" | "stepOrder" | "title">;
 
 /* ------------------------------------------------------------------ */
 /* Applications                                                         */
@@ -211,8 +243,24 @@ export async function listApplications(
   // which happens when rows disappear between requests: then the total would
   // read as 0 and the section header would say "0 applications" above nothing.
   // That one case pays for a real count.
+  // Only the columns a card renders come back (see ApplicationListItem): the
+  // whole row used to ride along — notes, the three contact fields, userId,
+  // createdAt, archivedFromStatus — and this runs once per board column.
   const rows = await db
-    .select({ application: applications, count: sql<number>`count(*) over ()::int` })
+    .select({
+      application: {
+        id: applications.id,
+        company: applications.company,
+        role: applications.role,
+        status: applications.status,
+        updatedAt: applications.updatedAt,
+        isFavorite: applications.isFavorite,
+        url: applications.url,
+        companyWebsite: applications.companyWebsite,
+        totalSteps: applications.totalSteps,
+      },
+      count: sql<number>`count(*) over ()::int`,
+    })
     .from(applications)
     .where(where)
     .orderBy(...orderBy)
@@ -234,13 +282,21 @@ export async function listApplications(
 
   const data: ApplicationListItem[] = [];
   if (apps.length > 0) {
+    // Again only what the card maths needs: progress counts by status,
+    // currentRound needs the titles and their order. A page of 50 applications
+    // can carry a few hundred milestone rows, so the unread columns add up.
     const msRows = await db
-      .select()
+      .select({
+        applicationId: milestones.applicationId,
+        status: milestones.status,
+        stepOrder: milestones.stepOrder,
+        title: milestones.title,
+      })
       .from(milestones)
       .where(inArray(milestones.applicationId, apps.map((a) => a.id)))
       .orderBy(milestones.stepOrder);
 
-    const byApp = new Map<string, Milestone[]>();
+    const byApp = new Map<string, MilestoneForList[]>();
     for (const m of msRows) {
       const list = byApp.get(m.applicationId) ?? [];
       list.push(m);

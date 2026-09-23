@@ -55,6 +55,16 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Performance
+- **The list endpoint sends only what a card renders.** `ApplicationListItem` was
+  the whole `applications` row plus derived fields, so every board load
+  serialized `notes`, the three contact fields, `userId`, `createdAt` and
+  `archivedFromStatus` — none of which a card reads, because the detail page
+  fetches the full row through `getApplication`. The list query now selects the
+  thirteen fields a card uses, and the milestone rows it joins select the three
+  the progress maths needs. Measured on a 22-application board: **12,344 →
+  7,703 bytes** across the six per-status requests, −38%. The type was declared
+  in two places (`lib/api.ts` and the service) and had already drifted apart; the
+  service owns it now and `lib/api.ts` re-exports it.
 - **The landing page no longer ships the dashboard's card runtime.** The product
   mock on the marketing page rendered `ApplicationCardView` — a client component
   carrying date-fns relative timestamps, Radix Progress and Radix Avatar — for

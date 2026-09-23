@@ -12,13 +12,13 @@ export type { ApplicationStatus, DisplayStatus };
 /* Types shared with the client                                        */
 /* ------------------------------------------------------------------ */
 
-export interface ApplicationListItem extends Application {
-  progress: number;
-  currentRound: string | null;
-  milestoneCount: number;
-  /** Effective status — "ghosted" when the app is stale (time-derived). */
-  displayStatus: DisplayStatus;
-}
+/**
+ * The list/card shape is owned by the service that produces it, and re-exported
+ * here for the client (`export type` so nothing is pulled into the bundle).
+ * Declaring it in both places is how the two drifted apart once already.
+ */
+import type { ApplicationListItem } from "@/lib/services/applications";
+export type { ApplicationListItem };
 
 export interface ApplicationDetail extends Application {
   milestones: Milestone[];
