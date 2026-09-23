@@ -74,19 +74,25 @@ export function KanbanBoard({
   // Optimistic removal from whichever column cached it: on a move the card
   // should leave immediately, and the invalidation below fills in the
   // destination column.
+  //
+  // `affected` is the set of sections the card was actually in — usually one,
+  // but a stale application is displayed in both "applied" and "ghosted", and
+  // those are the only sections that need to come back from the server.
   async function detachFromCaches(id: string) {
     await qc.cancelQueries({ queryKey: ["applications"] });
     const snapshots = qc.getQueriesData<ApplicationsResult>({
       queryKey: ["applications", "section"],
     });
+    const affected: string[] = [];
     for (const [key, data] of snapshots) {
       if (!data || !data.data.some((a) => a.id === id)) continue;
+      affected.push(String(key[2]));
       qc.setQueryData(key, {
         ...data,
         data: data.data.filter((a) => a.id !== id),
       });
     }
-    return { snapshots };
+    return { snapshots, affected };
   }
 
   function restore(
@@ -97,8 +103,31 @@ export function KanbanBoard({
     ctx?.snapshots.forEach(([key, data]) => qc.setQueryData(key, data));
   }
 
+  /**
+   * Refresh every board section. Kept for the mutations whose effect on status
+   * the client cannot predict: a step-back rewrites the timeline first and the
+   * server re-derives the status from it, so any column can change.
+   */
   function invalidateAll(id?: string) {
     qc.invalidateQueries({ queryKey: ["applications"] });
+    qc.invalidateQueries({ queryKey: ["stats"] });
+    if (id) qc.invalidateQueries({ queryKey: ["application", id] });
+  }
+
+  /**
+   * Refresh only the sections a mutation can actually have changed. Plain moves
+   * know both ends of the change, and refetching the other four columns costs
+   * four requests and a dozen queries per drag — the card cannot have appeared
+   * in them.
+   *
+   * "applied" and "interviewing" drag the ghosted section with them: a stale
+   * application of either status is displayed there too (see displayStatusOf),
+   * so that column's contents change even though its status does not.
+   */
+  function invalidateSections(statuses: Iterable<string>, id?: string) {
+    for (const status of Array.from(new Set(statuses))) {
+      qc.invalidateQueries({ queryKey: ["applications", "section", status] });
+    }
     qc.invalidateQueries({ queryKey: ["stats"] });
     if (id) qc.invalidateQueries({ queryKey: ["application", id] });
   }
@@ -115,7 +144,20 @@ export function KanbanBoard({
       restore(ctx);
       setMoveError((err as Error).message);
     },
-    onSettled: () => invalidateAll(),
+    onSettled: (_data, _err, vars, ctx) => {
+      invalidateSections(
+        [
+          // The sections the card was in before the move (from the optimistic
+          // detach), then where it went.
+          ...(ctx?.affected ?? []),
+          vars.status,
+          ...(vars.status === "applied" || vars.status === "interviewing"
+            ? ["ghosted"]
+            : []),
+        ],
+        vars.id,
+      );
+    },
   });
 
   /**

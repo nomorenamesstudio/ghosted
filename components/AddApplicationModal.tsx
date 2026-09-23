@@ -38,8 +38,13 @@ export function AddApplicationModal({
 
   const mutation = useMutation({
     mutationFn: createApplication,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["applications"] });
+    onSuccess: ({ data }) => {
+      // Only the section the new application landed in can have changed: a
+      // brand-new row is not stale, so it cannot appear in "ghosted" as well,
+      // and the other columns still hold exactly what they held before.
+      qc.invalidateQueries({
+        queryKey: ["applications", "section", data.status],
+      });
       qc.invalidateQueries({ queryKey: ["stats"] });
       setCompany("");
       setRole("");

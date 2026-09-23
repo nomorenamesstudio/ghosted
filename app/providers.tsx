@@ -1,34 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { SessionProvider } from "next-auth/react";
 import { ThemeProvider } from "@/components/theme-provider";
-import { SessionCacheClearer } from "@/components/SessionCacheClearer";
 
+/**
+ * The only provider that has to wrap every route: the theme is applied to
+ * `<html>` before first paint by an inline script in the root layout, and the
+ * settings page later needs the context to change it. Everything else — session,
+ * query cache — lives in `AppProviders`, mounted per route group, so pages that
+ * have no session and no queries do not ship that runtime at all.
+ */
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: 30_000,
-            retry: 1,
-            refetchOnWindowFocus: false,
-          },
-        },
-      }),
-  );
-  return (
-    <ThemeProvider>
-      <SessionProvider>
-        <QueryClientProvider client={queryClient}>
-          {/* Clears the query cache on login/logout/user-switch so no
-              account's data can leak into another session. */}
-          <SessionCacheClearer />
-          {children}
-        </QueryClientProvider>
-      </SessionProvider>
-    </ThemeProvider>
-  );
+  return <ThemeProvider>{children}</ThemeProvider>;
 }
