@@ -55,6 +55,20 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Fixed
+- **Dismissing the verification banner no longer breaks hydration.** The "Later"
+  dismissal was read straight out of localStorage in a `useState` initialiser,
+  so in any browser where the banner had been dismissed the client's first
+  render omitted a banner the server had already rendered. Every sibling after
+  it shifted by one node, and React reported the desync wherever it looked next
+  — in practice the search icon inside `ApplicationList`, as "Expected server
+  HTML to contain a matching `<svg>` in `<div>`", followed by "Hydration failed
+  because the initial UI does not match what was rendered on the server". It
+  happened on every load in that browser, survived a hard reload, and never
+  appeared in a fresh profile, which is what made it look like it came from
+  somewhere else. The stored dismissal is now applied in an effect, after mount,
+  exactly as the board/list view preference already was.
+  `tests/e2e/hydration.spec.ts` reproduces the original failure and guards it:
+  it fails on the old code and passes on the new.
 - **Tapping a form field on an iPhone no longer zooms the page.** iOS Safari
   zooms whenever a focused text control's font size is under 16px, and every
   control in the app is `text-sm` (14px), so the layout jumped into a zoomed

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Shared verification UI logic: resend the verification email and remember
@@ -29,11 +29,22 @@ export function writeVerifyDismissal(hiddenUntil: number): void {
 }
 
 export function useVerification() {
-  const [hiddenUntil, setHiddenUntil] = useState<number | null>(
-    readVerifyDismissal,
-  );
+  // Deliberately *not* seeded from localStorage, even though the dismissal is
+  // read-only and the value is right there: the server has no localStorage, so
+  // starting dismissed hid the banner the server had already rendered. Every
+  // sibling after it shifted by one node and React reported the desync wherever
+  // it happened to look next — in practice the search icon inside
+  // `ApplicationList`: "Expected server HTML to contain a matching <svg> in
+  // <div>". The stored preference is applied a tick later instead, exactly as
+  // the board/list view preference is. Regression guard:
+  // tests/e2e/hydration.spec.ts.
+  const [hiddenUntil, setHiddenUntil] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    setHiddenUntil(readVerifyDismissal());
+  }, []);
 
   const dismissed = hiddenUntil !== null && Date.now() < hiddenUntil;
 
