@@ -72,6 +72,20 @@ export function ghostedAfterDays(level?: PatienceLevel | null): number {
 }
 
 /**
+ * The instant an application of this age stops counting as active.
+ *
+ * Shared deliberately: the board and the list decide "ghosted" in JS from
+ * `Date.now()`, while the dashboard's stat counts do it in SQL. Comparing SQL
+ * against the database's own `now()` instead puts the two clocks on either side
+ * of an application that sits exactly on the threshold — which the seed data
+ * does — and the stat card then disagrees with the column beneath it. Both sides
+ * compare against this one timestamp.
+ */
+export function ghostedCutoff(days: number = ghostedAfterDays()): Date {
+  return new Date(Date.now() - days * MS_PER_DAY);
+}
+
+/**
  * "Ghosted": status is 'applied' or 'interviewing' AND the application has not
  * been updated within the user's patience threshold (based on updated_at). Any
  * edit or milestone change refreshes updated_at and un-ghosts it.
@@ -82,7 +96,7 @@ export function isGhosted(
   days: number = ghostedAfterDays(),
 ): boolean {
   if (status !== "applied" && status !== "interviewing") return false;
-  const cutoff = Date.now() - days * MS_PER_DAY;
+  const cutoff = ghostedCutoff(days).getTime();
   return new Date(updatedAt).getTime() < cutoff;
 }
 

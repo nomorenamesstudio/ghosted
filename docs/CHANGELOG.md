@@ -55,6 +55,19 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Performance
+- **The dashboard's stat counts are computed in the database.** `getStats` used
+  to fetch every application the user owns — one row each, on every dashboard
+  load and after every mutation, since the client invalidates it — and tally them
+  in JavaScript. It is one aggregate with `FILTER` clauses now. Counting in SQL
+  meant expressing the ghosted rule there as well, and that is where a real bug
+  surfaced: the first version counted only applied/interviewing rows that had gone
+  quiet, so an application filed as ghosted *by hand* was missing from the card
+  while sitting in the ghosted column — the number above the column read 8 over a
+  column of 9. Both sides now compare against one shared `ghostedCutoff(days)`;
+  letting SQL compare against the database's own `now()` would put the two clocks
+  either side of an application sitting exactly on the threshold.
+  `tests/integration/stats-ghosted-rule.test.ts` holds the two implementations to
+  the same answer, covering both kinds of ghosted and the boundary itself.
 - **Independent database reads now run concurrently.** The dashboard page's
   user row and application count, the list query's `count(*)` and its page of
   rows, `getApplication`'s patience lookup and milestones, and `getStats`' rows

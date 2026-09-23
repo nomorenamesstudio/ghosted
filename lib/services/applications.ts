@@ -25,6 +25,7 @@ import {
   deriveStatus,
   displayStatusOf,
   ghostedAfterDays,
+  ghostedCutoff,
   type DisplayStatus,
 } from "@/lib/utils/status";
 import type {
@@ -809,40 +810,55 @@ export interface DashboardStats {
 }
 
 export async function getStats(userId: string): Promise<DashboardStats> {
-  // Independent: the rows to count and the patience window used to derive
-  // "ghosted" from them.
-  const [rows, days] = await Promise.all([
-    db
-      .select({ status: applications.status, updatedAt: applications.updatedAt })
-      .from(applications)
-      .where(eq(applications.userId, userId)),
-    ghostedDaysFor(userId),
-  ]);
+  // One aggregate instead of one row per application. This runs on every
+  // dashboard load *and* after every mutation (the client invalidates it), and
+  // it used to pull every application the user owns just to count them.
+  //
+  // The ghosted rule is the same one displayStatusOf applies in JS: "applied" or
+  // "interviewing" whose updated_at is older than the user's patience window.
+  // Expressing it in SQL is what lets the counting happen in the database.
+  const days = await ghostedDaysFor(userId);
+  // Deliberately `ghostedCutoff(days)` rather than `now()`: the board and the
+  // list decide this in JS, and the two clocks disagree exactly at the
+  // threshold. Same timestamp, same line.
+  const cutoff = ghostedCutoff(days);
+  // Two ways an application displays as ghosted, and both have to be here: it
+  // was filed there by hand (the status is literally 'ghosted'), or it is an
+  // applied/interviewing one that has gone quiet past the patience window. The
+  // board's ghosted column uses exactly this disjunction, and the stat card has
+  // to agree with the column beneath it.
+  //
+  // The cutoff goes in as an ISO string with an explicit cast: postgres.js does
+  // not know how to send a raw JS Date through a drizzle `sql` fragment and
+  // stringifies it into something Postgres rejects.
+  const ghostedNow = sql`(
+    ${applications.status} = 'ghosted'
+    or (
+      ${applications.status} in ('applied', 'interviewing')
+      and ${applications.updatedAt} < ${cutoff.toISOString()}::timestamptz
+    )
+  )`;
 
-  const stats: DashboardStats = {
-    total: 0,
-    active: 0,
-    interviewing: 0,
-    offers: 0,
-    rejected: 0,
-    ghosted: 0,
+  const [row] = await db
+    .select({
+      total: sql<number>`count(*) filter (where ${applications.status} <> 'archived')::int`,
+      ghosted: sql<number>`count(*) filter (where ${ghostedNow})::int`,
+      interviewing: sql<number>`count(*) filter (where ${applications.status} = 'interviewing' and not ${ghostedNow})::int`,
+      offers: sql<number>`count(*) filter (where ${applications.status} = 'offer')::int`,
+      rejected: sql<number>`count(*) filter (where ${applications.status} = 'rejected')::int`,
+      applied: sql<number>`count(*) filter (where ${applications.status} = 'applied' and not ${ghostedNow})::int`,
+    })
+    .from(applications)
+    .where(eq(applications.userId, userId));
+
+  // "Active" is what is still in play: neither answered nor stale, i.e. the two
+  // columns that are not ghosted.
+  return {
+    total: Number(row.total),
+    active: Number(row.applied) + Number(row.interviewing),
+    interviewing: Number(row.interviewing),
+    offers: Number(row.offers),
+    rejected: Number(row.rejected),
+    ghosted: Number(row.ghosted),
   };
-
-  for (const r of rows) {
-    if (r.status === "archived") continue;
-    stats.total += 1;
-
-    const display = displayStatusOf(r.status, r.updatedAt, days);
-    if (display === "ghosted") {
-      stats.ghosted += 1;
-      continue;
-    }
-    if (display === "interviewing") stats.interviewing += 1;
-    if (display === "offer") stats.offers += 1;
-    if (display === "rejected") stats.rejected += 1;
-    if (display === "applied" || display === "interviewing") {
-      stats.active += 1;
-    }
-  }
-  return stats;
 }
