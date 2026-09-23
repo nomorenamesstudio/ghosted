@@ -55,6 +55,18 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Performance
+- **The landing page no longer ships the dashboard's card runtime.** The product
+  mock on the marketing page rendered `ApplicationCardView` — a client component
+  carrying date-fns relative timestamps, Radix Progress and Radix Avatar — for
+  four decorative cards, and so pulled all three onto the page a stranger loads
+  first. The markup now lives in `ApplicationCardShell`, a server component, and
+  `ApplicationCardView` wraps it with only the pieces that genuinely need the
+  client. Measured on the landing route's chunk list: **382 kB → 325 kB** of JS
+  (date-fns 10 kB, Radix Progress 4 kB and the avatar chunk all gone), and the
+  mock bars gained the `aria-valuenow` the Radix ones never rendered. The four
+  cards' text, card classes, fill transform and segment hairlines are identical
+  before and after, checked against the previous production build — it is the
+  same markup, not a copy that will drift.
 - **The dashboard's stat counts are computed in the database.** `getStats` used
   to fetch every application the user owns — one row each, on every dashboard
   load and after every mutation, since the client invalidates it — and tally them

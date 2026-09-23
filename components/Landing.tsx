@@ -27,10 +27,16 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ApplicationCardView } from "./ApplicationCard";
+// The card *shell*, not ApplicationCardView: the real card is a client component
+// (live relative timestamps, Radix avatar and progress), and rendering it here
+// pulled date-fns, Radix Progress and Radix Avatar onto the marketing page for
+// four decorative cards. The shell is a server component, so those stay on the
+// dashboard, and the look is identical because it is literally the same markup.
+import { ApplicationCardShell } from "./ApplicationCardShell";
 import { HeroGhost } from "./HeroGhost";
 import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
@@ -403,7 +409,37 @@ export function Landing() {
             <ul className="space-y-2">
               {MOCK_APPS.map((app) => (
                 <li key={app.id}>
-                  <ApplicationCardView app={app} logoUrl={MOCK_LOGOS[app.company]} />
+                  {/* Static twin of the real card: same shell, same classes, but
+                      no client boundary. The logo is a plain <img> of the file in
+                      public/landing-logos (the mock has no application row for
+                      /logos/<id> to look up), and the timestamp is formatted here
+                      on the server instead of in the browser. */}
+                  <ApplicationCardShell
+                    status={app.displayStatus}
+                    company={app.company}
+                    role={app.role}
+                    isFavorite={app.isFavorite}
+                    currentRound={app.currentRound}
+                    updatedLabel={`Updated ${formatDistanceToNow(
+                      new Date(app.updatedAt),
+                      { addSuffix: true },
+                    )}`}
+                    progress={app.progress}
+                    milestoneCount={app.milestoneCount}
+                    avatar={
+                      // A local file from public/landing-logos, 0.6–2.6 kB and
+                      // already the size it is drawn at: next/image would add its
+                      // own client runtime and an optimisation hop for nothing.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={MOCK_LOGOS[app.company]}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="h-9 w-9 shrink-0 rounded-lg object-contain"
+                      />
+                    }
+                  />
                 </li>
               ))}
             </ul>
