@@ -252,6 +252,19 @@ Decisions worth keeping:
 
 Deliberately not done, with the measurement that settled it:
 
+- **Moving the board toolbar out of its portal** (the review's "one extra render"
+  item). Measured in a browser on a wide-screen dashboard load: the toolbar
+  mounts inline, then mounts again into `#dashboard-header-slot` ~460 ms later
+  (dev timing; hydration is what the gap waits on). The cost is not the CPU — it
+  is that the search, sort, view switch and "Add application" button visibly
+  relocate from above the board into the header once the effect resolves. Nothing
+  cheap removes that: the slot only exists client-side, resolving it during the
+  first render is a hydration mismatch (the window width and the slot element are
+  both unknowable on the server), and `position: fixed` would detach the controls
+  from the layout that sizes them. It is a design decision — render the toolbar
+  in the header from the start, or keep it in the content flow like the list view
+  does — not a performance one, so it stays as it is until someone wants it
+  changed.
 - **Dynamic-importing the modals** (the review's "no `next/dynamic`" finding):
   the dashboard's page chunk is 34 kB raw and the modals are a slice of it, so
   lazy-mounting six dialogs — each needing first-open state to keep Radix's exit
