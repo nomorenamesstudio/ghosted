@@ -31,6 +31,7 @@ export function CompanyAvatar({
   company,
   version,
   cacheKey,
+  srcOverride,
   size = "sm",
   className,
 }: {
@@ -44,6 +45,8 @@ export function CompanyAvatar({
    * stale without them in the URL.
    */
   cacheKey?: string | null;
+  /** Explicit image to use instead of the /logos/:id route (landing mock). */
+  srcOverride?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
 }) {
@@ -51,7 +54,8 @@ export function CompanyAvatar({
   const params = new URLSearchParams();
   if (stamp) params.set("v", String(stamp));
   if (cacheKey) params.set("c", cacheKey);
-  const src = `/logos/${applicationId}${params.size ? `?${params}` : ""}`;
+  const src =
+    srcOverride ?? `/logos/${applicationId}${params.size ? `?${params}` : ""}`;
   const initial = company.trim().charAt(0).toUpperCase() || "?";
   const s = SIZES[size];
 

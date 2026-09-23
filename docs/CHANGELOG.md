@@ -25,6 +25,20 @@ All notable changes, by date and type.
   picture lives in the JWT, as the Google one always has. Covered by
   `tests/unit/gravatar.test.ts` and `tests/integration/avatars.test.ts`.
 
+### Changed
+- **Landing page mock cards carry the real company logos.** The preview cards
+  name Stripe, Vercel, Linear and Framer, so they now show those icons instead of
+  the lettered placeholder the real cards fall back to when a logo lookup fails. The four marks are static 128×128 files under
+  `public/landing-logos/`, chosen deliberately over a favicon lookup: the landing
+  page is statically built, and a runtime service call would put a third party in
+  the path of the first page every visitor sees. `ApplicationCardView` takes an
+  optional `logoUrl` and `CompanyAvatar` an optional `srcOverride`, which bypasses
+  the `/logos/:id` route — the mock data has no application id to look a logo up
+  by. Real cards are untouched.
+- **Card metadata is always two lines.** "Last round: …" and "Updated …" were a
+  wrapping row, so they shared a line on wide cards and split on narrow ones —
+  the same card read differently at different widths. They are a column now.
+
 ## 2026-09-17
 
 ### Fixed

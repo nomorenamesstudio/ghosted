@@ -35,6 +35,18 @@ import { HeroGhost } from "./HeroGhost";
 import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
 
+/**
+ * The mock cards name real companies, so they carry their real icons. Shipped as
+ * static files under public/landing-logos so the landing page stays static and
+ * never calls a favicon service at runtime.
+ */
+const MOCK_LOGOS: Record<string, string> = {
+  Stripe: "/landing-logos/stripe.png",
+  Vercel: "/landing-logos/vercel.png",
+  Linear: "/landing-logos/linear.jpg",
+  Framer: "/landing-logos/framer.jpg",
+};
+
 const FEATURES = [
   {
     icon: ClipboardList,
@@ -391,7 +403,7 @@ export function Landing() {
             <ul className="space-y-2">
               {MOCK_APPS.map((app) => (
                 <li key={app.id}>
-                  <ApplicationCardView app={app} />
+                  <ApplicationCardView app={app} logoUrl={MOCK_LOGOS[app.company]} />
                 </li>
               ))}
             </ul>

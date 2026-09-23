@@ -110,11 +110,14 @@ export function ApplicationCardView({
   className,
   compact = false,
   reserveActions = false,
+  logoUrl,
 }: {
   app: ApplicationListItem;
   className?: string;
   compact?: boolean;
   reserveActions?: boolean;
+  /** Real logo for mock data, which has no application id to look one up by. */
+  logoUrl?: string | null;
 }) {
   const status = app.displayStatus;
   return (
@@ -137,6 +140,7 @@ export function ApplicationCardView({
             company={app.company}
             version={app.updatedAt}
             cacheKey={`${app.url ?? ""}|${app.companyWebsite ?? ""}`}
+            srcOverride={logoUrl}
             size="lg"
           />
           <div className="min-w-0 flex-1">
@@ -168,7 +172,10 @@ export function ApplicationCardView({
             !compact && "sm:flex-row sm:items-center sm:justify-between sm:gap-4",
           )}
         >
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {/* Always two lines: the round it reached, then how fresh it is. As a
+              wrapping row they shared a line on wide cards and split on narrow
+              ones, so the same card read differently at different widths. */}
+          <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
             {app.currentRound && <span>Last round: {app.currentRound}</span>}
             <span>
               Updated {formatDistanceToNow(new Date(app.updatedAt), { addSuffix: true })}
