@@ -204,3 +204,53 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   and re-validates the upstream body (status, raster-only content type, 512KB
   cap) rather than trusting the status code, since an HTML error page cached as
   an image is worse than no avatar at all.
+
+## Performance notes
+
+Measured on a production build (`next build` + `next start` in a throwaway copy —
+never against the dev server's `.next`), 22 applications, 1440×900:
+
+| route | First Load JS | requests | notes |
+| --- | --- | --- | --- |
+| `/` landing (signed out) | ~137 kB | 27 | session request gone |
+| `/login` (signed out) | ~132 kB | 25 | mounts `AppProviders` |
+| `/app` (signed in) | 181–196 kB | 77 | 2 session + 6 per-status lists + 1 stats + 22 logos |
+| `/privacy` (static) | 101 kB | — | was 111 kB + 2 session requests |
+
+Decisions worth keeping:
+
+- **`AppProviders` is mounted per route group, not in the root layout.**
+  `SessionProvider`, `QueryClientProvider` and `SessionCacheClearer` belong to
+  `(dashboard)` and `(auth)` only; the root layout keeps `ThemeProvider`, since
+  the inline script already applies the theme before paint and the settings page
+  still needs its context. One QueryClient per mount means crossing the
+  auth/dashboard boundary starts a clean cache — the isolation
+  `SessionCacheClearer` gives between users, for free, between the groups.
+- **Invalidation is narrowed where the affected columns are known and left broad
+  where they are not.** A plain move knows both ends, and the optimistic detach
+  proves which sections held the card (a stale application is displayed in both
+  "applied" and "ghosted"), so it refreshes those plus the destination. A
+  step-back rewrites the timeline and lets the server re-derive the status, so it
+  invalidates the whole `["applications"]` prefix deliberately.
+- **The list query carries its own total**: `count(*) over ()` is evaluated
+  before LIMIT, so one query returns the page and how many matched. Only an empty
+  page *past the first* — rows vanishing between requests — runs a real count,
+  because otherwise a section header would claim "0 applications" over nothing.
+- **Independent reads run concurrently.** The patience lookup gates a WHERE
+  clause; everything else in a request (`count`/rows, app/milestones, stats rows)
+  goes out together.
+
+Deliberately not done, with the measurement that settled it:
+
+- **Dynamic-importing the modals** (the review's "no `next/dynamic`" finding):
+  the dashboard's page chunk is 34 kB raw and the modals are a slice of it, so
+  lazy-mounting six dialogs — each needing first-open state to keep Radix's exit
+  animations — buys roughly 3 kB gzipped. Not worth the complexity.
+- **One board endpoint instead of six per-status requests** is the real win still
+  on the table (~18 queries per dashboard load), but it means redesigning the
+  per-column paging contract `useApplicationSection` and the infinite scroll are
+  built on, plus the "every column has reported in" logic behind the empty state.
+  It wants its own session rather than a tail-end change.
+- **Milestone reorder/shift** still issues one `UPDATE` per row inside its
+  transaction, and the list response still serializes whole rows where the card
+  needs a handful of fields. Both are contained, neither is on the load path.

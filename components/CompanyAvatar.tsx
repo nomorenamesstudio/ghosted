@@ -64,7 +64,16 @@ export function CompanyAvatar({
       className={cn(s.box, s.radius, "shrink-0", className)}
       aria-hidden
     >
-      <AvatarImage src={src} alt="" className={s.radius} />
+      {/* Decoded off the main thread, and only fetched once it comes near the
+          viewport: a board with fifty cards would otherwise open fifty logo
+          requests while hydration is still running. */}
+      <AvatarImage
+        src={src}
+        alt=""
+        className={s.radius}
+        loading="lazy"
+        decoding="async"
+      />
       <AvatarFallback
         className={cn(
           s.radius,
