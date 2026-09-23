@@ -30,6 +30,11 @@ export function computeInsertShift(
  * Compute the new step_order assignments after deleting the milestone with
  * the given id. All milestones with stepOrder > deletedIndex shift down by 1.
  * Returns null if the milestone is not found.
+ *
+ * The service no longer calls this: it performs the same shift as a single range
+ * UPDATE (`step_order - 1` where `step_order > deleted`), because the rows are
+ * contiguous rather than a list. This stays as the readable statement of the
+ * rule, and its unit test pins the semantics the SQL mirrors.
  */
 export function computeDeleteShift(
   milestones: MilestoneLike[],

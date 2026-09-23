@@ -55,6 +55,16 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Performance
+- **Milestone shifts and renumbering are one statement each.** Adding, deleting
+  or re-marking a step used to move the following rows with one `UPDATE` per row
+  inside the transaction — a five-step timeline meant up to five round-trips. The
+  shifts are now single range updates (`step_order ± 1` over the affected range)
+  and the done-before-pending renumbering is one `CASE`. That is safe as a single
+  pass because nothing unique-constrains `(application_id, step_order)`, so a row
+  may pass through another row's old position mid-statement.
+  `tests/integration/milestone-ordering.test.ts` pins the invariants that make the
+  rewrite equivalent — the order stays a gapless `0..n-1`, and done steps always
+  precede pending ones — rather than asserting the SQL.
 - **The list endpoint sends only what a card renders.** `ApplicationListItem` was
   the whole `applications` row plus derived fields, so every board load
   serialized `notes`, the three contact fields, `userId`, `createdAt` and

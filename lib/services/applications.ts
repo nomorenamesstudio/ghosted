@@ -1,4 +1,4 @@
-import { and, eq, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { db } from "@/lib/db/client";
@@ -13,7 +13,6 @@ import {
 } from "@/lib/db/schema";
 import { calcProgress } from "@/lib/utils/progress";
 import {
-  computeDeleteShift,
   computeInsertShift,
   defaultMilestones,
   sortByStepOrder,
@@ -687,12 +686,21 @@ export async function addMilestone(
 
     // Position is clamped to [0, count] — "insert at position or append".
     const position = Math.min(input.position ?? existing.length, existing.length);
-    const { shifts, newStepOrder } = computeInsertShift(existing, position);
-    for (const s of shifts) {
+    const { newStepOrder } = computeInsertShift(existing, position);
+
+    // One statement rather than one UPDATE per shifted row: everything at or
+    // after the insert position moves up by exactly one, which is a range, not a
+    // list (see computeInsertShift).
+    if (position < existing.length) {
       await tx
         .update(milestones)
-        .set({ stepOrder: s.stepOrder })
-        .where(eq(milestones.id, s.id));
+        .set({ stepOrder: sql`${milestones.stepOrder} + 1` })
+        .where(
+          and(
+            eq(milestones.applicationId, applicationId),
+            gte(milestones.stepOrder, position),
+          ),
+        );
     }
 
     const [milestone] = await tx
@@ -780,13 +788,21 @@ export async function updateMilestone(
       if (aDone !== bDone) return aDone - bDone;
       return a.stepOrder - b.stepOrder;
     });
-    for (let i = 0; i < reordered.length; i++) {
-      if (reordered[i].stepOrder !== i) {
-        await tx
-          .update(milestones)
-          .set({ stepOrder: i })
-          .where(eq(milestones.id, reordered[i].id));
-      }
+    // Renumber in one statement rather than one UPDATE per moved row. Safe as a
+    // single pass because nothing unique-constrains (application_id, step_order):
+    // a row can pass through another row's old position mid-statement.
+    const renumber = reordered
+      .map((m, i) =>
+        m.stepOrder === i ? null : sql`when ${milestones.id} = ${m.id} then ${i}`,
+      )
+      .filter((clause): clause is SQL => clause !== null);
+    if (renumber.length > 0) {
+      await tx
+        .update(milestones)
+        .set({
+          stepOrder: sql`case ${sql.join(renumber, sql` `)} else ${milestones.stepOrder} end`,
+        })
+        .where(eq(milestones.applicationId, app.id));
     }
 
     const status = deriveStatus(app.status, reordered);
@@ -822,16 +838,19 @@ export async function deleteMilestone(
         .from(milestones)
         .where(eq(milestones.applicationId, app.id)),
     );
-    const shift = computeDeleteShift(existing, milestoneId);
-    if (!shift) return null;
 
     await tx.delete(milestones).where(eq(milestones.id, milestoneId));
-    for (const s of shift.shifts) {
-      await tx
-        .update(milestones)
-        .set({ stepOrder: s.stepOrder })
-        .where(eq(milestones.id, s.id));
-    }
+    // The mirror of the insert shift: everything after the deleted step moves
+    // down by one, so it is a range update rather than a list of rows.
+    await tx
+      .update(milestones)
+      .set({ stepOrder: sql`${milestones.stepOrder} - 1` })
+      .where(
+        and(
+          eq(milestones.applicationId, app.id),
+          gt(milestones.stepOrder, m.stepOrder),
+        ),
+      );
 
     const all = sortByStepOrder(
       await tx

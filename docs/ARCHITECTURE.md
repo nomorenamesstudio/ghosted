@@ -267,7 +267,11 @@ Deliberately not done, with the measurement that settled it:
   applications that took the six per-status responses from 12.3 kB to 7.7 kB.
   The type lives in the service beside the query that produces it and is
   re-exported by `lib/api.ts`; declaring it in both places is how it drifted once.
-- **Milestone reorder/shift** still issues one `UPDATE` per row inside its
-  transaction. It is a contained change, but it edits the ordering data every
-  milestone view depends on, and it runs per user action rather than per page
-  load — so it wants its own session rather than a tail-end edit.
+- **Milestone ordering is rewritten in one statement per operation.** A shift is
+  a range update (`step_order ± 1` where the order crosses the insert or delete
+  point), and the done-before-pending renumbering is a single `CASE`. Both rely on
+  there being no unique constraint on `(application_id, step_order)`: with one,
+  rows swapping places would collide mid-statement. `lib/utils/reorder.ts` keeps
+  the pure helpers as the readable statement of the rules, and
+  `tests/integration/milestone-ordering.test.ts` checks the invariants (gapless
+  `0..n-1`, done before pending) rather than the SQL.
