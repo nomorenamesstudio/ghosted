@@ -115,6 +115,16 @@ export const listApplicationsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+/**
+ * The board query: no status (it returns every section) and no page (it is
+ * always the first one — later pages come from the per-status endpoint).
+ */
+export const boardQuerySchema = z.object({
+  search: z.string().trim().max(200).optional(),
+  sort: z.enum(["company", "status", "updated_at", "progress"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
+
 /* ------------------------------------------------------------------ */
 /* Milestones                                                           */
 /* ------------------------------------------------------------------ */

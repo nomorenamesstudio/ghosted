@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { db } from "@/lib/db/client";
@@ -26,6 +26,7 @@ import {
   displayStatusOf,
   ghostedAfterDays,
   ghostedCutoff,
+  STATUS_ORDER,
   type DisplayStatus,
 } from "@/lib/utils/status";
 import type {
@@ -90,10 +91,13 @@ export interface ListResult {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+/** How a board column or list section can be ordered. */
+export type SortKey = "company" | "status" | "updated_at" | "progress";
+
 export interface ListFilters {
   status?: DisplayStatus;
   search?: string;
-  sort?: "company" | "status" | "updated_at" | "progress";
+  sort?: SortKey;
   page: number;
   limit: number;
 }
@@ -135,6 +139,130 @@ function escapeLike(input: string): string {
  */
 type MilestoneForList = Pick<Milestone, "status" | "stepOrder" | "title">;
 
+/** The application columns a card renders, and the only ones the list selects. */
+type ListAppRow = Pick<
+  Application,
+  | "id"
+  | "company"
+  | "role"
+  | "status"
+  | "updatedAt"
+  | "isFavorite"
+  | "url"
+  | "companyWebsite"
+  | "totalSteps"
+>;
+
+/** The card columns, spelled out once for both the list and the board query. */
+const LIST_APP_COLUMNS = {
+  id: applications.id,
+  company: applications.company,
+  role: applications.role,
+  status: applications.status,
+  updatedAt: applications.updatedAt,
+  isFavorite: applications.isFavorite,
+  url: applications.url,
+  companyWebsite: applications.companyWebsite,
+  totalSteps: applications.totalSteps,
+} as const;
+
+/** Sort order shared by the list and the board, so a column can never disagree. */
+function orderByFor(sort?: SortKey): SQL[] {
+  switch (sort ?? "updated_at") {
+    case "company":
+      return [
+        sql`${applications.isFavorite} desc`,
+        sql`lower(${applications.company}) asc`,
+        sql`${applications.updatedAt} desc`,
+      ];
+    case "status":
+      return [
+        sql`${applications.isFavorite} desc`,
+        sql`case ${applications.status} when 'applied' then 1 when 'interviewing' then 2 when 'offer' then 3 when 'rejected' then 4 when 'archived' then 5 end asc`,
+        sql`${applications.updatedAt} desc`,
+      ];
+    case "progress":
+      // Progress is derived from milestones (done / total steps), so order by
+      // the same ratio in SQL — favourites stay pinned on top.
+      return [
+        sql`${applications.isFavorite} desc`,
+        sql`(
+          select count(*)::float / nullif(${applications.totalSteps}, 0)
+          from milestones m
+          where m.application_id = ${applications.id}
+            and m.status = 'done'
+        ) desc`,
+        sql`${applications.updatedAt} desc`,
+      ];
+    default:
+      return [
+        sql`${applications.isFavorite} desc`,
+        sql`${applications.updatedAt} desc`,
+        sql`${applications.createdAt} desc`,
+      ];
+  }
+}
+
+/**
+ * Which section an application is displayed in, as SQL. The same rule as
+ * `displayStatusOf`, expressed once: filed as ghosted by hand, or an
+ * applied/interviewing row that has gone quiet past the patience window.
+ */
+function displayStatusSql(cutoffIso: string): SQL<DisplayStatus> {
+  return sql<DisplayStatus>`case
+    when ${applications.status} = 'archived' then 'archived'
+    when ${applications.status} = 'ghosted' then 'ghosted'
+    when ${applications.status} in ('applied', 'interviewing')
+      and ${applications.updatedAt} < ${cutoffIso}::timestamptz then 'ghosted'
+    else ${applications.status}::text
+  end`;
+}
+
+/**
+ * Turn application rows into cards: one extra query for every milestone of every
+ * row, then the derived fields the card shows (progress, current round, count and
+ * the display status time decides).
+ */
+async function buildListItems(
+  apps: ListAppRow[],
+  days: number,
+): Promise<ApplicationListItem[]> {
+  if (apps.length === 0) return [];
+
+  const msRows = await db
+    .select({
+      applicationId: milestones.applicationId,
+      status: milestones.status,
+      stepOrder: milestones.stepOrder,
+      title: milestones.title,
+    })
+    .from(milestones)
+    .where(inArray(milestones.applicationId, apps.map((a) => a.id)))
+    .orderBy(milestones.stepOrder);
+
+  const byApp = new Map<string, MilestoneForList[]>();
+  for (const m of msRows) {
+    const list = byApp.get(m.applicationId) ?? [];
+    list.push(m);
+    byApp.set(m.applicationId, list);
+  }
+
+  return apps.map((app) => {
+    const ms = byApp.get(app.id) ?? [];
+    return {
+      ...app,
+      progress: calcProgress({
+        status: app.status,
+        milestones: ms,
+        totalSteps: app.totalSteps,
+      }),
+      currentRound: currentRound(ms),
+      milestoneCount: ms.length,
+      displayStatus: displayStatusOf(app.status, app.updatedAt, days),
+    };
+  });
+}
+
 /* ------------------------------------------------------------------ */
 /* Applications                                                         */
 /* ------------------------------------------------------------------ */
@@ -147,6 +275,127 @@ export async function ghostedDaysFor(userId: string): Promise<number> {
     .where(eq(users.id, userId))
     .limit(1);
   return ghostedAfterDays(row?.level);
+}
+
+/**
+ * One section of the board: its first page of cards and how many it holds, in
+ * exactly the shape the per-status list endpoint returns — because a section
+ * falls back to that endpoint for "load more" and the two must be
+ * interchangeable.
+ */
+export interface BoardSection {
+  data: ApplicationListItem[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+export interface BoardFilters {
+  search?: string;
+  sort?: SortKey;
+  /** Cards per section — the same default the board uses per column. */
+  limit?: number;
+}
+
+/**
+ * The board's first paint, in one query.
+ *
+ * The dashboard used to make six requests — one per column — each running its
+ * own `count(*)` and its own page query, all with different WHERE clauses that
+ * were really one partition (a stale application belongs to the ghosted section
+ * and to no other). This asks the database once: partition by the display status,
+ * number the rows inside each partition by the shared sort, and keep the first
+ * `limit` of each. The section totals ride along on every row, so the six counts
+ * disappear too.
+ *
+ * `load more` still goes through `listApplications`, which is why a section's
+ * shape here matches a page there field for field.
+ */
+export async function listBoard(
+  userId: string,
+  filters: BoardFilters = {},
+): Promise<Record<DisplayStatus, BoardSection>> {
+  const { search, sort, limit = 50 } = filters;
+
+  const days = await ghostedDaysFor(userId);
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+  const display = displayStatusSql(cutoff);
+
+  const conditions = [eq(applications.userId, userId)];
+  if (search) {
+    const pattern = `%${escapeLike(search)}%`;
+    conditions.push(
+      or(
+        ilike(applications.company, pattern),
+        ilike(applications.role, pattern),
+      )!,
+    );
+  }
+
+  const orderBy = orderByFor(sort);
+  const rank = sql`row_number() over (partition by ${display} order by ${sql.join(
+    orderBy,
+    sql`, `,
+  )})::int`;
+
+  // Window functions cannot be filtered in the same SELECT, so the ranking is
+  // computed in a subquery and the first page of each section is taken outside
+  // it. Drizzle has no fluent wrapper for that, and the shape here is small
+  // enough to read as SQL.
+  const ranked = db
+    .select({
+      ...LIST_APP_COLUMNS,
+      section: display.as("section"),
+      sectionTotal: sql<number>`count(*) over (partition by ${display})::int`.as(
+        "section_total",
+      ),
+      rank: rank.as("rank"),
+    })
+    .from(applications)
+    .where(and(...conditions))
+    .as("ranked");
+
+  const rows = await db
+    .select()
+    .from(ranked)
+    .where(lte(ranked.rank, limit));
+
+  // Every section's total, read off the rows that carry it.
+  const totals = new Map<DisplayStatus, number>();
+  for (const row of rows) {
+    if (!totals.has(row.section)) totals.set(row.section, Number(row.sectionTotal));
+  }
+
+  // One milestones query and one pass of card maths for the whole board —
+  // building each section separately would put six more queries back.
+  const items = await buildListItems(
+    rows.map((r) => ({
+      id: r.id,
+      company: r.company,
+      role: r.role,
+      status: r.status,
+      updatedAt: r.updatedAt,
+      isFavorite: r.isFavorite,
+      url: r.url,
+      companyWebsite: r.companyWebsite,
+      totalSteps: r.totalSteps,
+    })),
+    days,
+  );
+
+  const sections = {} as Record<DisplayStatus, BoardSection>;
+  for (const status of STATUS_ORDER) {
+    const total = totals.get(status) ?? 0;
+    sections[status] = {
+      data: items.filter((item) => item.displayStatus === status),
+      pagination: {
+        page: 1,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  return sections;
 }
 
 export async function listApplications(
@@ -194,43 +443,7 @@ export async function listApplications(
   }
   const where = and(...conditions);
 
-  let orderBy: SQL[];
-  switch (sort ?? "updated_at") {
-    case "company":
-      orderBy = [
-        sql`${applications.isFavorite} desc`,
-        sql`lower(${applications.company}) asc`,
-        sql`${applications.updatedAt} desc`,
-      ];
-      break;
-    case "status":
-      orderBy = [
-        sql`${applications.isFavorite} desc`,
-        sql`case ${applications.status} when 'applied' then 1 when 'interviewing' then 2 when 'offer' then 3 when 'rejected' then 4 when 'archived' then 5 end asc`,
-        sql`${applications.updatedAt} desc`,
-      ];
-      break;
-    case "progress":
-      // Progress is derived from milestones (done / total steps), so order
-      // by the same ratio in SQL — favourites stay pinned on top.
-      orderBy = [
-        sql`${applications.isFavorite} desc`,
-        sql`(
-          select count(*)::float / nullif(${applications.totalSteps}, 0)
-          from milestones m
-          where m.application_id = ${applications.id}
-            and m.status = 'done'
-        ) desc`,
-        sql`${applications.updatedAt} desc`,
-      ];
-      break;
-    default:
-      orderBy = [
-        sql`${applications.isFavorite} desc`,
-        sql`${applications.updatedAt} desc`,
-        sql`${applications.createdAt} desc`,
-      ];
-  }
+  const orderBy = orderByFor(sort);
 
   // The total comes back with the page itself: `count(*) over ()` is evaluated
   // before LIMIT, so one query yields both the rows and how many matched. It
@@ -242,22 +455,9 @@ export async function listApplications(
   // which happens when rows disappear between requests: then the total would
   // read as 0 and the section header would say "0 applications" above nothing.
   // That one case pays for a real count.
-  // Only the columns a card renders come back (see ApplicationListItem): the
-  // whole row used to ride along — notes, the three contact fields, userId,
-  // createdAt, archivedFromStatus — and this runs once per board column.
   const rows = await db
     .select({
-      application: {
-        id: applications.id,
-        company: applications.company,
-        role: applications.role,
-        status: applications.status,
-        updatedAt: applications.updatedAt,
-        isFavorite: applications.isFavorite,
-        url: applications.url,
-        companyWebsite: applications.companyWebsite,
-        totalSteps: applications.totalSteps,
-      },
+      application: LIST_APP_COLUMNS,
       count: sql<number>`count(*) over ()::int`,
     })
     .from(applications)
@@ -279,44 +479,7 @@ export async function listApplications(
           )[0].count
         : 0;
 
-  const data: ApplicationListItem[] = [];
-  if (apps.length > 0) {
-    // Again only what the card maths needs: progress counts by status,
-    // currentRound needs the titles and their order. A page of 50 applications
-    // can carry a few hundred milestone rows, so the unread columns add up.
-    const msRows = await db
-      .select({
-        applicationId: milestones.applicationId,
-        status: milestones.status,
-        stepOrder: milestones.stepOrder,
-        title: milestones.title,
-      })
-      .from(milestones)
-      .where(inArray(milestones.applicationId, apps.map((a) => a.id)))
-      .orderBy(milestones.stepOrder);
-
-    const byApp = new Map<string, MilestoneForList[]>();
-    for (const m of msRows) {
-      const list = byApp.get(m.applicationId) ?? [];
-      list.push(m);
-      byApp.set(m.applicationId, list);
-    }
-
-    for (const app of apps) {
-      const ms = byApp.get(app.id) ?? [];
-      data.push({
-        ...app,
-        progress: calcProgress({
-          status: app.status,
-          milestones: ms,
-          totalSteps: app.totalSteps,
-        }),
-        currentRound: currentRound(ms),
-        milestoneCount: ms.length,
-        displayStatus: displayStatusOf(app.status, app.updatedAt, days),
-      });
-    }
-  }
+  const data = await buildListItems(apps, days);
 
   return {
     data,
