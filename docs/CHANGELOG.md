@@ -38,6 +38,21 @@ All notable changes, by date and type.
 - **Card metadata is always two lines.** "Last round: …" and "Updated …" were a
   wrapping row, so they shared a line on wide cards and split on narrow ones —
   the same card read differently at different widths. They are a column now.
+- **The dashboard has no toolbar while the account is empty.** With nothing in
+  it there is nothing to search, nothing to sort, no second view to switch to,
+  and "Add application" is already the empty state's own button — so search,
+  sort, the view switch and that button all stay out of the way, in both the
+  board and the list. The email-verification banner stays away for the same
+  reason — one focus on the screen, and a limit only starts to matter once there
+  is something to add. (The donation banner needs no gate: it hides itself until
+  there are offers.) The rule lives in `useAccountIsEmpty`, deliberately two
+  counts that must agree: `applicationCount` (the server's snapshot, so nothing
+  flashes in before the empty state) and the shared stats query (live,
+  invalidated by every mutation, so all of it returns the moment the first
+  application is added — but it excludes archived applications, so it cannot be
+  trusted alone). A search that matches nothing is not this state and keeps its
+  controls, since hiding them would leave no way to clear the filter. Covered by
+  `tests/e2e/empty-board.spec.ts`.
 
 ### Fixed
 - **Tapping a form field on an iPhone no longer zooms the page.** iOS Safari

@@ -12,6 +12,7 @@ import { ApplicationsEmptyState } from "./ApplicationsEmptyState";
 import { KanbanBoard } from "./KanbanBoard";
 import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
+import { useAccountIsEmpty } from "./use-account-is-empty";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -64,6 +65,12 @@ export function ApplicationList({
   // the cap is reached the add button opens the verification modal instead of
   // the form (the server enforces the cap too - this is purely UX).
   const atAppLimit = !emailVerified && applicationCount >= unverifiedAppLimit;
+
+  // An account with nothing in it gets no toolbar: search, sort, the view
+  // switch and "Add application" all have nothing to act on, and the empty
+  // state below already carries the one action that matters. The same rule
+  // keeps the verification banner away - see useAccountIsEmpty.
+  const accountIsEmpty = useAccountIsEmpty(applicationCount);
 
   function handleAddClick() {
     if (atAppLimit) setVerifyOpen(true);
@@ -235,7 +242,10 @@ export function ApplicationList({
 
   return (
     <div className="space-y-4">
-      {controlsInHeader ? createPortal(toolbar, headerSlot) : toolbar}
+      {/* Hidden entirely while the account is empty - the empty state below is
+          the whole screen's worth of interface in that case. */}
+      {!accountIsEmpty &&
+        (controlsInHeader ? createPortal(toolbar, headerSlot) : toolbar)}
 
       {view === "board" ? (
         <KanbanBoard

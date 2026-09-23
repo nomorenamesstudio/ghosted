@@ -33,7 +33,7 @@ export function ApplicationsEmptyState({
           hunt! 🎯
         </p>
       </div>
-      <Button onClick={onAdd}>
+      <Button data-testid="add-first-application" onClick={onAdd}>
         <Plus />
         Add your first application
       </Button>

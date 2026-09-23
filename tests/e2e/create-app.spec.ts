@@ -7,8 +7,9 @@ test("create an application and add a milestone", async ({ page }) => {
   await page.goto("/app");
   await expect(page.getByText("No applications yet")).toBeVisible();
 
-  // Open the add-application modal via the FAB.
-  await page.getByTestId("add-application-fab").click();
+  // Open the add-application modal. This account is empty, so the toolbar is
+  // hidden and the empty state's own button is the way in.
+  await page.getByTestId("add-first-application").click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel("Company *").fill("Acme Corp");
   await dialog.getByLabel("Role *").fill("Frontend Engineer");

@@ -9,6 +9,7 @@ import { DonateBanner } from "./DonateBanner";
 import { VerificationBanner } from "./VerificationBanner";
 import { ApplicationList, type ViewMode } from "./ApplicationList";
 import { ScrollTopButton } from "./ScrollTopButton";
+import { useAccountIsEmpty } from "./use-account-is-empty";
 
 const VIEW_KEY = "ghosted-view";
 
@@ -37,6 +38,12 @@ export function Dashboard({
     queryKey: ["stats"],
     queryFn: () => getStats(),
   });
+
+  // While the account is empty the verification banner stays out of the way:
+  // its limit only starts to matter once there is something to add, and the
+  // empty state is meant to be the single focus on the screen. It returns with
+  // the first application.
+  const accountIsEmpty = useAccountIsEmpty(applicationCount);
 
   // Status filter, shared between the clickable stat cards and the dropdown.
   const [status, setStatus] = useState<"" | DisplayStatus>("");
@@ -80,11 +87,15 @@ export function Dashboard({
       <div className="space-y-6 pt-4">
         {/* Both banners live in the content flow, above the stats - same
             Card design, different intent (amber = verification, violet =
-            donation). */}
-        <VerificationBanner
-          emailVerified={emailVerified}
-          limit={unverifiedAppLimit}
-        />
+            donation). The donation banner already hides itself until there are
+            offers to celebrate; the verification one steps aside while the
+            account is empty. */}
+        {!accountIsEmpty && (
+          <VerificationBanner
+            emailVerified={emailVerified}
+            limit={unverifiedAppLimit}
+          />
+        )}
         <DonateBanner offers={stats?.data?.offers ?? 0} />
         {/* Stats are a list-view summary (they filter the sections); on the
             board the columns already show every count, so they stay out of

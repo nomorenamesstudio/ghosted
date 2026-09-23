@@ -23,12 +23,24 @@ export async function markUserVerified(email: string): Promise<void> {
  * The dashboard opens on the Kanban board now. Specs that assert list behaviour
  * (sections, stat cards, infinite scroll over the sections) switch to List
  * first - the choice is remembered per browser, so once is enough.
+ *
+ * An account with no applications has no toolbar at all, so on a fresh account
+ * there is no switch to click: seed the stored preference the Dashboard applies
+ * on mount and reload instead. Same end state, and specs stay readable from the
+ * empty account onwards.
  */
 export async function useListView(page: Page): Promise<void> {
-  await page
+  const toggle = page
     .locator('[role="group"][aria-label="View"]')
-    .getByRole("button", { name: "List" })
-    .click();
+    .getByRole("button", { name: "List" });
+
+  if (await toggle.isVisible().catch(() => false)) {
+    await toggle.click();
+  } else {
+    await page.addInitScript(() => localStorage.setItem("ghosted-view", "list"));
+    await page.reload();
+  }
+
   await expect(page.getByTestId("application-sections")).toBeVisible();
 }
 
