@@ -200,23 +200,36 @@ export async function listApplications(
       ];
   }
 
-  // The count and the page are independent of each other — only the ordering
-  // depends on the filters — so they go out together instead of one after the
-  // other. This runs once per board column (six times on a dashboard load), so
-  // the saved round-trip is multiplied by six.
-  const [[{ count }], apps] = await Promise.all([
-    db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(applications)
-      .where(where),
-    db
-      .select()
-      .from(applications)
-      .where(where)
-      .orderBy(...orderBy)
-      .limit(limit)
-      .offset((page - 1) * limit),
-  ]);
+  // The total comes back with the page itself: `count(*) over ()` is evaluated
+  // before LIMIT, so one query yields both the rows and how many matched. It
+  // used to be a separate count query per call, and this call runs once per
+  // board column — six counts per dashboard load for numbers the rows already
+  // carry.
+  //
+  // The only case the window cannot answer is an empty page *past the first*,
+  // which happens when rows disappear between requests: then the total would
+  // read as 0 and the section header would say "0 applications" above nothing.
+  // That one case pays for a real count.
+  const rows = await db
+    .select({ application: applications, count: sql<number>`count(*) over ()::int` })
+    .from(applications)
+    .where(where)
+    .orderBy(...orderBy)
+    .limit(limit)
+    .offset((page - 1) * limit);
+
+  const apps = rows.map((r) => r.application);
+  const count =
+    rows.length > 0
+      ? Number(rows[0].count)
+      : page > 1
+        ? (
+            await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(applications)
+              .where(where)
+          )[0].count
+        : 0;
 
   const data: ApplicationListItem[] = [];
   if (apps.length > 0) {
