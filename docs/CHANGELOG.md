@@ -55,6 +55,21 @@ All notable changes, by date and type.
   `tests/e2e/empty-board.spec.ts`.
 
 ### Performance
+- **The dashboard opens with one board request instead of six.** Each column
+  used to fetch its own first page and its own count; `GET
+  /api/applications/board` answers all of them at once (one partitioned query
+  with the totals riding along, plus one milestones query for every card), and
+  `useBoardSeed` writes each section straight into the cache entry its column
+  reads. The write happens inside the query function, before the seed resolves:
+  a section mounts the moment the seed is ready, so filling the cache in an
+  effect afterwards would have sent every column off on its own request in the
+  gap. Measured on the dashboard: **11 API calls → 6** (1 board + 1 stats + 4
+  session in dev), and the six per-section `count(*)` queries are gone with the
+  six requests. `load more` still uses the per-status endpoint, and a section
+  cannot tell which one filled it — `tests/integration/board-equivalence.test.ts`
+  checks the two agree section by section. Failing is safe: the sections are only
+  gated while the seed is in flight, so an error drops back to exactly the old
+  behaviour, six requests and all.
 - **Milestone shifts and renumbering are one statement each.** Adding, deleting
   or re-marking a step used to move the following rows with one `UPDATE` per row
   inside the transaction — a five-step timeline meant up to five round-trips. The

@@ -23,6 +23,7 @@ export function ApplicationSection({
   sort,
   collapsed,
   onToggle,
+  seedReady = true,
   onTotalChange,
 }: {
   status: DisplayStatus;
@@ -30,6 +31,8 @@ export function ApplicationSection({
   sort: SectionSort;
   collapsed: boolean;
   onToggle: () => void;
+  /** False until the board's single seed request has filled the caches. */
+  seedReady?: boolean;
   onTotalChange: (status: DisplayStatus, total: number) => void;
 }) {
   const {
@@ -42,7 +45,14 @@ export function ApplicationSection({
     isLoadingMore,
     loadMore,
     sentinelRef,
-  } = useApplicationSection({ status, search, sort, collapsed, onTotalChange });
+  } = useApplicationSection({
+    status,
+    search,
+    sort,
+    collapsed,
+    enabled: seedReady,
+    onTotalChange,
+  });
 
   const Icon = STATUS_ICONS_MAP[status];
 

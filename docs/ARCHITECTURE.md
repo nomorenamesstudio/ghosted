@@ -284,14 +284,17 @@ Deliberately not done, with the measurement that settled it:
   in the header from the start, or keep it in the content flow like the list view
   does — not a performance one, so it stays as it is until someone wants it
   changed.
-- **One board endpoint instead of six per-status requests** — the server half is
-  in (`GET /api/applications/board`: one partitioned window query for every
-  section's first page plus its total, and one milestones query for all the
-  cards). `tests/integration/board-equivalence.test.ts` checks it section by
-  section against the per-status endpoint for every sort mode. What remains is
-  the client: seed the section caches from it so the initial fan-out becomes one
-  request, while `load more` keeps using the per-status endpoint it already
-  matches. Until that lands, the dashboard still makes six requests.
+- **One board endpoint instead of six per-status requests.** `GET
+  /api/applications/board` returns every section's first page and total from two
+  queries (one partitioned window query, one milestones query for all the cards),
+  and `useBoardSeed` seeds each section's cache entry inside its query function
+  so no column fires a request of its own. Sections are only gated while the seed
+  is in flight — an error falls back to the per-status fetches — and `load more`
+  keeps using `GET /api/applications`, which returns a section in the same shape;
+  `tests/integration/board-equivalence.test.ts` holds the two to the same answer
+  for every sort mode. Measured: the dashboard's API calls went 11 → 6 in dev
+  (1 board + 1 stats + 4 session), and the six per-section counts disappeared
+  with the six requests.
 - **Dynamic-importing the modals** (the review's "no `next/dynamic`" finding):
   the dashboard's page chunk is 34 kB raw and the modals are a slice of it, so
   lazy-mounting six dialogs — each needing first-open state to keep Radix's exit

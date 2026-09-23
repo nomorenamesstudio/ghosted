@@ -13,6 +13,7 @@ import { KanbanBoard } from "./KanbanBoard";
 import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
 import { useAccountIsEmpty } from "./use-account-is-empty";
+import { useBoardSeed } from "./use-board-seed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,6 +72,15 @@ export function ApplicationList({
   // state below already carries the one action that matters. The same rule
   // keeps the verification banner away - see useAccountIsEmpty.
   const accountIsEmpty = useAccountIsEmpty(applicationCount);
+
+  // Every section's first page arrives in one request instead of one per
+  // section. Disabled when a single status is filtered in: then the per-status
+  // request is already the cheap one and there is nothing to consolidate.
+  const { seedReady } = useBoardSeed({
+    search: debouncedSearch,
+    sort,
+    enabled: !status,
+  });
 
   function handleAddClick() {
     if (atAppLimit) setVerifyOpen(true);
@@ -263,6 +273,7 @@ export function ApplicationList({
               status={s}
               search={debouncedSearch}
               sort={sort}
+              seedReady={seedReady}
               // While a status filter is active the single visible section is
               // forced open, and toggling is disabled so the persisted manual
               // collapse state survives until the filter is cleared again.

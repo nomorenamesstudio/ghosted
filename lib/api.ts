@@ -39,6 +39,9 @@ export interface ApplicationsResult {
   pagination: Pagination;
 }
 
+/** The orderings the board and the list offer. */
+export type SectionSort = "company" | "updated_at" | "progress";
+
 export interface DashboardStats {
   total: number;
   active: number;
@@ -158,6 +161,24 @@ export function getApplications(params: ListParams = {}): Promise<ApplicationsRe
   if (params.limit) qs.set("limit", String(params.limit));
   const query = qs.toString();
   return request<ApplicationsResult>(`/api/applications${query ? `?${query}` : ""}`);
+}
+
+/**
+ * Every board section's first page and total in one request — the six columns'
+ * opening fetches collapsed into one. Each section carries the same shape
+ * `getApplications` returns, so a section can page on from either.
+ */
+export function getBoard(
+  params: { search?: string; sort?: SectionSort; limit?: number } = {},
+): Promise<{ sections: Record<string, ApplicationsResult> }> {
+  const qs = new URLSearchParams();
+  if (params.search) qs.set("search", params.search);
+  if (params.sort) qs.set("sort", params.sort);
+  if (params.limit) qs.set("limit", String(params.limit));
+  const query = qs.toString();
+  return request<{ sections: Record<string, ApplicationsResult> }>(
+    `/api/applications/board${query ? `?${query}` : ""}`,
+  );
 }
 
 export function getApplication(id: string): Promise<{ data: ApplicationDetail }> {

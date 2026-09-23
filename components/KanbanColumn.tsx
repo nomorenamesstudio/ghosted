@@ -26,6 +26,7 @@ export function KanbanColumn({
   search,
   sort,
   patienceDays,
+  seedReady = true,
   onMove,
   onTotalChange,
 }: {
@@ -34,6 +35,8 @@ export function KanbanColumn({
   sort: SectionSort;
   /** Days of silence before this column picks an application up. */
   patienceDays: number;
+  /** False until the board's single seed request has filled the caches. */
+  seedReady?: boolean;
   /** `from` is this column — the board needs it to spot a step back. */
   onMove: (
     id: string,
@@ -57,7 +60,7 @@ export function KanbanColumn({
     isLoadingMore,
     loadMore,
     sentinelRef,
-  } = useApplicationSection({ status, search, sort, onTotalChange });
+  } = useApplicationSection({ status, search, sort, enabled: seedReady, onTotalChange });
 
   const Icon = STATUS_ICONS_MAP[status];
 

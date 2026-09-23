@@ -18,6 +18,7 @@ import {
 } from "@/lib/utils/status";
 import { ApplicationsEmptyState } from "./ApplicationsEmptyState";
 import { KanbanColumn } from "./KanbanColumn";
+import { useBoardSeed } from "./use-board-seed";
 import { StepBackDialog } from "./StepBackDialog";
 import { GhostPulse } from "./loading";
 import type { SectionSort } from "./use-application-section";
@@ -51,6 +52,9 @@ export function KanbanBoard({
   onAdd: () => void;
   patienceDays: number;
 }) {
+  // The board opens with every column's first page, in one request.
+  const { seedReady } = useBoardSeed({ search, sort });
+
   const qc = useQueryClient();
   const [moveError, setMoveError] = useState<string | null>(null);
   const [pendingStepBack, setPendingStepBack] = useState<PendingStepBack | null>(
@@ -245,6 +249,7 @@ export function KanbanBoard({
             search={search}
             sort={sort}
             patienceDays={patienceDays}
+            seedReady={seedReady}
             onMove={handleMove}
             onTotalChange={reportTotal}
           />

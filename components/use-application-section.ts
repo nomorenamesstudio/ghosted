@@ -8,7 +8,8 @@ import type { DisplayStatus } from "@/lib/utils/status";
 /** Applications loaded per page per status group; more are fetched on scroll. */
 export const SECTION_PAGE_SIZE = 50;
 
-export type SectionSort = "company" | "updated_at" | "progress";
+export type { SectionSort } from "@/lib/api";
+import type { SectionSort } from "@/lib/api";
 
 /**
  * One status group's applications, with infinite scroll.
@@ -22,6 +23,7 @@ export function useApplicationSection({
   search,
   sort,
   collapsed = false,
+  enabled = true,
   onTotalChange,
 }: {
   status: DisplayStatus;
@@ -29,6 +31,13 @@ export function useApplicationSection({
   sort: SectionSort;
   /** Collapsed sections/columns skip the scroll sentinel (nothing to load into). */
   collapsed?: boolean;
+  /**
+   * False while the board's single seed request is still on its way. The column
+   * still renders (with its skeleton) but does not fetch: the seed fills this
+   * section's cache entry, so fetching here would put the six-request fan-out
+   * straight back.
+   */
+  enabled?: boolean;
   onTotalChange: (status: DisplayStatus, total: number) => void;
 }) {
   const [items, setItems] = useState<ApplicationListItem[]>([]);
@@ -60,6 +69,7 @@ export function useApplicationSection({
           limit: SECTION_PAGE_SIZE,
         }),
       placeholderData: (prev) => prev,
+      enabled,
     });
 
   // Merge fresh page-1 data into the accumulated list.
