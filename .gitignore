@@ -29,9 +29,10 @@ yarn-error.log*
 .env
 .env*.local
 
-# local GitHub token (never commit)
+# local GitHub and Railway access token (never commit)
 /.github-token
 /.git-credentials
+/.railway-token
 
 # pnpm sandbox-local dirs (see .npmrc)
 /.npmrc
