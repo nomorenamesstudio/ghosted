@@ -238,7 +238,9 @@ export function KanbanBoard({
           // `scroll-px-4` matches the padding: without it, snapping aligns the
           // first column to the padding *box* and the container auto-scrolls by
           // 16px on load, eating the left padding and leaving a gap on the right.
-          "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 sm:mx-0 sm:scroll-px-0 sm:px-0",
+          // `board-scroll` slims the scrollbar this strip needs (see globals.css):
+          // the default desktop bar sits under the cards and dominates them.
+          "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 sm:mx-0 sm:scroll-px-0 sm:px-0 board-scroll",
           allEmpty && "hidden",
         )}
       >

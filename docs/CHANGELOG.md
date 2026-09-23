@@ -144,6 +144,15 @@ All notable changes, by date and type.
   narrows to its own section the same way.
 
 ### Fixed
+- **The board's horizontal scrollbar no longer dominates the cards.** The column
+  strip scrolls sideways on purpose — the columns snap past each other — but a
+  desktop browser reserves a full-height bar for it, drawn right under the cards,
+  which is what looked wrong at narrower widths. It is now a slim themed
+  hairline (`scrollbar-width: thin` plus a `::-webkit-scrollbar` thumb in the
+  app's border colour on a transparent track). Measured in the reporting browser:
+  **15 px reserved → 10 px**, still scrollable, columns unchanged. It stays
+  visible deliberately: it is the only hint a mouse user gets that there are more
+  columns to the right.
 - **Dismissing the verification banner no longer breaks hydration.** The "Later"
   dismissal was read straight out of localStorage in a `useState` initialiser,
   so in any browser where the banner had been dismissed the client's first

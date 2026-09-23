@@ -170,6 +170,38 @@
   }
 }
 
+/* The board's column strip scrolls sideways on purpose — the columns snap past
+   each other — but a desktop browser reserves a full-height scrollbar for it and
+   draws that chunky grey bar right under the cards, which is what it looked like
+   at narrower widths. Slimming it to a quiet hairline keeps the affordance (this
+   is the only hint a mouse user gets that there is more to the right) while
+   letting the cards own the space.
+
+   Styling `::-webkit-scrollbar` also switches Chromium from overlay to classic
+   scrollbars for this element, which is why the height above is the one that
+   ends up reserved. */
+.board-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+.board-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.board-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.board-scroll::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+
+.board-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.45);
+}
+
 /* Board view uses the whole window: six columns need the room, and the header
    is widened with them so it stays aligned with the board. Set from Dashboard
    via `document.documentElement.dataset.view`. */
