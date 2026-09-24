@@ -111,7 +111,7 @@ export function KanbanColumn({
         </span>
         {status === "ghosted" && (
           <span className="ml-auto text-[10px] font-normal normal-case">
-            auto after {patienceDays} days, or by hand
+            auto after {patienceDays} days
           </span>
         )}
       </header>
