@@ -261,6 +261,18 @@ relative timestamp, Radix avatar, Radix progress — and the landing passes a pl
 pulling date-fns and two Radix primitives onto the first page a stranger loads,
 without a copied card that would drift.
 
+Those per-status colours are authored in **OKLCH, one lightness and one chroma
+per layer, varying only the hue** — surface 0.951/0.030, border 0.885/0.050,
+progress track 0.862/0.062, with a dark twin of each. Tailwind's ramp cannot do
+this job: at the same lightness `amber-100` carries 2.3x the chroma of `sky-100`,
+so taking the same step number for every status made the interviewing and offer
+cards shout next to a ghosted one. Status is carried by hue and by the badge
+(deliberately one step louder than the card it labels), not by how vivid a card
+happens to be; the progress *fill* is the one element left on the ramp, because
+it is meant to be the vivid thing. The token classes are spelled out in full
+rather than built from those numbers in a template literal, which Tailwind would
+never see and would silently render as transparent.
+
 Decisions worth keeping:
 
 - **`AppProviders` is mounted per route group, not in the root layout.**

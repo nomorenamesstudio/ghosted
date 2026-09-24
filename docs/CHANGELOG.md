@@ -46,6 +46,28 @@ All notable changes, by date and type.
   `tests/e2e/list-move.spec.ts` (move out of and back into a section through the
   real UI).
 
+### Fixed
+- **The status colours were 2.3x apart in perceived intensity.** Every status
+  used the same Tailwind step (`bg-amber-100`, `bg-emerald-100`, …), and that step
+  is not perceptually even: measured in OKLCH, `interviewing` sat at chroma 0.058
+  and `offer` at 0.051 while `rejected`, `ghosted` and `applied` sat at 0.031,
+  0.028 and 0.025. Same "100", twice the colour — so the interviewing and offer
+  cards shouted next to a ghosted one, and the board read as a board of different
+  designs. `lib/utils/card-styles.ts` now authors every status in `oklch()` with
+  one lightness and one chroma per layer, only the hue changing: surface
+  `0.951 0.030`, border `0.885 0.050` with a `0.845 0.070` hover, progress track
+  `0.862 0.062`, each with a dark twin. Measured after: every status sits at
+  exactly 0.030 / 0.050 / 0.062 — a spread of 1.00x, where it was 2.32x. Status is
+  now carried by hue, and by the badge, which stays one step louder than the card
+  it labels; the progress *fill* is the one element left on the Tailwind ramp,
+  being the part meant to be vivid, and `archived` stays neutral as the only
+  status that is not a hue. The tokens are written out as full class names —
+  Tailwind reads the source text, and the first attempt assembled them in a
+  template literal, which generated nothing and rendered every card transparent
+  until a browser measured it. Verified: tsc and lint clean, 252 unit/component
+  tests, full e2e 28/28 (axe scan included, so no contrast regression), and the
+  palette re-measured from the rendered page in both themes.
+
 ## 2026-09-23
 
 ### Added
