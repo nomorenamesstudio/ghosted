@@ -23,6 +23,10 @@ import type { MetadataRoute } from "next";
  * sampled from its corners), so the splash meets the icon instead of framing a
  * pale lavender ghost in the old purple.
  *
+ * Their URLs carry a `?v=`, because both iOS and Android remember an icon by its
+ * URL: bump it when the art changes and a re-added clip fetches the new one
+ * rather than the cached one.
+ *
  * The previous icon set — the purple square with the small ghost — is kept: its
  * master is `public/app-icon-x2.png` and its cuts are in `public/icons-v1/`, so
  * switching back is a copy plus the one ImageMagick command in the changelog.
@@ -39,14 +43,14 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#ebedf9",
     theme_color: "#ebedf9",
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/icon-192.png?v=2", sizes: "192x192", type: "image/png" },
       // The art bleeds to the edges, and previewing Android's circular crop shows
       // the face, eyes and phone surviving it — so one file serves both purposes.
       // It is listed twice because the manifest type takes a single value per
       // entry, not the spec's space-separated "any maskable".
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png?v=2", sizes: "512x512", type: "image/png", purpose: "any" },
       {
-        src: "/icon-512.png",
+        src: "/icon-512.png?v=2",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

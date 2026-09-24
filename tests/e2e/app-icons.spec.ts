@@ -16,7 +16,7 @@ const ICONS = [
 ];
 
 /** The subset the manifest lists — iOS ignores those and takes the link tag. */
-const MANIFEST_ICONS = ["/icon-192.png", "/icon-512.png"];
+const MANIFEST_ICONS = ["/icon-192.png?v=2", "/icon-512.png?v=2"];
 
 /** The previous set, kept in the repo so the icon can be reverted. */
 const ARCHIVE = [
@@ -86,9 +86,10 @@ test("the pages link the icons and the standalone meta tags", async ({ page }) =
     "href",
     "/manifest.webmanifest",
   );
+  // Versioned on purpose: both platforms cache an icon by URL.
   await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
     "href",
-    "/apple-touch-icon.png",
+    "/apple-touch-icon.png?v=2",
   );
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute(
     "content",

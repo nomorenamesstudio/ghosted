@@ -33,7 +33,13 @@ export const metadata: Metadata = {
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+    // The `?v=` is not decoration: iOS and Android key their icon caches by URL,
+    // so re-adding a home-screen clip to the same path can hand back the art it
+    // remembers. Bump this whenever the icon changes, and the re-add is
+    // guaranteed to fetch the new one.
+    apple: [
+      { url: "/apple-touch-icon.png?v=2", sizes: "180x180", type: "image/png" },
+    ],
   },
   // iOS standalone: the home-screen name, and the meta tag that makes a saved
   // shortcut open without Safari's chrome (the manifest's `display` covers
