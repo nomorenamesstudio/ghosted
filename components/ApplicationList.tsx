@@ -264,10 +264,16 @@ export function ApplicationList({
   // exists in the browser (the stored view, the account's totals, the first pages
   // of each section), and drawing one of them before that is known is how the
   // dashboard ended up showing a search box, six empty columns and then
-  // rearranging itself. The empty case is excluded because it *is* known up
-  // front: an account whose application count is zero cannot be waiting on a
-  // page of them.
-  const ready = placementKnown && (accountIsEmpty || seedReady);
+  // rearranging itself.
+  //
+  // The empty state waits too. It used to be let through early, on the grounds
+  // that a zero application count is already known on the server — but "this
+  // account is empty" is the *result* of this load, not an input to it, and
+  // letting it through rendered the board over its own skeletons for a few
+  // hundred milliseconds before the columns reported in and collapsed into the
+  // empty state. The seed settles first now, then the sections read their seeded
+  // (empty) pages and the empty state appears in one step.
+  const ready = placementKnown && seedReady;
 
   if (!ready) return <DashboardLoading />;
 

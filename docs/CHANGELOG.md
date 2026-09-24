@@ -33,12 +33,15 @@ All notable changes, by date and type.
   any of it was known: an account with no applications briefly saw a verification
   banner, and everyone saw a search box, six empty columns and zeroed counters
   rearrange themselves as the data landed. Nothing below the header renders now
-  until the totals are in and the view is known — just the app's loading motif
-  (the pulsing ghost) over card-shaped placeholders, deliberately neutral because
-  there is no honest way to draw either view yet. An account with no applications
-  skips it: its shape is known up front, so it goes straight to the empty state.
-  Measured: loading state alone at 180 ms, the whole dashboard at once at 630 ms,
-  with the shell width stable throughout.
+  until the view is settled and the seed has come back — just a large pulsing
+  ghost and "Reading paranormal data…". No card placeholders on purpose: a
+  skeleton card promises a list of applications, and until the totals are in we do
+  not know whether there will be a list at all. The empty state waits for that
+  data too — it is the *result* of the load, not an input to it, and letting a
+  zero-count account through early rendered the board over its own skeletons for
+  a few hundred milliseconds before collapsing into the empty state. Measured on
+  an empty account: loading state, then the empty state, with the board never
+  becoming visible.
 - **Landing page mock cards carry the real company logos.** The preview cards
   name Stripe, Vercel, Linear and Framer, so they now show those icons instead of
   the lettered placeholder the real cards fall back to when a logo lookup fails. The four marks are static 128×128 files under
