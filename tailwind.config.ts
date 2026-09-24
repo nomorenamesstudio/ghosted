@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import defaultTheme from "tailwindcss/defaultTheme";
 
 const config: Config = {
   darkMode: "class",
@@ -15,6 +16,16 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Geist is loaded by next/font in `app/layout.tsx`, which puts it on the
+      // body as `--font-geist-sans`. Nothing was reading that variable: the
+      // family was never mapped here, and Tailwind's preflight sets the base
+      // font on `html`, so every page rendered in the browser's own default
+      // face — the brand wordmark's "G" most visibly. The system stack stays
+      // behind the variable as the fallback.
+      fontFamily: {
+        sans: ["var(--font-geist-sans)", ...defaultTheme.fontFamily.sans],
+        mono: ["var(--font-geist-mono)", ...defaultTheme.fontFamily.mono],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

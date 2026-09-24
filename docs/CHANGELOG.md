@@ -83,6 +83,30 @@ All notable changes, by date and type.
   guards the SQL against the rule the board and the list apply in JavaScript.
   Verified: tsc and lint clean, 252 unit/component tests, full e2e 28/28.
 
+### Fixed
+- **The app was never actually using its own font.** `app/layout.tsx` loads Geist
+  Sans and Geist Mono through `next/font/local` and puts them on the body as
+  `--font-geist-sans` / `--font-geist-mono` — and nothing ever read those
+  variables: `fontFamily` was never mapped in `tailwind.config.ts`, so Tailwind's
+  preflight kept the base family at the browser's own stack and every page
+  rendered in the system fallback face. The brand wordmark showed it worst, which
+  is how it was spotted: the fallback's bold "G" has a spur and a different
+  optical weight from the rest of the header. `fontFamily.sans`/`mono` now lead
+  with those variables (system stack kept behind them as the fallback), and the
+  variables moved from `<body>` to `<html>` — preflight sets the base family on
+  `html`, and a `var()` that is undefined there makes the whole declaration
+  invalid at computed-value time, which is what dropped the fallbacks as well
+  when the mapping was first added (the page fell all the way back to the
+  browser's serif default until the variables were defined on `html`). Verified
+  in the browser: the family resolves to the Geist variable and `document.fonts`
+  reports it `loaded`, where it was `unloaded` before.
+- **The list view's section headers lined up with nothing.** Their content sat
+  flush with the card's outer edge while every card's own content starts at its
+  16px padding, so a section title hung off the side of the list it titled.
+  `pl-[17px]` (the card's `p-4` plus its 1px border) puts the status icon on the
+  same left edge as the logo at the head of every card below it — measured at
+  388.73px against the card's 388.49px in the real window.
+
 ## 2026-09-23
 
 ### Added

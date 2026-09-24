@@ -84,12 +84,16 @@ export function ApplicationSection({
   return (
     <section data-testid={`section-${status}`}>
       {/* Sticky header: stays below the app header while scrolling so
-          sections can always be collapsed. */}
+          sections can always be collapsed. Indented by the card's own padding
+          (p-4, plus the card's 1px border) so the status icon lines up with the
+          logo at the head of every card underneath: flush with the card's outer
+          edge it lined up with nothing, which read as a section title hanging
+          off the side of its own list. */}
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={!collapsed}
-        className="sticky top-14 z-30 mb-2 flex w-full items-center gap-2 rounded-md bg-background/95 py-2 text-left text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        className="sticky top-14 z-30 mb-2 flex w-full items-center gap-2 rounded-md bg-background/95 py-2 pl-[17px] text-left text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
         <Icon className="h-4 w-4" />
         {STATUS_TITLES[status]}

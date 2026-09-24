@@ -55,7 +55,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    // The font variables belong on <html>, not <body>: Tailwind's preflight sets
+    // the base font-family on `html`, and a `var()` that is not defined on that
+    // element makes the whole declaration invalid at computed-value time — which
+    // dropped the fallbacks too and left the page in the browser's serif default.
+    // Defined here they inherit everywhere, and `font-sans` resolves to Geist.
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable}`}
+      suppressHydrationWarning
+    >
       <head>
         {/* Apply the saved/system theme before first paint to avoid a flash, and
             the saved view with it: the board's shell is widened by a rule keyed
@@ -82,9 +91,7 @@ export default function RootLayout({
           data-domains="ghosted.lostsignals.studio"
         />
       </head>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className="antialiased">
         <Providers>
           {children}
           <Footer />
