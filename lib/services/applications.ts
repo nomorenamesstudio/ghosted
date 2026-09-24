@@ -715,10 +715,13 @@ export async function softDeleteApplication(
  * archiving (falls back to 'applied' when unknown).
  */
 /**
- * Send the timeline back to the start: every step returns to `pending` and
- * loses its date, so progress reads 0% again without losing the step titles
- * the user wrote. The application's own status is re-derived from the reset
- * steps, which lands it back at `applied`.
+ * Send the timeline back to the application itself: the first step (the
+ * application) stays done, everything after it returns to `pending` and loses
+ * its date. The status is re-derived from the result, which lands on `applied`.
+ *
+ * The first step used to be cleared too, which made an application sitting in
+ * Applied read as though it had never been sent — and left progress at 0% for a
+ * process that had at least started.
  */
 export async function resetTimeline(
   userId: string,
@@ -728,10 +731,33 @@ export async function resetTimeline(
     const app = await lockOwnedApplication(tx, userId, applicationId);
     if (!app) return null;
 
-    await tx
-      .update(milestones)
-      .set({ status: "pending", date: null })
-      .where(eq(milestones.applicationId, applicationId));
+    const existing = sortByStepOrder(
+      await tx
+        .select()
+        .from(milestones)
+        .where(eq(milestones.applicationId, applicationId)),
+    );
+    const [first, ...rest] = existing;
+
+    // The application step is where this reset stops. Its date is left alone:
+    // that is when the application was sent.
+    if (first) {
+      await tx
+        .update(milestones)
+        .set({ status: "done" })
+        .where(eq(milestones.id, first.id));
+    }
+    if (rest.length > 0) {
+      await tx
+        .update(milestones)
+        .set({ status: "pending", date: null })
+        .where(
+          inArray(
+            milestones.id,
+            rest.map((m) => m.id),
+          ),
+        );
+    }
 
     const all = sortByStepOrder(
       await tx

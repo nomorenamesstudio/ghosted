@@ -176,7 +176,11 @@ export function ApplicationProgressBar({
             key={i}
             aria-hidden
             data-testid="progress-segment"
-            className="pointer-events-none absolute inset-y-0 w-[2px] bg-card"
+            // A hairline that reads as a divider on any card tint. It used to be
+            // `bg-card`, i.e. a hard-coded white line: that only looked like the
+            // gaps it is meant to be while cards were white, and on a tinted card
+            // it reads as a bright scratch across the bar.
+            className="pointer-events-none absolute inset-y-0 w-[2px] bg-black/15 dark:bg-white/20"
             style={{
               left: `${((i + 1) / segments) * 100}%`,
               marginLeft: "-1px",

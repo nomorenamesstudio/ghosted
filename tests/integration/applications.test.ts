@@ -664,10 +664,12 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect(body.data).toMatchObject({ id: app.id, status: "applied" });
     const reset = body.milestones as Array<{ status: string; date: unknown }>;
     expect(reset).toHaveLength(5);
-    // Titles are kept, progress is not.
-    expect(reset.every((m) => m.status === "pending" && m.date === null)).toBe(
-      true,
-    );
+    // The reset stops at the application: the first step is what "applied"
+    // means, so it stays done, and everything after it goes back to pending.
+    expect(reset[0]).toMatchObject({ status: "done" });
+    expect(
+      reset.slice(1).every((m) => m.status === "pending" && m.date === null),
+    ).toBe(true);
   });
 
   it("reopening restores a manual rejected status too", async () => {

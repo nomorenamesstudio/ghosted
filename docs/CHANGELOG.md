@@ -172,6 +172,21 @@ All notable changes, by date and type.
   narrows to its own section the same way.
 
 ### Fixed
+- **Resetting the timeline stops at the application.** Dragging a card back from
+  Interviewing to Applied and choosing "reset the timeline" cleared every step, so
+  an application sitting in Applied read as though it had never been sent and its
+  progress was 0% for a process that had at least started. The first step — titled
+  "Application", the step that status is derived from — stays done now, and
+  everything after it returns to pending with its date cleared. Progress reads one
+  step rather than none. `tests/integration/reset-timeline.test.ts` pins it, and
+  the API test that asserted the old full wipe was updated.
+- **The archived progress bar is readable.** Its track was `bg-zinc-200/60`,
+  which on the card's own muted grey was very nearly the same colour — the bar
+  looked broken rather than empty — and the segment separators were `bg-card`, a
+  hard-coded white hairline that only looked like a gap while cards were white.
+  The archived track is a couple of steps darker than its card (measured:
+  card `rgb(223,223,226)`, track `rgb(161,161,170)`, fill `rgb(82,82,91)`), and
+  the separators are a translucent hairline that reads as a divider on any tint.
 - **The archived card is the same colour in both views.** Its tint was
   `bg-muted/60`, the only translucent one in light mode — every other status is
   opaque — and a translucent tint is only the same colour if the surface behind it

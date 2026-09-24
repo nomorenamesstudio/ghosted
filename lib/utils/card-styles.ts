@@ -75,8 +75,11 @@ export const STATUS_PROGRESS: Record<
     track: "bg-violet-300 dark:bg-violet-900/50",
     fill: "bg-violet-500 dark:bg-violet-400",
   },
+  // The archived track is a couple of steps darker than its own card: the card
+  // is the muted grey, so a light track disappears into it (it was `bg-zinc-200/60`
+  // and the bar looked broken rather than empty).
   archived: {
-    track: "bg-zinc-200/60 dark:bg-zinc-800/50",
-    fill: "bg-zinc-400 dark:bg-zinc-500",
+    track: "bg-zinc-400 dark:bg-zinc-800/50",
+    fill: "bg-zinc-600 dark:bg-zinc-500",
   },
 };
