@@ -51,7 +51,8 @@ pnpm dev            # http://localhost:3000  (JSON logs)
 pnpm dev:pretty     # same, piped through pino-pretty
 
 # 6. (Optional) seed demo data
-pnpm db:seed        # demo@example.com / password123
+pnpm db:seed                    # demo@example.com / password123
+pnpm db:seed you@example.com    # or fill an account that already exists
 ```
 
 > Note: in this sandbox environment port 3000 is occupied by a system nginx,

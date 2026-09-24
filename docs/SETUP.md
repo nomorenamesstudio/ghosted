@@ -93,8 +93,14 @@ e2e tests run the app on port 3100 (see `playwright.config.ts`).
 Optional demo data:
 
 ```bash
-pnpm db:seed   # demo@example.com / password123 (additive, 16 samples)
+pnpm db:seed                      # demo@example.com / password123 (additive, 26 samples)
+pnpm db:seed you@example.com      # fill an account that already exists
 ```
+
+The samples cover every status, with ages spread from "today" to two months ago,
+so the ghosted section, the "Updated …" labels and the progress bars all have
+something to show. Only the demo account is ever created by the script; any other
+email has to exist already, which is how a real dev login gets a testing profile.
 
 ## Testing
 
