@@ -24,6 +24,25 @@ export const metadata: Metadata = {
     "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
   metadataBase: new URL(siteUrl),
+  // Home-screen icons, from `public/app-icon-x2.png` (see app/manifest.ts for how
+  // they were cut). iOS ignores the manifest's icons in favour of this one link,
+  // and ignores transparency in it — hence the flattened 180px square — while
+  // Android takes the manifest's 192/512 and its maskable variant.
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  // iOS standalone: the home-screen name, and the meta tag that makes a saved
+  // shortcut open without Safari's chrome (the manifest's `display` covers
+  // Android).
+  appleWebApp: {
+    capable: true,
+    title: "Ghosted",
+    statusBarStyle: "default",
+  },
   openGraph: {
     title: "Ghosted - For the Job Hunters",
     description:

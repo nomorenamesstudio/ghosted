@@ -204,6 +204,25 @@ All notable changes, by date and type.
   picture lives in the JWT, as the Google one always has. Covered by
   `tests/unit/gravatar.test.ts` and `tests/integration/avatars.test.ts`.
 
+### Added
+- **The app installs with its own icon.** `public/app-icon-x2.png` (the 2048px
+  master) is now cut into the set "add to home screen" wants, by ImageMagick and
+  checked into `public/`: `apple-touch-icon.png` at 180px for iOS, `icon-192.png`
+  and `icon-512.png` (the sizes Chrome's install prompt asks for), and
+  `icon-maskable-512.png` with the ghost at 90% on the same purple, for Android's
+  adaptive masks — which crop to a circle or a squircle and would otherwise shave
+  the shadow off the ghost. iOS ignores transparency and composites it onto black,
+  so every cut is flattened onto the icon's own background (`#582eab`, sampled
+  from its corner). `app/manifest.ts` describes the install: name, standalone
+  display, `start_url: /app`, theme and background colour matching the icon, and
+  the three icons with the maskable one declared. The root layout links them —
+  `apple-touch-icon` for iOS, which ignores the manifest's icons, plus the two
+  `icon` links — and sets `appleWebApp` so a saved shortcut opens without Safari's
+  chrome and carries the name "Ghosted". Covered by
+  `tests/e2e/app-icons.spec.ts`, which fetches every file, asserts its real PNG
+  dimensions and colour type (truecolour, no alpha — the one mistake that looks
+  correct everywhere except iOS), and asserts the manifest and the emitted tags.
+
 ### Changed
 - **The list view keeps an Archived section, closed, below the empty state.**
   Archived applications are no longer hidden from the list: they have their own
