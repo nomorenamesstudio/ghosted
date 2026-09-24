@@ -202,10 +202,20 @@
   background-color: hsl(var(--muted-foreground) / 0.45);
 }
 
-/* Board view uses the whole window: six columns need the room, and the header
-   is widened with them so it stays aligned with the board. Set from Dashboard
-   via `document.documentElement.dataset.view`. */
-html[data-view="board"] .app-shell {
+/* Board view uses the whole window, and the header goes with it: a detail page
+   you reached from the board keeps that wide shell, so the frame never changes
+   width under you. What the board does not get is the content column — that is
+   the board's own, and only the dashboard widens it; the detail, settings and
+   legal pages keep their column whatever view you came from.
+   `data-view` therefore tracks the stored view on every route, while
+   `data-board-content` is only ever set on the dashboard. Both are set before
+   first paint by the inline script in the root layout, and kept in sync by
+   Dashboard. */
+html[data-view="board"] header .app-shell {
+  max-width: none;
+}
+
+html[data-board-content] main.app-shell {
   max-width: none;
 }
 

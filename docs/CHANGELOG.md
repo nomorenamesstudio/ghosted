@@ -47,6 +47,24 @@ All notable changes, by date and type.
   real UI).
 
 ### Fixed
+- **The shell width follows the view you are in, not the route you are on.** Board
+  is the wide view, and the header goes with it: a detail page reached from the
+  board keeps the wide frame, one reached from the list keeps the narrow one, and
+  a reload changes neither — which is what the stored preference is for, and what
+  it was failing to do. Only the *content* column is the board's own: the detail,
+  settings and legal pages stay a column whatever view you came from, so the shell
+  rules are two now — `html[data-view="board"] header .app-shell` for the frame
+  (set on every route, because it follows the view) and
+  `html[data-board-content] main.app-shell` for the content (set on the dashboard
+  only, because that is the only content that widens). The pre-paint script sets
+  both, so the board still opens at its real width rather than reflowing a moment
+  later, and `Dashboard` keeps them in sync with the toggle — deliberately leaving
+  `data-view` alone when it unmounts, since the frame belongs to the view rather
+  than to that page. Measured at an 1800px window: board dashboard 1800/1800,
+  detail from board 1800 header with a 1024 column, detail from list 1024/1024,
+  and identical figures before and after a reload in every case. Covered by
+  `tests/e2e/shell-width.spec.ts` for both views, which asserts the reload
+  equality directly.
 - **The status colours were 2.3x apart in perceived intensity.** Every status
   used the same Tailwind step (`bg-amber-100`, `bg-emerald-100`, …), and that step
   is not perceptually even: measured in OKLCH, `interviewing` sat at chroma 0.058

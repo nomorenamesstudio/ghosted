@@ -67,15 +67,21 @@ export default function RootLayout({
     >
       <head>
         {/* Apply the saved/system theme before first paint to avoid a flash, and
-            the saved view with it: the board's shell is widened by a rule keyed
-            on `data-view` (see globals.css). Setting the attribute here — the
-            same place the theme is decided — is the difference between the board
-            opening at its real width and opening at the list width and reflowing
-            half a second later when the effect in Dashboard finally runs. Board is
-            the default, so it applies unless the stored view says otherwise. */}
+            the saved view with it (see the rules in globals.css). Setting them
+            here — the same place the theme is decided — is the difference between
+            the board opening at its real width and opening at the list width and
+            reflowing half a second later when the effect in Dashboard finally
+            runs. Board is the default, so they apply unless the stored view says
+            otherwise.
+
+            `data-view` follows the stored view on every route, because the header
+            goes with the view: a detail page reached from the board keeps the wide
+            frame, and a refresh must not change it. `data-board-content` is only
+            set on the dashboard, whose content is the only thing that widens with
+            the board. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');if(localStorage.getItem('ghosted-view')!=='list')document.documentElement.setAttribute('data-view','board')}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');var v=localStorage.getItem('ghosted-view');if(v!=='list'){document.documentElement.setAttribute('data-view','board');if(location.pathname==='/app')document.documentElement.setAttribute('data-board-content','')}}catch(e){}`,
           }}
         />
         {/* Self-hosted umami analytics (tracker + beacon on

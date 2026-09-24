@@ -71,16 +71,24 @@ export function Dashboard({
     setViewKnown(true);
   }, []);
 
-  // The shell (header + main) is widened by a rule keyed on this attribute, so
-  // the layout stays a server component. The pre-paint script set it already;
-  // from here it is only kept in sync with the toggle.
+  // The shell is widened by rules keyed on these attributes, so the layout stays a
+  // server component. `data-view` follows the *view*, not this route — the header
+  // goes with the view, so it is deliberately left alone when the dashboard
+  // unmounts: a detail page you reached from the board keeps the wide frame.
+  // `data-board-content` is this page's own content, which is the only content
+  // that widens, so that one does not outlive the dashboard.
   useEffect(() => {
     if (!viewKnown) return;
     const root = document.documentElement;
-    if (view === "board") root.dataset.view = "board";
-    else delete root.dataset.view;
-    return () => {
+    if (view === "board") {
+      root.dataset.view = "board";
+      root.dataset.boardContent = "";
+    } else {
       delete root.dataset.view;
+      delete root.dataset.boardContent;
+    }
+    return () => {
+      delete root.dataset.boardContent;
     };
   }, [view, viewKnown]);
 
