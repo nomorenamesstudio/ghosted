@@ -63,11 +63,14 @@ export const STATUS_TINT: Partial<Record<DisplayStatus, string>> = {
     "bg-[color:oklch(0.951_0.03_17.7)] dark:bg-[color:oklch(0.22_0.03_17.7)]",
   ghosted:
     "bg-[color:oklch(0.951_0.03_294.6)] dark:bg-[color:oklch(0.22_0.03_294.6)]",
-  // Opaque, like every other tint here. It was `bg-muted/60`, and a translucent
-  // tint is only the same colour if what is behind it is: over the board's white
-  // column it read white-ish, over the dashboard's grey page it read grey, so the
-  // same card looked like two different cards.
-  archived: "bg-muted dark:bg-muted/20",
+  // The one status that is not a hue, so it keeps a neutral surface — but at the
+  // same lightness as every other status above (chroma 0), which is what makes
+  // its pill readable. It used to be `bg-muted`, and the muted badge is filled
+  // with that very token: the archived pill had exactly zero contrast against its
+  // own card, so it rendered as bare text (measured L 0.905 against L 0.905;
+  // every other pair is 0.046 apart). Light mode also gained an opaque dark
+  // value with it, where `bg-muted/20` was translucent.
+  archived: "bg-[color:oklch(0.951_0_0)] dark:bg-[color:oklch(0.22_0_0)]",
 };
 
 /** Border matching each status colour (pairs with the tint). */
@@ -116,11 +119,12 @@ export const STATUS_PROGRESS: Record<
       "bg-[color:oklch(0.862_0.062_294.6)] dark:bg-[color:oklch(0.3_0.062_294.6)]",
     fill: "bg-violet-500 dark:bg-violet-400",
   },
-  // The archived track is a couple of steps darker than its own card: the card
-  // is the muted grey, so a light track disappears into it (it was `bg-zinc-200/60`
-  // and the bar looked broken rather than empty).
+  // Neutral, but at the same lightness as the five above (chroma 0), so the
+  // archived bar carries the same weight as theirs. It used to be a couple of
+  // steps darker "because the card is the muted grey" — the card is not any more,
+  // and against a light surface that track read as the heaviest bar on the page.
   archived: {
-    track: "bg-zinc-400 dark:bg-zinc-800/50",
-    fill: "bg-zinc-600 dark:bg-zinc-500",
+    track: "bg-[color:oklch(0.862_0_0)] dark:bg-[color:oklch(0.3_0_0)]",
+    fill: "bg-zinc-400 dark:bg-zinc-400",
   },
 };

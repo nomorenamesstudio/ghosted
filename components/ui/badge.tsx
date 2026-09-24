@@ -25,8 +25,12 @@ const badgeVariants = cva(
           "border-transparent bg-violet-200 text-violet-900 dark:bg-violet-900 dark:text-violet-100",
         danger:
           "border-transparent bg-red-200 text-red-900 dark:bg-red-900 dark:text-red-100",
+        // The archived status. Its card carries no hue at all, so a muted fill is
+        // the whole chip: `bg-muted` in light mode, and in dark a step that
+        // matches the weight the -900 fills above sit at, rather than the
+        // near-invisible `bg-muted` on a near-muted card.
         muted:
-          "border-transparent bg-muted text-muted-foreground",
+          "border-transparent bg-muted text-muted-foreground dark:bg-zinc-700 dark:text-zinc-100",
       },
     },
     defaultVariants: {

@@ -123,6 +123,20 @@ All notable changes, by date and type.
   it is *independent of line-height*, so no leading tweak can fix it — only an
   explicit nudge can. (The count pill's digit is not affected: it shares the
   caps' baseline exactly, it is only shorter because it is set at 12px.)
+- **The archived pill had no fill, because it was painted the colour of its own
+  card.** Archived was the one card with no hue — `bg-muted` — and the muted badge
+  variant is filled with that same token, so the chip came out at exactly zero
+  contrast: measured L 0.905 against L 0.905 in light mode, and L 0.274 against
+  L 0.274 in dark, where every other status pair sits 0.046 apart (light) and
+  0.158 (dark). It rendered as bare text on the card. The archived card now takes
+  a neutral surface at the same lightness as its five siblings, chroma 0 —
+  `oklch(0.951 0 0)` light and `oklch(0.22 0 0)` dark — which also replaces the
+  translucent `bg-muted/20` dark value with an opaque one, and the muted badge
+  variant gains a dark fill at the weight the -900 fills sit at. Measured after:
+  archived card against its pill is 0.046 light and 0.150 dark, against 0.046 and
+  0.158 for offer — the same chip weight as every other status. The progress track
+  and fill came along: neutrals at the family's own lightness now, rather than the
+  "couple of steps darker" they were tuned to when the card behind them was grey.
 
 ## 2026-09-23
 
