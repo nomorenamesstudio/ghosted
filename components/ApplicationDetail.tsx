@@ -139,7 +139,7 @@ export function ApplicationDetail({ id }: { id: string }) {
             <Skeleton className="h-4 w-10" />
           </div>
         </div>
-        <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="grid gap-6 [&>*]:min-w-0 lg:grid-cols-[1fr_340px]">
           <div>
             <GhostPulse />
             <div className="space-y-3">
@@ -258,8 +258,13 @@ export function ApplicationDetail({ id }: { id: string }) {
       </div>
 
       {/* items-start: the details card sizes to its own content instead of
-          stretching down to match however long the timeline happens to be. */}
-      <div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+          stretching down to match however long the timeline happens to be.
+          `[&>*]:min-w-0` because a grid item's automatic minimum size is its
+          min-content width, and a job-posting URL offers no break opportunity:
+          without it the column — and the page with it — widened to fit the URL
+          instead of the URL truncating to the column (625px of sideways scroll on
+          a 390px phone, measured). */}
+      <div className="grid items-start gap-6 [&>*]:min-w-0 lg:grid-cols-[1fr_340px]">
         <MilestoneTimeline appId={app.id} milestones={app.milestones} />
         <ApplicationDetailsCard app={app} actions={cardActions} />
       </div>

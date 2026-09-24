@@ -72,7 +72,7 @@ export function ApplicationDetailsCard({
           </Row>
           <Row label="Notes">
             {app.notes ? (
-              <span className="whitespace-pre-wrap">{app.notes}</span>
+              <span className="whitespace-pre-wrap break-words">{app.notes}</span>
             ) : (
               <Empty />
             )}

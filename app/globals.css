@@ -253,4 +253,21 @@ html[data-board-content] main.app-shell {
   textarea {
     font-size: 16px !important;
   }
+
+  /* iOS Safari gives a native date field an intrinsic width of its own, and it
+     paints past the right edge of whatever box it is in — the card, at phone
+     width. Dropping the native appearance lets the field be the width of its
+     container like every other input on the page; tapping it still opens the
+     picker, which is the part iOS owns. Kept to touch devices so the desktop
+     control keeps its spinner. */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"],
+  input[type="month"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
 }

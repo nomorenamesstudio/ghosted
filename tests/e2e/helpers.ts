@@ -85,9 +85,11 @@ export async function createAppViaApi(
   page: Page,
   company: string,
   role: string,
+  /** Any other create fields — a long `url`, a contact, notes. */
+  extra: Record<string, unknown> = {},
 ) {
   const res = await page.request.post("/api/applications", {
-    data: { company, role },
+    data: { company, role, ...extra },
   });
   if (res.status() !== 201) {
     throw new Error(`create app failed: ${res.status()} ${await res.text()}`);

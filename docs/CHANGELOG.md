@@ -156,6 +156,31 @@ All notable changes, by date and type.
   and fill came along: neutrals at the family's own lightness now, rather than the
   "couple of steps darker" they were tuned to when the card behind them was grey.
 
+### Fixed
+- **A long job-posting URL pushed the whole detail page sideways on a phone.** The
+  details card already tried to truncate it — an `inline-flex max-w-full` link with
+  a `truncate` span inside — but the *column* was the problem: a grid item's
+  automatic minimum size is its min-content width, and a URL offers no break
+  opportunity, so the track grew to fit the URL instead of the URL truncating to
+  the track. Measured at a 390px viewport: 625px of horizontal scroll, with
+  `document.scrollWidth` 1015 against a 390 client width. `[&>*]:min-w-0` on the
+  detail page's grid — and on the loading skeleton that mirrors it — lets the URL
+  truncate as intended, and Notes gained `break-words` for the same reason: a long
+  unbroken string in a field nobody thought about is the same bug. Covered by
+  `tests/e2e/mobile-overflow.spec.ts`, which fails against the old layout with
+  `Expected <= 390, Received 1015`.
+- **The date field on iOS painted past the edge of its card.** iOS Safari gives a
+  native `input[type="date"]` an intrinsic width of its own that ignores its
+  container, so at phone width it reached over the side of the milestone editor.
+  It now takes `width: 100%; min-width: 0; max-width: 100%` plus
+  `appearance: none` on touch devices only — the picker still opens on tap, and
+  desktop keeps the native control. The `Input` primitive also gained `min-w-0`,
+  so no field can force a flex or grid track wider than its container. **This part
+  is not regression-tested**: WebKit cannot be installed in this sandbox (its host
+  requirements are unmet, and there is no root to satisfy them), so the fix rests
+  on the documented iOS behaviour rather than a local reproduction — the Chromium
+  mobile tests cover the layout around it, not the iOS quirk itself.
+
 ## 2026-09-23
 
 ### Added
