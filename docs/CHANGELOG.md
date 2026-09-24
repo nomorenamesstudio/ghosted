@@ -4,6 +4,24 @@ All notable changes, by date and type.
 
 ## 2026-09-24
 
+### Changed
+- **Landing page restructured: one rhythm instead of a flat stack.** The page
+  was a centred hero, a floating mock and then five sections of equal weight, so
+  nothing led and nothing rested. Now: a left-aligned hero with the CTA in it and
+  the product shot on the right — the real dashboard cards inside a fake app
+  window (chrome bar, URL, two offset panels behind, cropped at the bottom) with
+  the ghost floating above it and the icon tornado anchored on the character
+  rather than the viewport; the six feature cards became a bento where Ghosted
+  detection gets a 2×2 tile with a ten-day-mark drawing and a stamp, the timeline
+  gets a 2×1 with the five-step rail, and only the small features stay square;
+  "what we're not doing" became its own dark band with a statement-sized heading
+  and the refusals as large text behind a cross; the closing CTA is a single
+  violet band with one button. Section padding is one pace (py-16 → py-24) and
+  the type scale is five sizes, so the rhythm is deliberate rather than even.
+  The hero's second button ("Sign in", which the header already offers) is now
+  the "See how it works" link to `#features`. Every string of the owner's copy is
+  unchanged.
+
 ### Fixed
 - **The footer follows the same shell as the header.** The wide-shell rule
   covered `header .app-shell` and the dashboard's `main`, so in board view the
