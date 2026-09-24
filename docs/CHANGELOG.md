@@ -107,6 +107,23 @@ All notable changes, by date and type.
   same left edge as the logo at the head of every card below it — measured at
   388.73px against the card's 388.49px in the real window.
 
+### Fixed
+- **Icons beside text sat low, because a line box reserves space the text never
+  uses.** `items-center` centres an icon's *box* on the text's *line box*, and a
+  line box keeps room below the baseline for descenders — which uppercase titles
+  and "Ghosted" have none of. So the box centres matched to the hundredth of a
+  pixel while the ink did not, which is what the eye reads as "not centred"
+  (measured from the rendered pixels in a real window: the section icon's ink sat
+  1.87px below the caps' ink on a 1.333 device-pixel ratio, the brand's ghost
+  0.75px below the wordmark). Both now carry a one-line optical nudge —
+  `-translate-y-0.5` on the section's status icon, `-translate-y-px` on the brand
+  mark — and measure at -0.37px, which is the quantisation floor at a fractional
+  DPR rather than a real offset. The derived rule, worth knowing before adding
+  another icon+text pair: the offset is `(descent - ascent)/2 + capHeight/2` and
+  it is *independent of line-height*, so no leading tweak can fix it — only an
+  explicit nudge can. (The count pill's digit is not affected: it shares the
+  caps' baseline exactly, it is only shorter because it is set at 12px.)
+
 ## 2026-09-23
 
 ### Added

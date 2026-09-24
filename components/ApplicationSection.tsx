@@ -95,7 +95,12 @@ export function ApplicationSection({
         aria-expanded={!collapsed}
         className="sticky top-14 z-30 mb-2 flex w-full items-center gap-2 rounded-md bg-background/95 py-2 pl-[17px] text-left text-sm font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
       >
-        <Icon className="h-4 w-4" />
+        {/* Same optical nudge as the brand mark, and for the same reason: the
+            line box reserves room below the baseline that uppercase text never
+            uses, so a box-centred icon sits low against the caps — measured at
+            1.87px in the rendered pixels, against 0.75px on the wordmark because
+            this title has no ascenders to pull its ink upward. */}
+        <Icon className="h-4 w-4 -translate-y-0.5" />
         {STATUS_TITLES[status]}
         <span
           className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums"
