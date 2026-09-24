@@ -49,6 +49,12 @@ export const metadata: Metadata = {
     title: "Ghosted",
     statusBarStyle: "default",
   },
+  // Chrome warns that `apple-mobile-web-app-capable` alone is deprecated and
+  // wants the standard name alongside it; iOS still needs the apple one, so
+  // both are emitted.
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
   openGraph: {
     title: "Ghosted",
     description:

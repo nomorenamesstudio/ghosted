@@ -1,4 +1,4 @@
-import { inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { companyLogos } from "@/lib/db/schema";
 import { logoDomainCandidates } from "@/lib/utils/company-domain";
@@ -171,6 +171,44 @@ async function store(
 function isFresh(fetchedAt: Date, status: "ok" | "none"): boolean {
   const ttl = status === "ok" ? OK_TTL_MS : NONE_TTL_MS;
   return Date.now() - fetchedAt.getTime() < ttl;
+}
+
+/**
+ * Is there nothing for `/logos/:id` to answer with? True when the company has no
+ * candidate domain at all, or when every candidate is already cached as "no
+ * logo" — in both cases the route can only reply 404, so a caller holding this
+ * answer should render the monogram instead of asking. Anything merely uncached
+ * returns false: the route would go and fetch it.
+ *
+ * Pure, so a caller with many applications can ask once for all of them (the
+ * list does) and a caller with one can use the async form below.
+ */
+export function logoMissingFrom(
+  domains: string[],
+  knownMissing: ReadonlySet<string>,
+): boolean {
+  return domains.length === 0 || domains.every((d) => knownMissing.has(d));
+}
+
+/** The single-application form of `logoMissingFrom`. */
+export async function logoIsKnownMissing(
+  company: string,
+  url: string | null | undefined,
+  companyWebsite?: string | null,
+): Promise<boolean> {
+  const domains = logoDomainCandidates(company, url, companyWebsite);
+  if (domains.length === 0) return true;
+
+  const rows = await db
+    .select({ domain: companyLogos.domain })
+    .from(companyLogos)
+    .where(
+      and(
+        inArray(companyLogos.domain, domains),
+        eq(companyLogos.status, "none"),
+      ),
+    );
+  return logoMissingFrom(domains, new Set(rows.map((row) => row.domain)));
 }
 
 /**

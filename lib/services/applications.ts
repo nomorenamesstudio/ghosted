@@ -39,6 +39,7 @@ import type {
   UpdateMilestoneInput,
 } from "@/lib/utils/validation";
 import { logoDomainCandidates } from "@/lib/utils/company-domain";
+import { logoIsKnownMissing, logoMissingFrom } from "@/lib/services/company-logos";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                */
@@ -57,6 +58,11 @@ export interface ApplicationDetail extends Application {
   progress: number;
   /** Effective status — "ghosted" when the app is stale (time-derived). */
   displayStatus: DisplayStatus;
+  /**
+   * The logo cache already knows this company has no logo, so the avatar goes
+   * straight to the monogram instead of asking `/logos/:id` for a 404.
+   */
+  logoMissing: boolean;
 }
 
 /**
@@ -298,16 +304,10 @@ async function buildListItems(
       currentRound: currentRound(ms),
       milestoneCount: ms.length,
       displayStatus: displayStatusOf(app.status, app.updatedAt, days),
-      logoMissing: (() => {
-        const domains = candidateDomains.get(app.id) ?? [];
-        // No candidate domain at all means there is nothing to look up — the
-        // route would answer 404 without fetching anything — and every candidate
-        // being cached as "none" means the same answer is already known.
-        return (
-          domains.length === 0 ||
-          domains.every((d) => knownMissing.has(d))
-        );
-      })(),
+      logoMissing: logoMissingFrom(
+        candidateDomains.get(app.id) ?? [],
+        knownMissing,
+      ),
     };
   });
 }
@@ -555,13 +555,17 @@ export async function getApplication(
   if (!app) return null;
 
   // Both the patience lookup and the milestones are keyed on what we just
-  // fetched, and on nothing else, so they are fetched together.
-  const [days, msRows] = await Promise.all([
+  // fetched, and on nothing else, so they are fetched together. The logo
+  // question rides along: the detail page renders the same avatar as a card, and
+  // without the answer it asks `/logos/:id` for a company whose every candidate
+  // domain is already known to have no logo — one 404 in the console per visit.
+  const [days, msRows, logoMissing] = await Promise.all([
     ghostedDaysFor(userId),
     db
       .select()
       .from(milestones)
       .where(eq(milestones.applicationId, app.id)),
+    logoIsKnownMissing(app.company, app.url, app.companyWebsite),
   ]);
   const ms = sortByStepOrder(msRows);
 
@@ -574,6 +578,7 @@ export async function getApplication(
       totalSteps: app.totalSteps,
     }),
     displayStatus: displayStatusOf(app.status, app.updatedAt, days),
+    logoMissing,
   };
 }
 
@@ -670,6 +675,12 @@ export async function createApplication(
         totalSteps: app.totalSteps,
       }),
       displayStatus: displayStatusOf(app.status, app.updatedAt),
+      // Nothing can be cached for an application created a moment ago, so the
+      // avatar asks - unless this company has no candidate domain at all.
+      logoMissing: logoMissingFrom(
+        logoDomainCandidates(app.company, app.url, app.companyWebsite),
+        new Set(),
+      ),
     };
   });
 }

@@ -49,6 +49,22 @@ All notable changes, by date and type.
   Applied *and* Ghosted. The copy now describes the patience window, and the
   card is a "Board or a list" one instead: the two views of the same data are
   real, visible, and not advertised anywhere else on the page.
+- **The detail page no longer asks for a logo it knows does not exist.** The list
+  payload has carried `logoMissing` since the console-noise fix — the avatar skips
+  the image and renders the monogram when the logo cache already knows every
+  candidate domain for a company has nothing — but the detail payload never did,
+  so `/applications/[id]` re-asked `/logos/:id` on every visit and the route
+  answered 404 by design (its own comment says a logo is decoration). One 404 in
+  the console per company without a favicon, on a page whose card equivalent was
+  already quiet. `logoMissingFrom(domains, knownMissing)` is now the single
+  predicate behind both answers, with `logoIsKnownMissing()` as its
+  single-application form for the detail path, and the detail response carries the
+  flag for `CompanyAvatar`. Reproduced on a company with no candidate domain
+  before the fix, and covered by a regression test that walks both directions:
+  uncached domains mean "ask", cached-as-none means "skip".
+- **`mobile-web-app-capable` is emitted alongside the apple one.** Chrome warns
+  that `apple-mobile-web-app-capable` alone is deprecated; iOS still needs it, so
+  both are in the head now and the warning is gone.
 
 ### Added
 - `tests/integration/applications.test.ts`: a status sent unchanged is

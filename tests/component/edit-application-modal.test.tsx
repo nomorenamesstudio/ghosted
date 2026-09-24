@@ -42,6 +42,7 @@ const app: ApplicationDetail = {
   milestones: [],
   progress: 20,
   displayStatus: "applied",
+  logoMissing: true,
 };
 
 function setup() {

@@ -233,6 +233,7 @@ export function ApplicationDetail({ id }: { id: string }) {
               company={app.company}
               version={app.updatedAt}
               cacheKey={`${app.url ?? ""}|${app.companyWebsite ?? ""}`}
+              logoMissing={app.logoMissing}
               size="md"
             />
             <h1 className="text-2xl font-bold">{app.company}</h1>

@@ -25,6 +25,11 @@ export interface ApplicationDetail extends Application {
   progress: number;
   /** Effective status — "ghosted" when the app is stale (time-derived). */
   displayStatus: DisplayStatus;
+  /**
+   * The logo cache already knows this company has no logo, so the avatar should
+   * go straight to the monogram instead of asking `/logos/:id` for a 404.
+   */
+  logoMissing: boolean;
 }
 
 export interface Pagination {

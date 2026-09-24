@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
@@ -23,7 +23,8 @@ import { PATCH as PATCH_MILESTONE } from "@/app/api/milestones/[id]/route";
 import { PATCH as PATCH_PROFILE } from "@/app/api/auth/profile/route";
 import { GET as GET_STATS } from "@/app/api/dashboard/stats/route";
 import { db } from "@/lib/db/client";
-import { applications, milestones } from "@/lib/db/schema";
+import { applications, companyLogos, milestones } from "@/lib/db/schema";
+import { logoDomainCandidates } from "@/lib/utils/company-domain";
 import {
   authMock,
   createUser,
@@ -892,5 +893,47 @@ describe("POST /api/applications/:id/favorite", () => {
       { params: { id: app.id } },
     );
     expect(res.status).toBe(404);
+  });
+});
+
+describe("the detail payload's logo answer", () => {
+  it("tells the page when asking for a logo is pointless", async () => {
+    const user = await createUser();
+    // A one-word company name yields candidate domains; "Acme Corp" does not.
+    const { app } = await createApp(user.id, { company: "Globex" });
+    const domains = logoDomainCandidates(
+      app.company,
+      app.url,
+      app.companyWebsite,
+    );
+    expect(domains.length).toBeGreaterThan(0);
+    // The logo cache is shared: another test may have cached these already.
+    await db.delete(companyLogos).where(inArray(companyLogos.domain, domains));
+
+    // An uncached domain means the route would actually go and fetch, so the
+    // avatar has to ask for the image.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const first = await GET_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+    expect(first.status).toBe(200);
+    expect((await readJson(first)).data).toMatchObject({ logoMissing: false });
+
+    // Regression: the detail page renders the same avatar as a card but never
+    // learned this, so every visit to a company with no logo logged a 404 for
+    // `/logos/:id` - the console noise the list had already been spared.
+    await db.insert(companyLogos).values(
+      domains.map((domain) => ({
+        domain,
+        status: "none" as const,
+        fetchedAt: new Date(),
+      })),
+    );
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const second = await GET_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+    expect((await readJson(second)).data).toMatchObject({ logoMissing: true });
   });
 });
