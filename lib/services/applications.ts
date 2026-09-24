@@ -5,6 +5,7 @@ import { db } from "@/lib/db/client";
 import * as schema from "@/lib/db/schema";
 import {
   applications,
+  companyLogos,
   milestones,
   users,
   type Application,
@@ -35,6 +36,7 @@ import type {
   UpdateApplicationInput,
   UpdateMilestoneInput,
 } from "@/lib/utils/validation";
+import { logoDomainCandidates } from "@/lib/utils/company-domain";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                                */
@@ -84,6 +86,13 @@ export interface ApplicationListItem {
   milestoneCount: number;
   /** Effective status — "ghosted" when the app is stale (time-derived). */
   displayStatus: DisplayStatus;
+  /**
+   * True when the logo cache already knows that none of this company's candidate
+   * domains has a logo: the card then renders its monogram without asking
+   * `/logos/:id` for an answer the server already has. Without it every such card
+   * opened a request that could only end in a 404.
+   */
+  logoMissing?: boolean;
 }
 
 export interface ListResult {
@@ -240,6 +249,34 @@ async function buildListItems(
     .where(inArray(milestones.applicationId, apps.map((a) => a.id)))
     .orderBy(milestones.stepOrder);
 
+  // Which companies the logo cache already knows have no logo at all. Asking
+  // anyway put one 404 in the console per card; the card skips the request when
+  // the answer is already known, and still asks when a domain is merely uncached
+  // (the route would then go and fetch it).
+  const candidateDomains = new Map<string, string[]>();
+  for (const app of apps) {
+    candidateDomains.set(
+      app.id,
+      logoDomainCandidates(app.company, app.url, app.companyWebsite),
+    );
+  }
+  const allDomains = Array.from(
+    new Set(Array.from(candidateDomains.values()).flat()),
+  );
+  const knownMissing = new Set<string>();
+  if (allDomains.length > 0) {
+    const rows = await db
+      .select({ domain: companyLogos.domain })
+      .from(companyLogos)
+      .where(
+        and(
+          inArray(companyLogos.domain, allDomains),
+          eq(companyLogos.status, "none"),
+        ),
+      );
+    for (const row of rows) knownMissing.add(row.domain);
+  }
+
   const byApp = new Map<string, MilestoneForList[]>();
   for (const m of msRows) {
     const list = byApp.get(m.applicationId) ?? [];
@@ -259,6 +296,16 @@ async function buildListItems(
       currentRound: currentRound(ms),
       milestoneCount: ms.length,
       displayStatus: displayStatusOf(app.status, app.updatedAt, days),
+      logoMissing: (() => {
+        const domains = candidateDomains.get(app.id) ?? [];
+        // No candidate domain at all means there is nothing to look up — the
+        // route would answer 404 without fetching anything — and every candidate
+        // being cached as "none" means the same answer is already known.
+        return (
+          domains.length === 0 ||
+          domains.every((d) => knownMissing.has(d))
+        );
+      })(),
     };
   });
 }

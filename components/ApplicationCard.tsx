@@ -63,6 +63,7 @@ export function ApplicationCardView({
           version={app.updatedAt}
           cacheKey={`${app.url ?? ""}|${app.companyWebsite ?? ""}`}
           srcOverride={logoUrl}
+          logoMissing={app.logoMissing}
           size="lg"
         />
       }

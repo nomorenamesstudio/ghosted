@@ -32,6 +32,7 @@ export function CompanyAvatar({
   version,
   cacheKey,
   srcOverride,
+  logoMissing = false,
   size = "sm",
   className,
 }: {
@@ -47,6 +48,12 @@ export function CompanyAvatar({
   cacheKey?: string | null;
   /** Explicit image to use instead of the /logos/:id route (landing mock). */
   srcOverride?: string | null;
+  /**
+   * The logo cache already knows every candidate domain for this company has no
+   * logo, so asking would only produce a 404. The server sends this with the
+   * list so the cards can skip the image and go straight to the monogram.
+   */
+  logoMissing?: boolean;
   size?: keyof typeof SIZES;
   className?: string;
 }) {
@@ -67,13 +74,15 @@ export function CompanyAvatar({
       {/* Decoded off the main thread, and only fetched once it comes near the
           viewport: a board with fifty cards would otherwise open fifty logo
           requests while hydration is still running. */}
-      <AvatarImage
-        src={src}
-        alt=""
-        className={s.radius}
-        loading="lazy"
-        decoding="async"
-      />
+      {!logoMissing && (
+        <AvatarImage
+          src={src}
+          alt=""
+          className={s.radius}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
       <AvatarFallback
         className={cn(
           s.radius,

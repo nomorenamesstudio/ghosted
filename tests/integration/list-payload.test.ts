@@ -29,6 +29,7 @@ const CARD_FIELDS = [
   "displayStatus",
   "id",
   "isFavorite",
+  "logoMissing",
   "milestoneCount",
   "progress",
   "role",
@@ -72,7 +73,8 @@ describe("the list payload stays the card's contract", () => {
     // disagree, which is the drift this test exists to catch.
     expect(Object.keys(item).sort()).toEqual(CARD_FIELDS);
 
-    // The detail path still hands out the whole row, notes and contacts included.
+    // The card also learns whether asking for a logo is worth it at all; the
+    // detail path still hands out the whole row, notes and contacts included.
     expect(item).not.toHaveProperty("notes");
     expect(item).not.toHaveProperty("contactEmail");
     expect(item).not.toHaveProperty("userId");
