@@ -58,10 +58,14 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "Ghosted - Never let a job application go quiet on you.",
+        // 2400x1260: the 1200x630 card ratio at 2x, so a retina preview and a
+        // desktop one come from the same file. The `?v=` is the crawler-cache
+        // equivalent of the icon URLs: social cards are cached by URL, so bump it
+        // instead of expecting a replaced file to be re-fetched.
+        url: "/ghost-og.png?v=1",
+        width: 2400,
+        height: 1260,
+        alt: "The Ghosted ghost holding a phone, beside the words: never let a job application go quiet on you.",
       },
     ],
   },
@@ -70,7 +74,7 @@ export const metadata: Metadata = {
     title: "Ghosted",
     description:
       "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
-    images: ["/og.png"],
+    images: ["/ghost-og.png?v=1"],
   },
 };
 

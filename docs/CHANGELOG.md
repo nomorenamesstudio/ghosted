@@ -241,6 +241,19 @@ All notable changes, by date and type.
   — so going back is `cp public/icons-v1/*.png public/` (plus deleting the stray
   `icon-maskable-512.png` restore if the manifest asks for it again).
 
+### Added
+- **A new social card** (`public/ghost-og.png`), the full-body ghost beside the
+  wordmark and the tagline, on the brand purple — 2400x1260, which is the 1200x630
+  card ratio at 2x, so a retina preview and a desktop one come from one file. It
+  replaces `public/og.png` in `openGraph.images` and `twitter.images`, with the
+  declared width/height, a real `og:image:alt`, and a `?v=` in the URL for the same
+  reason the icon URLs have one: social crawlers cache a card by URL and keep
+  serving the old one otherwise. `tests/e2e/og-image.spec.ts` fetches the card and
+  checks the tags against the actual bytes — absolute URL, versioned, dimensions
+  matching, ratio within 1.91:1 — since a wrong ratio is exactly what a cropped or
+  letterboxed preview looks like. (`public/og.png` is left in place, unreferenced;
+  it can go whenever.)
+
 ### Changed
 - **The page titles say "Ghosted".** The tagline is gone from `title`,
   `openGraph.title`, `twitter.title` and the manifest's name, so the browser tab,
