@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ApplicationStatus } from "@/lib/db/schema";
 import { STATUS_TITLES, type DisplayStatus } from "@/lib/utils/status";
 import { ApplicationCard } from "./ApplicationCard";
 import { SkeletonGhostCard } from "./loading";
@@ -23,6 +24,7 @@ export function ApplicationSection({
   sort,
   collapsed,
   onToggle,
+  onMove,
   seedReady = true,
   onTotalChange,
 }: {
@@ -31,6 +33,13 @@ export function ApplicationSection({
   sort: SectionSort;
   collapsed: boolean;
   onToggle: () => void;
+  /** The card carries its own status, so `from` comes with the move. */
+  onMove: (
+    id: string,
+    from: DisplayStatus,
+    to: ApplicationStatus,
+    company: string,
+  ) => void;
   /** False until the board's single seed request has filled the caches. */
   seedReady?: boolean;
   onTotalChange: (status: DisplayStatus, total: number) => void;
@@ -101,7 +110,7 @@ export function ApplicationSection({
       {!collapsed && (
         <ul className="space-y-2">
           {items.map((app) => (
-            <ApplicationCard key={app.id} app={app} />
+            <ApplicationCard key={app.id} app={app} onMove={onMove} />
           ))}
         </ul>
       )}

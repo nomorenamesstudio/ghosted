@@ -14,6 +14,7 @@ import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
 import { useAccountIsEmpty } from "./use-account-is-empty";
 import { useBoardSeed } from "./use-board-seed";
+import { useApplicationMove } from "./use-application-move";
 import { DashboardLoading } from "./DashboardLoading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,6 +83,10 @@ export function ApplicationList({
     sort,
     enabled: !status,
   });
+
+  // The list's cards change status through their "Move to" menu (the board's
+  // equivalent is drag and drop). The move is the list's own — see the hook.
+  const { handleMove, moveError } = useApplicationMove();
 
   function handleAddClick() {
     if (atAppLimit) setVerifyOpen(true);
@@ -320,6 +325,9 @@ export function ApplicationList({
         />
       ) : (
         <div className="space-y-6" data-testid="application-sections">
+          {moveError && (
+            <p className="text-sm text-destructive-readable">{moveError}</p>
+          )}
           {!allKnown && <GhostPulse />}
           {activeSections.map((s) => (
             <ApplicationSection
@@ -328,6 +336,7 @@ export function ApplicationList({
               search={debouncedSearch}
               sort={sort}
               seedReady={seedReady}
+              onMove={handleMove}
               // While a status filter is active the single visible section is
               // forced open, and toggling is disabled so the persisted manual
               // collapse state survives until the filter is cleared again.
@@ -358,6 +367,7 @@ export function ApplicationList({
               search={debouncedSearch}
               sort={sort}
               seedReady={seedReady}
+              onMove={handleMove}
               collapsed={collapsed.has("archived")}
               onToggle={() => toggleSection("archived")}
               onTotalChange={reportTotal}

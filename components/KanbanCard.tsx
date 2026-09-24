@@ -2,34 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreVertical } from "lucide-react";
 import type { ApplicationListItem } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/db/schema";
 import { cn } from "@/lib/utils";
 import { ApplicationCardView } from "./ApplicationCard";
-import { STATUS_TITLES } from "@/lib/utils/status";
-import { StatusIcon } from "./status-icons";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { MoveToMenu } from "./MoveToMenu";
 
 /** Drag payload key — namespaced so nothing else can be mistaken for a card. */
 export const DRAG_MIME = "application/x-ghosted-application";
-
-/** Statuses a card can be moved to. "ghosted" is derived, never set. */
-export const MOVE_TARGETS: ApplicationStatus[] = [
-  "applied",
-  "interviewing",
-  "offer",
-  "rejected",
-  "archived",
-];
 
 /**
  * A card inside a kanban column: draggable with the native HTML5 API (no drag
@@ -74,31 +54,16 @@ export function KanbanCard({
         <ApplicationCardView app={app} compact reserveActions />
       </Link>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={`Move ${app.company} to another status`}
-            className="absolute bottom-1.5 right-1.5 h-7 w-7 opacity-60 transition-opacity hover:opacity-100 focus-visible:opacity-100"
-          >
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuLabel>Move to</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {MOVE_TARGETS.filter((s) => s !== app.status).map((s) => (
-            <DropdownMenuItem
-              key={s}
-              onSelect={() => onMove(app.id, s, app.company)}
-            >
-              <StatusIcon status={s} className="mr-2 h-4 w-4" />
-              {STATUS_TITLES[s]}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <MoveToMenu
+        app={app}
+        onMove={onMove}
+        // The same rule as the list card's kebab: centred on the progress bar it
+        // reserves room from. A compact card is p-3 here, plus the 1px card
+        // border, so its bar's centre is 21px above the bottom edge and a 28px
+        // trigger needs 21 - 14. The column stacks, which puts the bar on the
+        // card's last line whatever the round or date above it says.
+        className="absolute bottom-[7px] right-1.5"
+      />
     </div>
   );
 }

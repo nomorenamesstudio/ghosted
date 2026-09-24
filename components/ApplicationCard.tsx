@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import type { ApplicationListItem } from "@/lib/api";
+import type { ApplicationStatus } from "@/lib/db/schema";
+import type { DisplayStatus } from "@/lib/utils/status";
 import { CompanyAvatar } from "./CompanyAvatar";
+import { MoveToMenu } from "./MoveToMenu";
 import { Progress } from "@/components/ui/progress";
 import { ApplicationCardShell } from "./ApplicationCardShell";
 import { STATUS_PROGRESS } from "@/lib/utils/card-styles";
@@ -80,12 +83,42 @@ export function ApplicationCardView({
   );
 }
 
-export function ApplicationCard({ app }: { app: ApplicationListItem }) {
+/**
+ * A card in the list view: the shared visuals, the link to the application, and
+ * the same "Move to" kebab the board's cards carry — the list has no drag and
+ * drop, so this is the whole of its status changing.
+ *
+ * The menu is a *sibling* of the `<Link>`, not a child: a button inside an
+ * anchor still navigates when clicked, and the kebab has to open its menu
+ * instead. `reserveActions` keeps the progress bar clear of it.
+ */
+export function ApplicationCard({
+  app,
+  onMove,
+}: {
+  app: ApplicationListItem;
+  /** `from` is the card's own displayed status; the view decides what to do. */
+  onMove: (
+    id: string,
+    from: DisplayStatus,
+    to: ApplicationStatus,
+    company: string,
+  ) => void;
+}) {
   return (
-    <li>
+    <li className="relative">
       <Link href={`/applications/${app.id}`} className="block">
-        <ApplicationCardView app={app} />
+        <ApplicationCardView app={app} reserveActions />
       </Link>
+      <MoveToMenu
+        app={app}
+        onMove={(id, to, company) => onMove(id, app.displayStatus, to, company)}
+        // Centred on the progress bar it makes room for. Measured: the bar's
+        // centre sits 25px above the card's bottom edge (p-4, the 1px card
+        // border, and the bar's own half-row), so a 28px trigger needs
+        // 25 - 14. `reserveActions` keeps the bar out of its way horizontally.
+        className="absolute bottom-[11px] right-4"
+      />
     </li>
   );
 }

@@ -2,6 +2,50 @@
 
 All notable changes, by date and type.
 
+## 2026-09-24
+
+### Added
+- **The list view's cards carry the "Move to" menu.** Status changing was the
+  board's privilege: a card in the list could only be moved by opening the
+  application and editing its status. Every list card now has the same kebab the
+  kanban card has, in the same corner, offering the same targets in the same
+  order (`MOVE_TARGETS`; `ghosted` is absent because it is derived from
+  inactivity rather than set). The menu itself moved out of `KanbanCard` into
+  `components/MoveToMenu.tsx`, which owns no mutation and no positioning — the
+  caller supplies `onMove` and the corner — so the two views cannot drift apart.
+  The trigger is a *sibling* of the card's `<Link>`, not a child: a button inside
+  an anchor still follows the href, which would have made every menu click
+  navigate to the detail page. The list card passes `reserveActions`, so the
+  progress bar stops short of the trigger instead of running underneath it: 9px
+  of clearance at every width. The kebab is centred on the bar rather than
+  dropped in the corner like the board's — 11px above the card's bottom edge
+  against a 28px trigger, because the bar's centre sits 25px up (p-4, the 1px
+  card border, half a 16px row). Measured delta at 1280, 1024, 640 and 390px:
+  0px, and the board's own kebab was brought to the same rule (it was 1px out).
+  The card's "Last round" and "Updated" share one row on the list card — the
+  same row carries the bar, and a stacked pair would make the bar the taller
+  block's centre, which `items-center` then floats off the card's last line, the
+  line the kebab is aligned to. The pair wraps to two lines only when it does not
+  fit (verified by measurement at ten widths from 1440 down to 390px, and by
+  forcing the wrap on desktop, where the demo data never triggers it): the
+  separator travels inside the date's own element, because as its own flex item
+  it would be left dangling at the end of the first line. The bottom row is
+  bottom-aligned rather than centred, so the bar keeps the last line when the
+  pair does wrap. The board's card is much narrower and keeps the stack. The
+  list's move is deliberately plain
+  where the board's is optimistic: `components/use-application-move.ts` PATCHes
+  the status and invalidates only the two sections the move can have changed —
+  plus `ghosted`, which displays stale applied/interviewing applications — the
+  `stats` totals, and the application's own detail cache. A drag has to feel
+  like it landed; a menu selection has nothing to honour, so the card simply
+  leaves when the refetch arrives. Covered by
+  `tests/component/application-card.test.tsx` (the trigger is outside the link,
+  the move names its source status, the current status is not offered),
+  `tests/component/use-application-move.test.tsx` (the PATCH, the narrow
+  invalidation, the ghosted section, the surfaced error) and
+  `tests/e2e/list-move.spec.ts` (move out of and back into a section through the
+  real UI).
+
 ## 2026-09-23
 
 ### Added

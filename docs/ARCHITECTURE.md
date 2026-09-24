@@ -38,7 +38,8 @@ components/
   ui/                     # shadcn-style primitives (button, dialog, card, ...)
   UserMenu / theme-provider / StatusBadge / VerificationBanner / VerificationModal
   ApplicationCard / ApplicationList / AddApplicationModal / CompanyAvatar
-  KanbanBoard / KanbanColumn / KanbanCard / StepBackDialog / use-application-section
+  KanbanBoard / KanbanColumn / KanbanCard / MoveToMenu / StepBackDialog
+  use-application-section / use-application-move
   MilestoneTimeline / AddMilestoneModal / EditApplicationForm
   Dashboard / DashboardStats / DonateBanner
 lib/
@@ -140,12 +141,26 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   which would otherwise hijack the drag) and each column is a drop target. The
   drag payload carries `company\0id\0fromStatus`, because the receiving column
   only knows the target — the source status is what distinguishes a step back
-  from ordinary progress. The card also carries a "Move to" menu, which is the
+  from ordinary progress. Every card also carries a "Move to" menu, which is the
   touch and keyboard route — native HTML5 drag does not exist on touch, and this
-  keeps the dependency list unchanged. `ghosted` is a derived display state, so
-  that column refuses drops; dropping into `archived` goes through the same
-  PATCH status path that records `archivedFromStatus`, so Reopen still restores
-  the previous status.
+  keeps the dependency list unchanged. That menu is `MoveToMenu`, shared with the
+  list view's cards (where it is the only route to a status change): it owns
+  neither the mutation nor its own corner, so a list card and a column card
+  offer the same targets and a click on it can never be mistaken for a click on
+  the card's own link. `ghosted` is a derived display state, so that column
+  refuses drops; dropping into `archived` goes through the same PATCH status
+  path that records `archivedFromStatus`, so Reopen still restores the previous
+  status.
+- **The two views move a card differently on purpose**: a drag is optimistic
+  (`KanbanBoard` detaches the card from whichever column cached it before the
+  request goes out — the gesture has to feel like it landed) and, being a
+  backwards move, may go through `StepBackDialog`. A menu selection has no such
+  gesture to honour, so `use-application-move.ts` is plain: PATCH, then
+  invalidate. What both share is the *narrow* invalidation: a move knows both
+  ends of the change, so only the source and destination sections come back from
+  the server, plus `ghosted` (which displays stale applied/interviewing
+  applications) and the application's own detail cache. Refetching every section
+  would cost five requests the card cannot have appeared in.
 - **A step back is a question, not a rewrite**: moving a card backwards through
   `PIPELINE_ORDER` (applied → interviewing → offer) opens `StepBackDialog`
   before anything is written. Which question is asked comes from

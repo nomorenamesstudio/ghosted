@@ -95,17 +95,44 @@ export function ApplicationCardShell({
         </div>
 
         {/* Hairline across the full card, then the dates and the progress:
-            side by side on the wide list card, stacked in a kanban column. */}
+            side by side on the wide list card, stacked in a kanban column.
+            Bottom-aligned, not centred: if the round and the date below wrap to
+            two lines on a narrow list card, the progress bar has to stay on the
+            card's last line — that is the line the "Move to" menu is centred
+            on. With both on one line the two are identical. */}
         <div
           className={cn(
             "flex flex-col gap-2 border-t pt-2",
-            !compact && "sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+            !compact && "sm:flex-row sm:items-end sm:justify-between sm:gap-4",
           )}
         >
-          {/* Always two lines: the round it reached, then how fresh it is. */}
-          <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
-            {currentRound && <span>Last round: {currentRound}</span>}
-            <span>{updatedLabel}</span>
+          {/* Which round it reached, and how fresh it is.
+              One line on the list card, wrapping to two only when they do not
+              fit; the board's much narrower card always stacks. */}
+          <div
+            className={cn(
+              "flex text-xs text-muted-foreground",
+              compact
+                ? "mt-1 flex-col gap-0.5"
+                : "min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5",
+            )}
+          >
+            {currentRound && (
+              <span className={cn(!compact && "truncate")}>
+                Last round: {currentRound}
+              </span>
+            )}
+            {/* The separator travels with the date it separates: kept as its own
+                flex item it would be left dangling at the end of the first line
+                whenever the pair wraps. */}
+            <span
+              className={cn(
+                !compact && "flex shrink-0 items-center gap-x-2",
+              )}
+            >
+              {currentRound && !compact && <span aria-hidden>·</span>}
+              {updatedLabel}
+            </span>
           </div>
           <div
             className={cn(
