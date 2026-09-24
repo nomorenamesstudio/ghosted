@@ -4,15 +4,18 @@ import { createAppViaApi, registerUser, uniqueEmail } from "./helpers";
 /**
  * The shell width follows the *view*, not the route: board is the wide one, and
  * a page you reached from it keeps the wide frame so nothing changes width under
- * you — on a reload in particular. What the board does not get to keep is the
- * content column: only the dashboard's own content widens, so a detail page is a
- * column whatever view you came from.
+ * you — on a reload in particular. Header and footer are the frame and move
+ * together; the content column is the board's own, so it only widens on the
+ * dashboard and a detail page is a column whatever view you came from.
  */
 const COLUMN = 1024; // max-w-5xl
 
 const widths = async (page: Page) => ({
   header: await page
     .locator("header .app-shell")
+    .evaluate((el) => Math.round(el.getBoundingClientRect().width)),
+  footer: await page
+    .locator("footer .app-shell")
     .evaluate((el) => Math.round(el.getBoundingClientRect().width)),
   main: await page
     .locator("main")
@@ -40,6 +43,9 @@ for (const view of ["board", "list"] as const) {
     const w = await widths(page);
     expect(w.main).toBe(wide ? vw : COLUMN);
     expect(w.header).toBe(w.main);
+    // The frame includes the footer: a wide header over a column-width footer
+    // reads as two shells on one page.
+    expect(w.footer).toBe(w.header);
   });
 
   test(`a detail page reached from the ${view} keeps that shell, and a reload does not change it`, async ({
@@ -65,10 +71,11 @@ for (const view of ["board", "list"] as const) {
     await page.getByTestId("status-badge").waitFor();
     const refreshed = await widths(page);
 
-    // The header follows the view you came from — the whole complaint was that a
-    // reload changed it.
+    // The frame — header and footer together — follows the view you came from;
+    // the whole complaint was that a reload changed it.
     expect(refreshed).toEqual(clickedThrough);
     expect(refreshed.header).toBe(wide ? page.viewportSize()!.width : COLUMN);
+    expect(refreshed.footer).toBe(refreshed.header);
     // The content column belongs to the board's own page.
     expect(refreshed.main).toBe(COLUMN);
   });

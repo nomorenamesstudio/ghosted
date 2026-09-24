@@ -5,6 +5,13 @@ All notable changes, by date and type.
 ## 2026-09-24
 
 ### Fixed
+- **The footer follows the same shell as the header.** The wide-shell rule
+  covered `header .app-shell` and the dashboard's `main`, so in board view the
+  header ran the full window while the footer stayed at the 1024px column —
+  two different frames on one page. `footer .app-shell` is now in the same rule,
+  and the e2e assertion compares all three widths on the dashboard *and* on a
+  detail page reached from each view; removing the rule again fails those two
+  board-view cases, which is how the test earns its place.
 - **`updated_at` is the silence clock, and now only employer-facing events move
   it.** The rule was already written down in `updateApplication` ("editing notes
   … must not un-ghost an application"), but only half enforced: the field moved
