@@ -26,6 +26,18 @@ All notable changes, by date and type.
   `tests/unit/gravatar.test.ts` and `tests/integration/avatars.test.ts`.
 
 ### Changed
+- **The list view keeps an Archived section, closed, below the empty state.**
+  Archived applications are no longer hidden from the list: they have their own
+  section at the bottom, closed until asked for. With nothing stored it starts
+  closed, and a preference stored before the section existed (which knows nothing
+  about it) is migrated to closed rather than left open. Because it sits below the
+  empty state, an account whose applications are all archived still sees one —
+  worded "No active applications", which is what the list's empty state actually
+  means now that archived is visible below it (the board's columns cover every
+  status, so its wording is unchanged). The call to action stops saying "first"
+  when something is already archived. Covered by `tests/e2e/delete.spec.ts`, which
+  archives through the UI, then checks the wording, the section's position below
+  it, that it is closed, and that opening it shows the application.
 - **The dashboard shows one loading state instead of a half-drawn page.** Which
   shape the page takes — board, list, or the empty state — depends on the stored
   view, the account's totals and each section's first page, and all of that lives

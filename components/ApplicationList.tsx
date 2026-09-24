@@ -88,14 +88,32 @@ export function ApplicationList({
     else setAddOpen(true);
   }
 
-  // Collapsed sections (persisted per browser).
+  // Collapsed sections (persisted per browser). The archived section starts
+  // closed — it is the one people go looking for rather than one they want in
+  // front of them — so with nothing stored, it is the default.
   const [collapsed, setCollapsed] = useState<Set<DisplayStatus>>(() => {
-    if (typeof window === "undefined") return new Set();
+    const closedByDefault = (): Set<DisplayStatus> =>
+      new Set<DisplayStatus>(["archived"]);
+    if (typeof window === "undefined") return new Set<DisplayStatus>();
     try {
       const raw = localStorage.getItem(COLLAPSED_KEY);
-      return raw ? new Set(JSON.parse(raw) as DisplayStatus[]) : new Set();
+      if (!raw) return closedByDefault();
+      const parsed: unknown = JSON.parse(raw);
+      // v2 wraps the list so that a preference stored before the archived
+      // section existed (a bare array, with no opinion about it) can be told
+      // apart from one the user has since made.
+      if (Array.isArray(parsed)) {
+        return new Set<DisplayStatus>([
+          ...(parsed as DisplayStatus[]),
+          "archived",
+        ]);
+      }
+      return new Set<DisplayStatus>(
+        ((parsed as { collapsed?: DisplayStatus[] }).collapsed ??
+          []) as DisplayStatus[],
+      );
     } catch {
-      return new Set();
+      return closedByDefault();
     }
   });
 
@@ -105,7 +123,10 @@ export function ApplicationList({
       if (next.has(s)) next.delete(s);
       else next.add(s);
       try {
-        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(Array.from(next)));
+        localStorage.setItem(
+          COLLAPSED_KEY,
+          JSON.stringify({ v: 2, collapsed: Array.from(next) }),
+        );
       } catch {
         /* ignore storage errors */
       }
@@ -130,17 +151,20 @@ export function ApplicationList({
     setTotals((prev) => (prev[s] === total ? prev : { ...prev, [s]: total }));
   }, []);
 
-  // The archived section only renders when explicitly filtered.
-  const renderedStatuses = status
-    ? [status]
-    : STATUS_ORDER.filter((s) => s !== "archived");
+  // The archived section belongs to the list view now: it sits *below* the empty
+  // state (archived applications are not "active", so their presence must not
+  // suppress it) and starts closed, because it is the section people go looking
+  // for rather than one they want in the way.
+  const activeSections = status ? [status] : STATUS_ORDER.filter((s) => s !== "archived");
+  const showArchived = !status;
 
-  const allKnown = renderedStatuses.every(
-    (s) => typeof totals[s] === "number",
-  );
+  // Only the active sections decide the empty state: an account whose
+  // applications are all archived still has nothing active to show.
+  const allKnown = activeSections.every((s) => typeof totals[s] === "number");
   const allEmpty =
-    allKnown && renderedStatuses.every((s) => (totals[s] ?? 0) === 0);
+    allKnown && activeSections.every((s) => (totals[s] ?? 0) === 0);
   const hasActiveFilters = Boolean(debouncedSearch || status);
+  const hasArchived = (totals.archived ?? 0) > 0;
 
   // Board controls move into the app header on a wide screen: they are then
   // always in reach (the header is sticky) and the columns get the whole width
@@ -297,7 +321,7 @@ export function ApplicationList({
       ) : (
         <div className="space-y-6" data-testid="application-sections">
           {!allKnown && <GhostPulse />}
-          {renderedStatuses.map((s) => (
+          {activeSections.map((s) => (
             <ApplicationSection
               key={s}
               status={s}
@@ -318,6 +342,25 @@ export function ApplicationList({
             <ApplicationsEmptyState
               filtered={hasActiveFilters}
               onAdd={handleAddClick}
+              // Archived applications are not active, and the archived section
+              // sits below this: "no active applications" is what is actually
+              // true here, and the call to action stops claiming to be the
+              // first one when there is already something archived.
+              title="No active applications"
+              cta={hasArchived ? "Add an application" : "Add your first application"}
+            />
+          )}
+          {/* Last, and closed by default: archived applications are the ones
+              being kept rather than worked on. */}
+          {showArchived && (
+            <ApplicationSection
+              status="archived"
+              search={debouncedSearch}
+              sort={sort}
+              seedReady={seedReady}
+              collapsed={collapsed.has("archived")}
+              onToggle={() => toggleSection("archived")}
+              onTotalChange={reportTotal}
             />
           )}
         </div>
