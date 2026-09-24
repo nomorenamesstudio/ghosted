@@ -224,6 +224,13 @@ All notable changes, by date and type.
   correct everywhere except iOS), and asserts the manifest and the emitted tags.
 
 ### Changed
+- **The page titles say "Ghosted".** The tagline is gone from `title`,
+  `openGraph.title`, `twitter.title` and the manifest's name, so the browser tab,
+  a shared link and an installed app all read the same single word. It stays where
+  it is copy rather than a title: the line under the brand on the auth pages, the
+  header of the emails `lib/emails.ts` sends, and the README's own heading.
+
+
 - **The list view keeps an Archived section, closed, below the empty state.**
   Archived applications are no longer hidden from the list: they have their own
   section at the bottom, closed until asked for. With nothing stored it starts

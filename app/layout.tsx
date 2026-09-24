@@ -19,7 +19,7 @@ const geistMono = localFont({
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
 
 export const metadata: Metadata = {
-  title: "Ghosted - For the Job Hunters",
+  title: "Ghosted",
   description:
     "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   openGraph: {
-    title: "Ghosted - For the Job Hunters",
+    title: "Ghosted",
     description:
       "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
     type: "website",
@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ghosted - For the Job Hunters",
+    title: "Ghosted",
     description:
       "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
     images: ["/og.png"],
