@@ -13,11 +13,18 @@ const ICONS = [
   { src: "/apple-touch-icon.png", size: 180 },
   { src: "/icon-192.png", size: 192 },
   { src: "/icon-512.png", size: 512 },
-  { src: "/icon-maskable-512.png", size: 512 },
 ];
 
 /** The subset the manifest lists — iOS ignores those and takes the link tag. */
-const MANIFEST_ICONS = ["/icon-192.png", "/icon-512.png", "/icon-maskable-512.png"];
+const MANIFEST_ICONS = ["/icon-192.png", "/icon-512.png"];
+
+/** The previous set, kept in the repo so the icon can be reverted. */
+const ARCHIVE = [
+  "/icons-v1/apple-touch-icon.png",
+  "/icons-v1/icon-192.png",
+  "/icons-v1/icon-512.png",
+  "/icons-v1/icon-maskable-512.png",
+];
 
 const pngHeader = (body: Buffer) => ({
   width: body.readUInt32BE(16),
@@ -62,6 +69,13 @@ test("every icon is served, at the size it claims, flat for iOS", async ({
     // Truecolour without an alpha channel: iOS composites transparency onto
     // black, so a transparent icon arrives as a black square.
     expect(header.colourType, `${src} colour type`).toBe(2);
+  }
+});
+
+test("the previous icon set is still there to revert to", async ({ page }) => {
+  for (const src of ARCHIVE) {
+    const res = await page.request.get(src);
+    expect(res.status(), `${src} status`).toBe(200);
   }
 });
 

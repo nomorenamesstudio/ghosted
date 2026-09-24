@@ -24,10 +24,10 @@ export const metadata: Metadata = {
     "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
   metadataBase: new URL(siteUrl),
-  // Home-screen icons, from `public/app-icon-x2.png` (see app/manifest.ts for how
-  // they were cut). iOS ignores the manifest's icons in favour of this one link,
-  // and ignores transparency in it — hence the flattened 180px square — while
-  // Android takes the manifest's 192/512 and its maskable variant.
+  // Home-screen icons, cut from `public/staring-at-phone-sad-app-icon-alt.png`
+  // (see app/manifest.ts for how). iOS ignores the manifest's icons in favour of
+  // this one link, and composites transparency onto black — hence the flattened
+  // 180px square — while Android takes the manifest's 192 and 512.
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },

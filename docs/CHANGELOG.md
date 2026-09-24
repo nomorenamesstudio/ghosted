@@ -223,6 +223,24 @@ All notable changes, by date and type.
   dimensions and colour type (truecolour, no alpha — the one mistake that looks
   correct everywhere except iOS), and asserts the manifest and the emitted tags.
 
+- **The icon is now the close-up ghost**, cut from
+  `public/staring-at-phone-sad-app-icon-alt.png` instead of the purple square with
+  the small ghost. That artwork is a bleed — the ghost and its phone run off all
+  four edges on purpose — so every cut is full bleed, and `icon-512.png` is
+  declared twice in the manifest, `any` and `maskable`, because Android's masks
+  round the corners and previewing the circle crop shows the face, eyes and phone
+  surviving it. Padding the art to sit inside the maskable safe circle was tried
+  first and looked worse: a blurred halo of the artwork around a shrunken face.
+  The separate `icon-maskable-512.png` is gone with it — one file serves both
+  purposes now — and the manifest's theme and background colours moved from the old
+  purple to the art's own pale ground (`#ebedf9`, sampled from its corners), so a
+  splash screen meets the icon rather than framing a lavender ghost in purple.
+  **The previous set is kept for reverting**: its master is
+  `public/app-icon-x2.png` (untouched) and its four cuts are archived in
+  `public/icons-v1/`, which `tests/e2e/app-icons.spec.ts` asserts are still served
+  — so going back is `cp public/icons-v1/*.png public/` (plus deleting the stray
+  `icon-maskable-512.png` restore if the manifest asks for it again).
+
 ### Changed
 - **The page titles say "Ghosted".** The tagline is gone from `title`,
   `openGraph.title`, `twitter.title` and the manifest's name, so the browser tab,

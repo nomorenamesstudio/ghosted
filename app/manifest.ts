@@ -2,24 +2,30 @@ import type { MetadataRoute } from "next";
 
 /**
  * The web app manifest, for "add to home screen" on Android — and on iOS, which
- * reads the manifest for the standalone window and the icons but takes its own
- * settings from the `appleWebApp` metadata in the root layout.
+ * reads the manifest for the standalone window and its colours but takes its icons
+ * from the `appleWebApp` metadata in the root layout.
  *
- * Icons come from `public/`, generated from `public/app-icon-x2.png` (the 2048px
- * master, opaque, purple with the ghost well inside the safe zone), so the
- * manifest and the metadata point at the same files:
+ * Icons are cut from `public/staring-at-phone-sad-app-icon-alt.png` (the 2048px
+ * master) into `public/`:
  *
- *   apple-touch-icon.png     180x180   iOS home screen
- *   icon-192.png             192x192   the size Chrome's install prompt wants
- *   icon-512.png             512x512   splash and store listings
- *   icon-maskable-512.png    512x512   the ghost at 90% on the same purple, for
- *                                      Android's adaptive masks, which crop to a
- *                                      circle or a squircle and would otherwise
- *                                      shave the shadow off the ghost
+ *   apple-touch-icon.png   180x180   iOS home screen
+ *   icon-192.png           192x192   the size Chrome's install prompt asks for
+ *   icon-512.png           512x512   splash, and Android's maskable icon
  *
- * `theme_color` and `background_color` are the icon's own purple (sampled from
- * its corner), so the splash screen and the status bar meet the icon instead of
- * framing it in a different colour.
+ * That artwork is a close-up that bleeds to all four edges — the ghost and its
+ * phone run off the frame on purpose — so every cut is full bleed, and the 512 is
+ * declared `any maskable` rather than given a padded twin: Android's masks round
+ * the corners, and previewing the circle crop shows the face, eyes and phone all
+ * surviving inside the safe area. Padding it to sit inside the safe circle was
+ * tried and looked worse — a blurred halo of the artwork round a shrunken face.
+ *
+ * `theme_color` and `background_color` are the art's own pale ground (#ebedf9,
+ * sampled from its corners), so the splash meets the icon instead of framing a
+ * pale lavender ghost in the old purple.
+ *
+ * The previous icon set — the purple square with the small ghost — is kept: its
+ * master is `public/app-icon-x2.png` and its cuts are in `public/icons-v1/`, so
+ * switching back is a copy plus the one ImageMagick command in the changelog.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -30,13 +36,17 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/app",
     scope: "/",
     display: "standalone",
-    background_color: "#582eab",
-    theme_color: "#582eab",
+    background_color: "#ebedf9",
+    theme_color: "#ebedf9",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      // The art bleeds to the edges, and previewing Android's circular crop shows
+      // the face, eyes and phone surviving it — so one file serves both purposes.
+      // It is listed twice because the manifest type takes a single value per
+      // entry, not the spec's space-separated "any maskable".
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
       {
-        src: "/icon-maskable-512.png",
+        src: "/icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
