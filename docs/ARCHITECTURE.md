@@ -41,7 +41,7 @@ components/
   KanbanBoard / KanbanColumn / KanbanCard / MoveToMenu / StepBackDialog
   use-application-section / use-application-move
   MilestoneTimeline / AddMilestoneModal / EditApplicationForm
-  Dashboard / DashboardStats / DonateBanner
+  Dashboard / DonateBanner
 lib/
   auth.ts                 # Auth.js v5 config (JWT, bcrypt, Google/LinkedIn OAuth)
   api.ts                  # typed client-side API + error handling
@@ -174,8 +174,8 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   optimistically moved for a step back: it stays in its column while the dialog
   is open.
 - **The board owns the page width, and the view lives in Dashboard**: which view
-  is active has to be known above `ApplicationList`, because the stat cards and
-  the shell width depend on it. `Dashboard` sets
+  is active has to be known above `ApplicationList`, because the shell width
+  depends on it. `Dashboard` sets
   `document.documentElement.dataset.view = "board"` and a rule in `globals.css`
   widens `.app-shell` (header + main), which keeps the layout a server
   component. The stored preference is read in an effect after mount — reading

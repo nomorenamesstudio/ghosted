@@ -48,7 +48,7 @@ export function ApplicationList({
 }: {
   status: "" | DisplayStatus;
   onStatusChange: (s: "" | DisplayStatus) => void;
-  /** Owned by Dashboard: it also decides the page width and the stat cards. */
+  /** Owned by Dashboard: it also decides the page width. */
   view: ViewMode;
   onViewChange: (view: ViewMode) => void;
   emailVerified: boolean;

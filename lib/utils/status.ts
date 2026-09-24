@@ -75,11 +75,11 @@ export function ghostedAfterDays(level?: PatienceLevel | null): number {
  * The instant an application of this age stops counting as active.
  *
  * Shared deliberately: the board and the list decide "ghosted" in JS from
- * `Date.now()`, while the dashboard's stat counts do it in SQL. Comparing SQL
+ * `Date.now()`, while the `getStats` aggregate does it in SQL. Comparing SQL
  * against the database's own `now()` instead puts the two clocks on either side
  * of an application that sits exactly on the threshold — which the seed data
- * does — and the stat card then disagrees with the column beneath it. Both sides
- * compare against this one timestamp.
+ * does — so the aggregate can disagree with the section it is counting. Both
+ * sides compare against this one timestamp.
  */
 export function ghostedCutoff(days: number = ghostedAfterDays()): Date {
   return new Date(Date.now() - days * MS_PER_DAY);

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getStats } from "@/lib/api";
 import type { DisplayStatus } from "@/lib/utils/status";
-import { DashboardStats } from "./DashboardStats";
 import { DonateBanner } from "./DonateBanner";
 import { VerificationBanner } from "./VerificationBanner";
 import { ApplicationList, type ViewMode } from "./ApplicationList";
@@ -15,8 +14,8 @@ const VIEW_KEY = "ghosted-view";
 
 /**
  * Which view is active lives here, not in ApplicationList, because the board
- * needs more than the list does: the page shell widens to the full window and
- * the stat cards step aside to give the columns the room.
+ * needs more than the list does: the page shell widens to the full window to
+ * give the columns the room.
  *
  * The board is the default; a stored preference is applied *after* mount, since
  * reading localStorage during the first render would paint a different toggle on
@@ -46,12 +45,12 @@ export function Dashboard({
   // the first application.
   const accountIsEmpty = useAccountIsEmpty(applicationCount);
 
-  // The totals every count on this page comes from. Until they are in, the
-  // banner, the stat cards and the list below all stay out of the way (see the
-  // ready gate in ApplicationList): the account's shape is simply not known yet.
+  // What the donate banner counts. Until it is in, the banners and the list
+  // below stay out of the way (see the ready gate in ApplicationList): the
+  // account's shape is simply not known yet.
   const statsReady = !statsQuery.isPending;
 
-  // Status filter, shared between the clickable stat cards and the dropdown.
+  // Status filter, owned here and driven by the list's dropdown.
   const [status, setStatus] = useState<"" | DisplayStatus>("");
   // The board is the default view.
   const [view, setView] = useState<ViewMode>("board");
@@ -102,10 +101,9 @@ export function Dashboard({
       <div className="space-y-6 pt-4">
         {/* Nothing above or below the header renders until the totals are in.
             The banner's own reason to exist depends on them (an account with no
-            applications never shows it), and the stat cards would otherwise sit
-            there reading zero - both are part of the same "we do not know yet"
-            state the list itself waits in, so they appear together rather than
-            one at a time. The donation banner is left where it is: it hides
+            applications never shows it) - and that is the same "we do not know
+            yet" state the list itself waits in, so they appear together rather
+            than one at a time. The donation banner is left where it is: it hides
             itself until there are offers to celebrate, so it is already silent
             on load. */}
         {statsReady && !accountIsEmpty && (
@@ -115,16 +113,11 @@ export function Dashboard({
           />
         )}
         {statsReady && <DonateBanner offers={stats?.data?.offers ?? 0} />}
-        {/* Stats are a list-view summary (they filter the sections); on the
-            board the columns already show every count, so they stay out of
-            the way. */}
-        {statsReady && view === "list" && (
-          <DashboardStats
-            stats={stats?.data}
-            activeStatus={status}
-            onSelect={setStatus}
-          />
-        )}
+        {/* No stat cards: every count they carried is already on screen in the
+            view that is showing — the section headers in the list, the column
+            headers on the board — and a row of totals above them was one summary
+            of a summary, taking the first screenful of the page. The status
+            filter they used to drive stays in the list's toolbar. */}
         <ApplicationList
           status={status}
           onStatusChange={setStatus}

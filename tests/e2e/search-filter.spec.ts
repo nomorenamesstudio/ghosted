@@ -40,37 +40,11 @@ test("search and filter return expected results", async ({ page }) => {
   await page.getByLabel("Filter by status").click();
   await page.getByRole("option", { name: "Applied" }).click();
   await expect(appliedSection.locator("li")).toHaveCount(2);
-});
 
-test("stat cards filter like the dropdown and stay in sync", async ({
-  page,
-}) => {
-  const email = uniqueEmail("statcard");
-  await registerUser(page, email);
-  await createAppViaApi(page, "Acme Corp", "Engineer");
-  await createAppViaApi(page, "Globex", "Designer");
-
-  await page.goto("/app");
-  await useListView(page);
-  await expect(page.getByTestId("stat-total")).toHaveText("2");
-
-  // The stat value divs live inside the stat-card buttons.
-  const totalCard = page.getByTestId("stat-total").locator("xpath=ancestor::button");
-  const appliedCard = page.getByTestId("stat-applied").locator("xpath=ancestor::button");
-
-  // Total is the active card by default (no filter).
-  await expect(totalCard).toHaveAttribute("aria-pressed", "true");
-
-  // Click the "Applied" card → applied filter; the dropdown syncs.
-  await appliedCard.click();
-  await expect(page.getByLabel("Filter by status")).toContainText("Applied");
-  await expect(page.getByTestId("section-applied")).toBeVisible();
-  await expect(page.getByTestId("section-offer")).toHaveCount(0);
-  await expect(appliedCard).toHaveAttribute("aria-pressed", "true");
-
-  // Clearing from the dropdown restores everything and marks Total active.
+  // Clearing the filter restores every section. The stat cards used to be the
+  // other way back to this state; the dropdown is the only one now.
   await page.getByLabel("Filter by status").click();
   await page.getByRole("option", { name: "All statuses" }).click();
-  await expect(page.getByTestId("section-applied")).toBeVisible();
-  await expect(totalCard).toHaveAttribute("aria-pressed", "true");
+  await expect(appliedSection.locator("li")).toHaveCount(2);
+  await expect(page.getByTestId("section-offer")).toHaveCount(0);
 });

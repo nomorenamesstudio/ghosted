@@ -18,12 +18,13 @@ import { eq } from "drizzle-orm";
 import { resetDb, createUser } from "../helpers";
 
 /**
- * The dashboard's stat cards are counted in SQL, while the columns, the list and
- * the cards decide "ghosted" in JavaScript. The two must agree, and they did not:
- * the first version of the aggregate counted only applied/interviewing rows that
- * had gone quiet, so an application filed as ghosted *by hand* was missing from
- * the stat card while sitting in the ghosted column — the count read 8 above a
- * column of 9.
+ * `getStats` counts in SQL, while the columns, the list and the cards decide
+ * "ghosted" in JavaScript. The two must agree, and they did not: the first
+ * version of the aggregate counted only applied/interviewing rows that had gone
+ * quiet, so an application filed as ghosted *by hand* was missing from the total
+ * while sitting in the ghosted column — the count read 8 above a column of 9.
+ * The dashboard no longer draws stat cards, but the aggregate is still served
+ * (the donate banner reads its offer count) and is still counted the same way.
  *
  * So this asserts the invariant directly: build a set of applications that
  * covers every branch (both kinds of ghosted, the patience boundary, archived),

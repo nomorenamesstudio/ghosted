@@ -59,7 +59,7 @@ test("a11y: authenticated pages, both themes", async ({ page }) => {
     await expect(page.getByTestId("kanban-board")).toBeVisible();
     await audit(page, `/app board (${theme})`);
 
-    // List view, whose sections and stat cards the board replaces.
+    // List view, whose sections the board replaces.
     await setPrefs(page, { "ghosted-theme": theme, "ghosted-view": "list" });
     await page.goto("/app");
     await expect(page.getByTestId("application-sections")).toBeVisible();

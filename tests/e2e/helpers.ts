@@ -21,7 +21,7 @@ export async function markUserVerified(email: string): Promise<void> {
 
 /**
  * The dashboard opens on the Kanban board now. Specs that assert list behaviour
- * (sections, stat cards, infinite scroll over the sections) switch to List
+ * (sections, infinite scroll over the sections) switch to List
  * first - the choice is remembered per browser, so once is enough.
  *
  * An account with no applications has no toolbar at all, so on a fresh account

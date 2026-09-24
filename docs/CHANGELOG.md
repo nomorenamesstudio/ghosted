@@ -68,6 +68,21 @@ All notable changes, by date and type.
   tests, full e2e 28/28 (axe scan included, so no contrast regression), and the
   palette re-measured from the rendered page in both themes.
 
+### Removed
+- **The dashboard's stat-card row.** The six counted cards only ever rendered in
+  the list view (the board hid them, since its columns already show every count),
+  and the list shows the same totals in each section header — so the row was a
+  summary of a summary, sitting between the toolbar and the first section and
+  taking the top of the page with it. `DashboardStats` and its `stat-*` test ids
+  are gone; the section headers now carry `data-testid="section-count-<status>"`,
+  which is what `tests/e2e/section-counts.spec.ts` (replacing `stats.spec.ts`)
+  asserts after a milestone-driven status change. Clicking a card to filter is
+  likewise gone with them — the toolbar's status dropdown was already the other
+  way to do it, and it is now the only one. `getStats` itself stays: the donate
+  banner reads its offer count, and the ghosted-rule integration test still
+  guards the SQL against the rule the board and the list apply in JavaScript.
+  Verified: tsc and lint clean, 252 unit/component tests, full e2e 28/28.
+
 ## 2026-09-23
 
 ### Added

@@ -21,8 +21,8 @@ test("the board is the default view, in pipeline order", async ({ page }) => {
   await expect(page.getByTestId("kanban-board")).toBeVisible();
   await expect(page.getByTestId("application-sections")).toHaveCount(0);
 
-  // Stat cards and the status filter belong to the list; on the board the
-  // columns are the statuses.
+  // The status filter belongs to the list; on the board the columns are the
+  // statuses. (The stat cards are gone from both views — see section-counts.)
   await expect(page.getByTestId("stat-total")).toHaveCount(0);
   await expect(page.getByLabel("Filter by status")).toHaveCount(0);
 

@@ -1136,8 +1136,8 @@ export async function getStats(userId: string): Promise<DashboardStats> {
   // Two ways an application displays as ghosted, and both have to be here: it
   // was filed there by hand (the status is literally 'ghosted'), or it is an
   // applied/interviewing one that has gone quiet past the patience window. The
-  // board's ghosted column uses exactly this disjunction, and the stat card has
-  // to agree with the column beneath it.
+  // board's ghosted column uses exactly this disjunction, and this aggregate has
+  // to agree with the section it counts.
   //
   // The cutoff goes in as an ISO string with an explicit cast: postgres.js does
   // not know how to send a raw JS Date through a drizzle `sql` fragment and

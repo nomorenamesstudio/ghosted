@@ -34,8 +34,8 @@ export function useBoardSeed({
   sort: SectionSort;
   /**
    * False when only one section is on screen (the list view filtered to a
-   * single status by the stat cards): then the per-status request is the cheaper
-   * one and there is nothing to consolidate.
+   * single status): then the per-status request is the cheaper one and there is
+   * nothing to consolidate.
    */
   enabled?: boolean;
 }): { seedReady: boolean } {

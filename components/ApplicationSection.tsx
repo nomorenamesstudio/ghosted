@@ -93,7 +93,10 @@ export function ApplicationSection({
       >
         <Icon className="h-4 w-4" />
         {STATUS_TITLES[status]}
-        <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">
+        <span
+          className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums"
+          data-testid={`section-count-${status}`}
+        >
           {total}
         </span>
         <ChevronDown
