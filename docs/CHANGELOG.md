@@ -144,6 +144,31 @@ All notable changes, by date and type.
   narrows to its own section the same way.
 
 ### Fixed
+- **The dashboard no longer opens narrow and jumps to the board's width.** The
+  shell is widened by a rule keyed on `data-view="board"` (six columns need the
+  room), and that attribute was set in a `useEffect` — so the first paint was
+  always list-width and the whole page reflowed about half a second later, once
+  hydration had run. Measured: `main` 1024 px → 1280 px and the column strip
+  992 px → 1248 px, both at ~500 ms. The attribute is now set by the inline
+  script in the root layout that already decides the theme before first paint, so
+  the shell is right in the first frame; `Dashboard` keeps it in sync from then
+  on, and only starts touching it once it has read the stored preference (a list
+  user's shell must not flash to board width on the way to "list" — verified: it
+  stays 1024 px from the first frame).
+- **The board's toolbar no longer jumps into the header.** It used to render
+  inline and then remount inside `#dashboard-header-slot` once the viewport width
+  and the slot were known — measured at ~460 ms, with the search, sort, view
+  switch and Add button visibly relocating upward. Both facts are
+  browser-only, so the toolbar is simply not rendered until they are resolved:
+  one appearance, in its final place.
+- **The board's loading state is keyboard accessible.** The column strip scrolls
+  sideways, which makes it a scrollable region, and while it holds only skeletons
+  nothing inside it can take focus — `scrollable-region-focusable` (WCAG 2.1.1)
+  failed on the loading state and passed once the cards arrived, which is why it
+  showed up intermittently as a "flake" on a cold server. The region itself is a
+  tab stop now (`role="region"`, `aria-label`, `tabIndex=0`, focus ring), so a
+  keyboard user can arrow across the columns and the audit passes in both states
+  — confirmed by running it against the same cold server that had just failed.
 - **The board's horizontal scrollbar no longer dominates the cards.** The column
   strip scrolls sideways on purpose — the columns snap past each other — but a
   desktop browser reserves a full-height bar for it, drawn right under the cards,

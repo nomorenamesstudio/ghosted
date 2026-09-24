@@ -144,14 +144,22 @@ export function ApplicationList({
   // Board controls move into the app header on a wide screen: they are then
   // always in reach (the header is sticky) and the columns get the whole width
   // below it. Below the breakpoint - and in list view - they keep their own row.
+  //
+  // Both facts are only knowable in the browser, so the toolbar is not rendered
+  // until they are: rendering it inline first and moving it into the header a
+  // hydration later made the search, sort and add controls visibly jump up the
+  // page (measured: mounted inline, then remounted in the header ~460ms in).
+  // Until then the space is left to the skeletons.
   const [headerSlot, setHeaderSlot] = useState<HTMLElement | null>(null);
   const [isWideScreen, setIsWideScreen] = useState(false);
+  const [placementKnown, setPlacementKnown] = useState(false);
 
   useEffect(() => {
     const query = window.matchMedia("(min-width: 1280px)");
     const update = () => setIsWideScreen(query.matches);
     update();
     query.addEventListener("change", update);
+    setPlacementKnown(true);
     return () => query.removeEventListener("change", update);
   }, []);
 
@@ -253,8 +261,11 @@ export function ApplicationList({
   return (
     <div className="space-y-4">
       {/* Hidden entirely while the account is empty - the empty state below is
-          the whole screen's worth of interface in that case. */}
+          the whole screen's worth of interface in that case - and not rendered
+          until its placement is known, so it can never appear in one place and
+          move to another. */}
       {!accountIsEmpty &&
+        placementKnown &&
         (controlsInHeader ? createPortal(toolbar, headerSlot) : toolbar)}
 
       {view === "board" ? (

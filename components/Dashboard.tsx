@@ -49,6 +49,12 @@ export function Dashboard({
   const [status, setStatus] = useState<"" | DisplayStatus>("");
   // The board is the default view.
   const [view, setView] = useState<ViewMode>("board");
+  // Whether the stored preference has been read yet. The shell's width is keyed
+  // on `data-view`, the inline script in the root layout already set that from
+  // storage before first paint, and this flag is what keeps this component from
+  // touching it until it knows the same value — otherwise a list user's shell
+  // would flash to board width and back on the way to "list".
+  const [viewKnown, setViewKnown] = useState(false);
 
   useEffect(() => {
     try {
@@ -57,18 +63,21 @@ export function Dashboard({
     } catch {
       /* ignore storage errors */
     }
+    setViewKnown(true);
   }, []);
 
   // The shell (header + main) is widened by a rule keyed on this attribute, so
-  // the layout stays a server component.
+  // the layout stays a server component. The pre-paint script set it already;
+  // from here it is only kept in sync with the toggle.
   useEffect(() => {
+    if (!viewKnown) return;
     const root = document.documentElement;
     if (view === "board") root.dataset.view = "board";
     else delete root.dataset.view;
     return () => {
       delete root.dataset.view;
     };
-  }, [view]);
+  }, [view, viewKnown]);
 
   function changeView(next: ViewMode) {
     setView(next);

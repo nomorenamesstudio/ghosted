@@ -57,10 +57,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Apply the saved/system theme before first paint to avoid a flash. */}
+        {/* Apply the saved/system theme before first paint to avoid a flash, and
+            the saved view with it: the board's shell is widened by a rule keyed
+            on `data-view` (see globals.css). Setting the attribute here — the
+            same place the theme is decided — is the difference between the board
+            opening at its real width and opening at the list width and reflowing
+            half a second later when the effect in Dashboard finally runs. Board is
+            the default, so it applies unless the stored view says otherwise. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}`,
+            __html: `try{var t=localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');if(localStorage.getItem('ghosted-view')!=='list')document.documentElement.setAttribute('data-view','board')}catch(e){}`,
           }}
         />
         {/* Self-hosted umami analytics (tracker + beacon on
