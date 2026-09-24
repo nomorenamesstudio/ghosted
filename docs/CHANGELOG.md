@@ -255,6 +255,62 @@ All notable changes, by date and type.
   it can go whenever.)
 
 ### Changed
+- **The brand mark is a wordmark, and its "beta" is a word.** The ghost glyph beside
+  the header's wordmark is gone, "Ghosted" went from 16px to 18px, and the single β
+  character — which at 10px read as a stray glyph rather than a label — is now
+  spelled out in **Geist Mono** at the same size, where the mono texture separates it
+  from the wordmark. The auth pages lost their 48px `BrandGhost` too: the
+  illustration belongs to the hero, the app icon and the social card, and the
+  sign-in screen was the third place the same character appeared before a user had
+  done anything. `BrandGhost` and `HeroGhost` are both deleted (git has them), and
+  the auth heading carries the same wordmark + mono "beta" as every header. This is
+  the first thing to use Geist Mono, which had been wired since the font fix and
+  unused — it now downloads (~60 kB woff) on every page. The email header in
+  `lib/emails.ts` spells "beta" out too, in a **system** monospace stack
+  (`ui-monospace, SFMono-Regular, Menlo, Consolas, …`) rather than our own webfont,
+  because no mail client loads a webfont — and the rest of the email stays on the
+  system sans stack it already used, now with a comment saying why. Its ghost mark
+  stays: that one is a 46px header illustration rather than UI chrome.
+  The landing page's header had its own copy of the whole mark and now renders
+  `AppBrand` like every other header, with an `href` prop because it links home
+  rather than to the app — left alone, that copy would have kept the old lockup and
+  drifted. The brand block measures 102x28px (was 82x28) with the word in it.
+- **The landing hero is the standing ghost, much larger, under a tighter
+  headline.** `components/HeroGhost.tsx` — a bespoke outline mascot with its own
+  eye-blink keyframes — is gone, replaced by the vector the app icon and the social
+  card come from (`public/staring-at-phone-sad.svg`, full body on a transparent
+  ground, so nothing here is tinted by the OS). It keeps the same `ghost-float`
+  levitation and the `.ghost-shadow` beneath it (the blink keyframes and the
+  `.ghost-eyes` rule went with the mascot), and it is drawn at **240px** instead of
+  96 — 176 on a phone, with the wrapper grown to match so the layout accounts for
+  its height. That made the old type sizes look oversized, so the headline came
+  down and then settled at **32px / 40px**, the subtitle is his own copy —
+  "A simple logbook for your jobhunt. Every application, interview and ghosting on
+  one timeline. Nothing more, nothing less." — and both now wrap with
+  `text-balance`,
+  which is the part that matters: measured at 1280px, the headline's break goes
+  from a 625px line followed by a 67px orphan ("…go quiet on / you.", evenness
+  0.11) to a 503 / 301 split (0.60, the most even break its words allow), and the
+  subtitle from 576 / 95 to an even two-line split. `text-pretty` was tried first
+  and left the same orphan. The meta descriptions also gained the em dash they
+  were missing ("interview progress — and never lose track"), which is the house
+  copy style, not a hyphen.
+
+### Changed
+- **The header's brand is text only, a size up.** The ghost glyph beside the
+  wordmark is gone and "Ghosted" moved from 16px to 18px (the β with it, 10px to
+  11px), so the mark reads as a wordmark rather than a logo lockup. The character
+  still carries the app icon and the social card, so nothing leaves the identity —
+  the header just stops repeating it a few inches from a hero illustration of the
+  same ghost, and the auth pages keep their bespoke 48px `BrandGhost`, which is
+  the one place a big mark is doing work. The landing page's header had its own
+  copy of the exact same markup and now renders `AppBrand` like every other
+  header, with an `href` prop because it links home rather than to the app — that
+  copy would otherwise have kept the old lockup and drifted from the app's.
+  Header height is unchanged (57px, `h-14` plus its border); the brand block is
+  82x28px in all four headers.
+
+
 - **The page titles say "Ghosted".** The tagline is gone from `title`,
   `openGraph.title`, `twitter.title` and the manifest's name, so the browser tab,
   a shared link and an installed app all read the same single word. It stays where

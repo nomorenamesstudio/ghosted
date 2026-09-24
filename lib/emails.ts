@@ -144,6 +144,13 @@ export function renderEmailShell({
 
   return `<!DOCTYPE html>
 <html lang="en">
+<!--
+  Both stacks are deliberately system stacks: no mail client loads our webfont, so
+  asking for Geist here would buy nothing and fall back to whatever the client
+  has. The wordmark's "beta" is the one place a monospace face is wanted, and it
+  asks for the sanest system monospace first rather than a font that will not be
+  there.
+-->
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px;">
     <tr>
@@ -155,7 +162,7 @@ export function renderEmailShell({
                 <tr>
                   <td align="center">
                     ${GHOST_MARK}
-                    <div style="padding-top:10px;color:#18181b;font-size:18px;font-weight:700;letter-spacing:-0.02em;text-align:center;">Ghosted<span style="color:${EMAIL_BRAND};font-size:11px;font-weight:600;vertical-align:super;">β</span></div>
+                    <div style="padding-top:10px;color:#18181b;font-size:18px;font-weight:700;letter-spacing:-0.02em;text-align:center;">Ghosted<span style="color:${EMAIL_BRAND};font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;margin-left:4px;font-size:11px;font-weight:600;vertical-align:super;">beta</span></div>
                   </td>
                 </tr>
               </table>

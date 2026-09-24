@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 // four decorative cards. The shell is a server component, so those stay on the
 // dashboard, and the look is identical because it is literally the same markup.
 import { ApplicationCardShell } from "./ApplicationCardShell";
-import { HeroGhost } from "./HeroGhost";
+import { AppBrand } from "./AppBrand";
 import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
 
@@ -262,15 +262,9 @@ export function Landing() {
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Ghost className="h-5 w-5 text-violet-500" aria-hidden />
-            <span className="font-semibold tracking-tight">
-              Ghosted
-              <sup className="ml-0.5 text-[10px] font-medium text-violet-700 dark:text-violet-300">
-                β
-              </sup>
-            </span>
-          </Link>
+          {/* The same component the app's header renders, rather than a second
+              copy of the same markup that drifts the moment either changes. */}
+          <AppBrand href="/" />
           <nav aria-label="Account" className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
               <Link href="/login">Sign in</Link>
@@ -284,9 +278,9 @@ export function Landing() {
 
       <main className="flex-1">
         {/* Hero — inverted purple band (overflow hidden clips the icon cloud). */}
-        <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-16 text-center sm:pt-24">
+        <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700 px-4 pb-32 pt-12 text-center sm:pt-16">
           <div
-            className="relative mx-auto flex h-32 w-32 items-center justify-center"
+            className="relative mx-auto flex h-48 w-48 items-center justify-center sm:h-64 sm:w-64"
             aria-hidden
           >
             {/* Rotating "email tornado" icon rings around the ghost — first
@@ -336,18 +330,33 @@ export function Landing() {
                 })}
               </div>
             ))}
-            <HeroGhost className="ghost-float h-24 w-24 text-white" />
-            <span className="ghost-shadow absolute bottom-0 left-1/2 h-2.5 w-16 -translate-x-1/2 rounded-full bg-violet-950/50 blur-[2px]" />
+            {/* The same character as the app icon and the social card, drawn full
+                body and on a transparent ground (`public/staring-at-phone-sad.svg`,
+                the 1024px vector master — the icon is the close-up crop of the same
+                illustration, which is why nothing here is tinted by the OS). It is an
+                illustration rather than a silhouette, hence an image: 11 kB of paths
+                drawn at their own size, so next/image would only add its runtime and
+                a re-encode hop, the same call as the mock logos below. Decorative, so
+                an empty alt — the copy underneath says everything it says. The float
+                is the same `ghost-float` the outline mascot used, and the ground
+                shadow below is still `.ghost-shadow`. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/staring-at-phone-sad.svg"
+              alt=""
+              aria-hidden
+              className="ghost-float h-44 w-44 sm:h-60 sm:w-60"
+            />
+            <span className="ghost-shadow absolute bottom-0 left-1/2 h-3 w-24 -translate-x-1/2 rounded-full bg-violet-950/50 blur-[2px] sm:w-32" />
           </div>
           {/* Text is positioned (relative) so it paints above the tornado's
               positioned ghost wrapper, keeping the rings behind the copy. */}
-          <h1 className="relative mx-auto mt-6 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
+          <h1 className="relative mx-auto mt-6 max-w-2xl text-balance text-[2rem] font-bold leading-[1.15] tracking-tight text-white sm:text-[2.5rem]">
             Never let a job application go quiet on you.
           </h1>
-          <p className="relative mx-auto mt-4 max-w-xl text-violet-100">
-            Ghosted keeps every application, interview and offer on one clear
-            timeline — and gently reminds you of the ones that went silent.
-            Your job hunt, without the ghosting.
+          <p className="relative mx-auto mt-4 max-w-xl text-balance text-sm text-violet-100 sm:text-base">
+            A simple logbook for your jobhunt. Every application, interview and
+            ghosting on one timeline. Nothing more, nothing less.
           </p>
           <div className="relative mt-8 flex items-center justify-center gap-3">
             <Button

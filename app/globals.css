@@ -100,46 +100,12 @@
   }
 }
 
-@keyframes ghost-eyes {
-  0%,
-  72% {
-    transform: translate(0, 0) scaleY(1);
-  }
-  76% {
-    transform: translate(3.5px, -1px) scaleY(1);
-  }
-  84% {
-    transform: translate(3.5px, -1px) scaleY(1);
-  }
-  88% {
-    transform: translate(0, 0) scaleY(1);
-  }
-  91% {
-    transform: translate(0, 0) scaleY(0.12);
-  }
-  94% {
-    transform: translate(0, 0) scaleY(1);
-  }
-  97% {
-    transform: translate(-3.5px, 0) scaleY(1);
-  }
-  100% {
-    transform: translate(0, 0) scaleY(1);
-  }
-}
-
 .ghost-float {
   animation: ghost-float 6s ease-in-out infinite;
 }
 
 .ghost-shadow {
   animation: ghost-shadow 6s ease-in-out infinite;
-}
-
-.ghost-eyes {
-  animation: ghost-eyes 12s ease-in-out infinite;
-  transform-box: fill-box;
-  transform-origin: center;
 }
 
 /* ---- Hero icon rings (rotating "email tornado" around the ghost) ---- */
@@ -164,7 +130,6 @@
 @media (prefers-reduced-motion: reduce) {
   .ghost-float,
   .ghost-shadow,
-  .ghost-eyes,
   .icon-cloud-ring {
     animation: none;
   }

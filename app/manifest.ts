@@ -36,7 +36,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Ghosted",
     short_name: "Ghosted",
     description:
-      "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
+      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     start_url: "/app",
     scope: "/",
     display: "standalone",

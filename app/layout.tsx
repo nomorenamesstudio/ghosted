@@ -21,7 +21,7 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.
 export const metadata: Metadata = {
   title: "Ghosted",
   description:
-    "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
+    "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
   metadataBase: new URL(siteUrl),
   // Home-screen icons, cut from `public/staring-at-phone-sad-app-icon-alt.png`
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Ghosted",
     description:
-      "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
+      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     type: "website",
     siteName: "Ghosted",
     locale: "en_US",
@@ -73,7 +73,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Ghosted",
     description:
-      "Track your job applications and interview progress - and never lose track of the ones that went quiet.",
+      "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     images: ["/ghost-og.png?v=1"],
   },
 };
