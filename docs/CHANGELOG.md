@@ -172,6 +172,18 @@ All notable changes, by date and type.
   narrows to its own section the same way.
 
 ### Fixed
+- **The archived card's colours and progress bar were missing.** Not the card's
+  logic: its colours compiled to nothing. The per-status card colours live in
+  `lib/utils/card-styles.ts`, and Tailwind's `content` globs listed `./pages`,
+  `./components` and `./app` but not `./lib`, so any class named only there was
+  absent from the stylesheet. The card tint survived by luck (`bg-muted/60` is
+  used elsewhere), while the archived progress bar's own `bg-zinc-200/60` and
+  `bg-zinc-400` existed nowhere else and rendered fully transparent; the archived
+  border fell back to the default grey, which is why the card also read
+  differently in the two views. `./lib/**` is scanned now. Measured before and
+  after on both views: track `rgba(0,0,0,0)` → `rgba(228,228,231,0.6)`, fill
+  transparent → `rgb(161,161,170)`, border default grey →
+  `rgba(212,212,216,0.7)`, and the list and board colours now match.
 - **The dashboard no longer opens narrow and jumps to the board's width.** The
   shell is widened by a rule keyed on `data-view="board"` (six columns need the
   room), and that attribute was set in a `useEffect` — so the first paint was

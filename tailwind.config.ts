@@ -6,6 +6,12 @@ const config: Config = {
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    // Class names live in lib/ too — the per-status card colours, for one — and
+    // anything Tailwind does not scan is silently absent from the stylesheet: the
+    // card tint survived only because `bg-muted/60` happens to be used elsewhere,
+    // while the archived progress bar's own colours existed nowhere else and
+    // compiled to nothing at all.
+    "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     extend: {
