@@ -34,16 +34,22 @@ export function Dashboard({
   /** Ghosted threshold from the user's patience level (Settings). */
   patienceDays: number;
 }) {
-  const { data: stats } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ["stats"],
     queryFn: () => getStats(),
   });
+  const stats = statsQuery.data;
 
   // While the account is empty the verification banner stays out of the way:
   // its limit only starts to matter once there is something to add, and the
   // empty state is meant to be the single focus on the screen. It returns with
   // the first application.
   const accountIsEmpty = useAccountIsEmpty(applicationCount);
+
+  // The totals every count on this page comes from. Until they are in, the
+  // banner, the stat cards and the list below all stay out of the way (see the
+  // ready gate in ApplicationList): the account's shape is simply not known yet.
+  const statsReady = !statsQuery.isPending;
 
   // Status filter, shared between the clickable stat cards and the dropdown.
   const [status, setStatus] = useState<"" | DisplayStatus>("");
@@ -94,22 +100,25 @@ export function Dashboard({
           banner down (space-y applies margin to every sibling after the first). */}
       <h1 className="sr-only">Applications</h1>
       <div className="space-y-6 pt-4">
-        {/* Both banners live in the content flow, above the stats - same
-            Card design, different intent (amber = verification, violet =
-            donation). The donation banner already hides itself until there are
-            offers to celebrate; the verification one steps aside while the
-            account is empty. */}
-        {!accountIsEmpty && (
+        {/* Nothing above or below the header renders until the totals are in.
+            The banner's own reason to exist depends on them (an account with no
+            applications never shows it), and the stat cards would otherwise sit
+            there reading zero - both are part of the same "we do not know yet"
+            state the list itself waits in, so they appear together rather than
+            one at a time. The donation banner is left where it is: it hides
+            itself until there are offers to celebrate, so it is already silent
+            on load. */}
+        {statsReady && !accountIsEmpty && (
           <VerificationBanner
             emailVerified={emailVerified}
             limit={unverifiedAppLimit}
           />
         )}
-        <DonateBanner offers={stats?.data?.offers ?? 0} />
+        {statsReady && <DonateBanner offers={stats?.data?.offers ?? 0} />}
         {/* Stats are a list-view summary (they filter the sections); on the
             board the columns already show every count, so they stay out of
             the way. */}
-        {view === "list" && (
+        {statsReady && view === "list" && (
           <DashboardStats
             stats={stats?.data}
             activeStatus={status}

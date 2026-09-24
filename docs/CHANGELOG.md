@@ -26,6 +26,19 @@ All notable changes, by date and type.
   `tests/unit/gravatar.test.ts` and `tests/integration/avatars.test.ts`.
 
 ### Changed
+- **The dashboard shows one loading state instead of a half-drawn page.** Which
+  shape the page takes — board, list, or the empty state — depends on the stored
+  view, the account's totals and each section's first page, and all of that lives
+  in the browser. The banner, the stat cards and the board used to render before
+  any of it was known: an account with no applications briefly saw a verification
+  banner, and everyone saw a search box, six empty columns and zeroed counters
+  rearrange themselves as the data landed. Nothing below the header renders now
+  until the totals are in and the view is known — just the app's loading motif
+  (the pulsing ghost) over card-shaped placeholders, deliberately neutral because
+  there is no honest way to draw either view yet. An account with no applications
+  skips it: its shape is known up front, so it goes straight to the empty state.
+  Measured: loading state alone at 180 ms, the whole dashboard at once at 630 ms,
+  with the shell width stable throughout.
 - **Landing page mock cards carry the real company logos.** The preview cards
   name Stripe, Vercel, Linear and Framer, so they now show those icons instead of
   the lettered placeholder the real cards fall back to when a logo lookup fails. The four marks are static 128×128 files under

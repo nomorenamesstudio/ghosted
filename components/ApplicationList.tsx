@@ -14,6 +14,7 @@ import { GhostPulse } from "./loading";
 import { StatusIcon } from "./status-icons";
 import { useAccountIsEmpty } from "./use-account-is-empty";
 import { useBoardSeed } from "./use-board-seed";
+import { DashboardLoading } from "./DashboardLoading";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -257,6 +258,18 @@ export function ApplicationList({
         </div>
       </div>
   );
+
+  // Everything below the header waits for this. Which of the three shapes the
+  // page takes — board, list, or the empty state — depends on data that only
+  // exists in the browser (the stored view, the account's totals, the first pages
+  // of each section), and drawing one of them before that is known is how the
+  // dashboard ended up showing a search box, six empty columns and then
+  // rearranging itself. The empty case is excluded because it *is* known up
+  // front: an account whose application count is zero cannot be waiting on a
+  // page of them.
+  const ready = placementKnown && (accountIsEmpty || seedReady);
+
+  if (!ready) return <DashboardLoading />;
 
   return (
     <div className="space-y-4">
