@@ -172,6 +172,15 @@ All notable changes, by date and type.
   narrows to its own section the same way.
 
 ### Fixed
+- **The archived card is the same colour in both views.** Its tint was
+  `bg-muted/60`, the only translucent one in light mode — every other status is
+  opaque — and a translucent tint is only the same colour if the surface behind it
+  is. Over the board's white column it read white-ish, over the dashboard's grey
+  page it read grey, so the same application looked like two different cards.
+  Measured: card `rgba(223,223,226,0.6)` over `rgb(255,255,255)` versus over
+  `rgb(233,233,236)`; now an opaque `rgb(223,223,226)` in both. (Dark mode's tints
+  are all translucent by design, but there both surfaces are dark and close, so
+  the effect is not visible.)
 - **The archived card's colours and progress bar were missing.** Not the card's
   logic: its colours compiled to nothing. The per-status card colours live in
   `lib/utils/card-styles.ts`, and Tailwind's `content` globs listed `./pages`,

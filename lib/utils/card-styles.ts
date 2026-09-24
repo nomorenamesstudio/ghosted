@@ -27,7 +27,11 @@ export const STATUS_TINT: Partial<Record<DisplayStatus, string>> = {
   offer: "bg-emerald-100 dark:bg-emerald-950/20",
   rejected: "bg-red-100 dark:bg-red-950/20",
   ghosted: "bg-violet-100 dark:bg-violet-950/20",
-  archived: "bg-muted/60 dark:bg-muted/20",
+  // Opaque, like every other tint here. It was `bg-muted/60`, and a translucent
+  // tint is only the same colour if what is behind it is: over the board's white
+  // column it read white-ish, over the dashboard's grey page it read grey, so the
+  // same card looked like two different cards.
+  archived: "bg-muted dark:bg-muted/20",
 };
 
 /** Muted border matching each status colour (pairs with the tint). */
