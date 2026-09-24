@@ -5,7 +5,32 @@ All notable changes, by date and type.
 ## 2026-09-24
 
 ### Changed
-- **Landing page restructured: one rhythm instead of a flat stack.** The page
+- **Landing refinement pass: one grid, one type scale, and the mascots on the
+  page.** The first pass had three different left edges (header 1024, hero 1152,
+  features 1024) which is why the margins read as random; every container is now
+  `max-w-6xl px-5 sm:px-6` and section padding is one pace (`py-16 sm:py-24`).
+  The hero headline came down from 72px to 32/40/52px at a 1.06 line-height,
+  section headings to the app's own `text-2xl sm:text-3xl`, tile bodies to
+  `text-sm`, so the page uses five sizes instead of eight-and-a-bit. The ghost,
+  its shadow and the icon tornado are now siblings inside one ghost-sized box,
+  which centres the rings on the character and puts the shadow at its hem by
+  construction (both were anchored independently and drifted); the rings also
+  sit behind the window now instead of over its chrome, and the ghost carries a
+  drop shadow so pale lavender still reads on violet.
+- **The bento is balanced by filling the big tile, not by shrinking it.** The
+  Ghosted tile gained the patience control (7d / 10d / 14d, 10 selected) under
+  the ten day marks, the day marks grow to 80px on desktop, and the grid no
+  longer forces equal rows, so the tall tile is content rather than air.
+- **Geist Mono finally has a home:** the machine-ish labels. The window's URL
+  bar, the tab counts, `Day 1 → 10`, the GHOSTED stamp, the patience chips and
+  `5 fixed steps` are all mono; every word of copy stays in Geist Sans.
+- **The four new mascot poses are in use**: `confused` (scratching its head)
+  fronts Ghosted detection, `content` fronts the timeline, `finger-guns` fronts
+  favourites, and the happy phone ghost — the payoff to the hero's sad one —
+  sits above the closing CTA. The two policy tiles keep plain glyphs: terms of
+  service do not have a face. All five live in `public/`.
+
+### Fixed The page
   was a centred hero, a floating mock and then five sections of equal weight, so
   nothing led and nothing rested. Now: a left-aligned hero with the CTA in it and
   the product shot on the right — the real dashboard cards inside a fake app

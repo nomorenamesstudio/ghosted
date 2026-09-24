@@ -5,7 +5,6 @@ import {
   BookOpen,
   Briefcase,
   Calendar,
-  ClipboardList,
   Clock,
   Coffee,
   FileText,
@@ -18,7 +17,6 @@ import {
   Phone,
   Send,
   ShieldCheck,
-  Star,
   Tag,
   Users,
   Video,
@@ -53,28 +51,44 @@ const MOCK_LOGOS: Record<string, string> = {
 };
 
 /**
- * The feature tiles are a bento, not six equal cards: the differentiator gets a
- * 2×2 tile with a visual, the timeline gets a 2×1, and only the small ones stay
- * square. `span` is the desktop grid footprint, `visual` picks the little
- * drawing that carries the tile. Order matters — Ghosted detection is the hook
- * and reads first.
+ * The mascot poses, all 1024×1024 flat vectors on a transparent ground, drawn
+ * for this product: the sad one holds a phone and stares at it, `confused`
+ * scratches its head under a question mark, `content` is calm, `finger-guns`
+ * winks, and the happy one is the phone ghost finally getting an answer. They
+ * carry the tiles where the product has a feeling; the two policy tiles keep
+ * plain glyphs, because terms of service do not have a face.
+ */
+const ART = {
+  sad: "/staring-at-phone-sad.svg",
+  confused: "/confused.svg",
+  content: "/content.svg",
+  fingerGuns: "/finger-guns.svg",
+  happy: "/staring-at-phone-happy.svg",
+} as const;
+
+/**
+ * Features are a bento, not six equal cards: the differentiator takes a 2×2 tile
+ * with a drawn silence panel, the timeline a 2×1 with the five-step rail, and
+ * only the smaller features stay square. `span` is the desktop footprint, `art`
+ * the mascot that fronts the tile, `visual` the drawing that carries it.
  */
 const FEATURES: {
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  art?: string;
   title: string;
   body: string;
   span: string;
   visual?: "silence" | "steps";
 }[] = [
   {
-    icon: Ghost,
+    art: ART.confused,
     title: "Ghosted detection",
     body: "Applications the employer has gone quiet on float into their own section once they pass your patience window — 10 days by default, and you set the pace.",
     span: "sm:col-span-2 lg:col-span-2 lg:row-span-2",
     visual: "silence",
   },
   {
-    icon: ClipboardList,
+    art: ART.content,
     title: "One timeline per application",
     body: "Start with the 5 standard steps — Application, HR Screen, Technical Interview, Test, Offer — and add your own as the process grows.",
     span: "sm:col-span-2 lg:col-span-2",
@@ -87,7 +101,7 @@ const FEATURES: {
     span: "",
   },
   {
-    icon: Star,
+    art: ART.fingerGuns,
     title: "Favourites first",
     body: "Pin the applications that matter most and they always stay on top of their section.",
     span: "",
@@ -266,7 +280,7 @@ function MockTab({
           at 390px with it, and a clipped tab reads as broken. */}
       <span
         className={cn(
-          "hidden rounded-full px-1.5 py-0.5 text-[10px] tabular-nums sm:inline",
+          "hidden rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums sm:inline",
           active ? "bg-muted" : "bg-muted/60",
         )}
       >
@@ -354,13 +368,13 @@ function ProductWindow() {
             <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
           </span>
-          <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 text-[11px] text-muted-foreground">
+          <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground">
             ghosted.lostsignals.studio
           </span>
         </div>
 
         {/* Cropped at the bottom: the log keeps going past the frame. */}
-        <div className="max-h-[25rem] overflow-hidden p-4 sm:max-h-[29rem]">
+        <div className="max-h-[25rem] overflow-hidden p-4 sm:max-h-[29rem] sm:p-5">
           <div className="mb-3 flex gap-1 overflow-hidden rounded-lg border bg-muted/50 p-1">
             <MockTab status="applied" title="Applied" count={1} active />
             <MockTab status="interviewing" title="Interviewing" count={2} />
@@ -415,13 +429,13 @@ function ProductWindow() {
  */
 function SilenceMarks() {
   return (
-    <div aria-hidden className="mt-auto pt-8">
+    <div aria-hidden className="mt-8">
       <div className="flex items-end gap-1.5">
         {Array.from({ length: 10 }, (_, i) => (
           <span
             key={i}
             className={cn(
-              "h-10 flex-1 rounded-[3px] border sm:h-12",
+              "h-12 flex-1 rounded-[4px] border sm:h-16 lg:h-20",
               i < 6
                 ? "border-violet-300/70 bg-violet-500/25 dark:border-violet-700/60 dark:bg-violet-500/20"
                 : "border-dashed border-border bg-muted/40",
@@ -429,12 +443,31 @@ function SilenceMarks() {
           />
         ))}
       </div>
-      <div className="mt-3 flex items-center justify-between">
-        <span className="text-[0.8125rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-          Day 1 → 10
-        </span>
-        <span className="-rotate-[4deg] rounded-md border-2 border-violet-500/70 px-2 py-0.5 text-[0.8125rem] font-bold uppercase tracking-[0.14em] text-violet-600 dark:border-violet-400/70 dark:text-violet-300">
+      <div className="mt-4 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em]">
+        <span className="text-muted-foreground">Day 1 → 10</span>
+        <span className="-rotate-[4deg] rounded-md border-2 border-violet-500/70 px-2 py-1 font-bold text-violet-600 dark:border-violet-400/70 dark:text-violet-300">
           Ghosted
+        </span>
+      </div>
+      {/* The setting that drives the whole tile, shown as the control it is. */}
+      <div className="mt-auto flex items-center gap-2 border-t pt-6">
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          Patience
+        </span>
+        <span className="flex gap-1.5">
+          {["7", "10", "14"].map((days) => (
+            <span
+              key={days}
+              className={cn(
+                "rounded-md border px-2 py-1 font-mono text-[11px] tabular-nums",
+                days === "10"
+                  ? "border-violet-500 bg-violet-500/10 text-violet-700 dark:text-violet-300"
+                  : "border-border text-muted-foreground",
+              )}
+            >
+              {days}d
+            </span>
+          ))}
         </span>
       </div>
     </div>
@@ -448,13 +481,13 @@ function SilenceMarks() {
 function StepRail() {
   const steps = ["Application", "HR Screen", "Technical Interview", "Test", "Offer"];
   return (
-    <div aria-hidden className="mt-5">
+    <div aria-hidden className="mt-auto pt-10">
       <div className="flex items-center">
         {steps.map((step, i) => (
           <span key={step} className="flex flex-1 items-center last:flex-none">
             <span
               className={cn(
-                "h-2.5 w-2.5 shrink-0 rounded-full border",
+                "h-3 w-3 shrink-0 rounded-full border",
                 i < 2
                   ? "border-violet-500 bg-violet-500"
                   : i === 2
@@ -473,10 +506,11 @@ function StepRail() {
           </span>
         ))}
       </div>
-      <div className="mt-2.5 flex justify-between text-[0.8125rem] text-muted-foreground">
-        <span>Application</span>
-        <span className="text-foreground">Technical Interview</span>
-        <span>Offer</span>
+      <div className="mt-4 flex items-baseline justify-between gap-4">
+        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+          5 fixed steps
+        </span>
+        <span className="text-sm text-foreground">Technical Interview</span>
       </div>
     </div>
   );
@@ -486,7 +520,7 @@ export function Landing() {
   return (
     <div className="flex min-h-screen flex-col">
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+        <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-6">
           {/* The same component the app's header renders, rather than a second
               copy of the same markup that drifts the moment either changes. */}
           <AppBrand href="/" />
@@ -508,12 +542,12 @@ export function Landing() {
             The icon tornado is anchored on the ghost, not the viewport, and
             `overflow-hidden` clips the outer rings. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
-          <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:pt-14 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-28">
-            <div className="lg:pb-4">
-              <h1 className="text-[clamp(2.5rem,6vw,4.5rem)] font-bold leading-[1.05] tracking-[-0.02em] text-white">
+          <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16 lg:pb-28 lg:pt-20">
+            <div>
+              <h1 className="text-[2rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[2.5rem] lg:text-[3.25rem]">
                 Never let a job application go quiet on you.
               </h1>
-              <p className="mt-5 max-w-[52ch] text-[1.125rem] leading-relaxed text-violet-100 sm:text-[1.25rem]">
+              <p className="mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">
                 A simple logbook for your jobhunt. Every application, interview
                 and ghosting on one timeline. Nothing more, nothing less.
               </p>
@@ -527,7 +561,7 @@ export function Landing() {
                 </Button>
                 <Link
                   href="#features"
-                  className="group inline-flex items-center gap-1.5 rounded-md text-[0.9375rem] font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700"
+                  className="group inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700"
                 >
                   See how it works
                   <ArrowRight
@@ -538,29 +572,33 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Product shot column: the ghost floats above the window with the
-                tornado behind it, so the character owns its own space instead of
-                sitting on the app chrome. Same character as the app icon and the
-                social card, drawn full body on a transparent ground
-                (`public/staring-at-phone-sad.svg`), which is why nothing here is
-                tinted by the OS. It is an illustration rather than a silhouette,
-                hence an image: 11 kB of paths drawn at their own size, so
-                next/image would only add its runtime and a re-encode hop, the
-                same call as the mock logos. Decorative, so an empty alt. */}
-            <div className="relative mt-14 pt-20 lg:mt-0 lg:pt-28">
-              <IconTornado className="left-[8%] top-[4%] lg:left-[10%] lg:top-[2%]" />
+            {/* Product shot column. The ghost, its shadow and the icon tornado
+                are siblings inside one ghost-sized box, so the rings are centred
+                on the character and the shadow sits at its hem by construction —
+                anchoring them independently is what had them drifting apart.
+                Same character as the app icon and the social card, drawn full
+                body on a transparent ground, which is why nothing here is tinted
+                by the OS. An illustration rather than a silhouette, hence an
+                image: 11 kB of paths drawn at their own size, so next/image would
+                only add its runtime and a re-encode hop, the same call as the
+                mock logos. Decorative, so an empty alt. */}
+            <div className="relative mt-20 sm:mt-24 lg:mt-0">
               <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/staring-at-phone-sad.svg"
-                  alt=""
-                  aria-hidden
-                  className="ghost-float absolute -top-24 left-4 z-20 h-28 w-28 sm:h-32 sm:w-32 lg:-top-28 lg:left-2 lg:h-36 lg:w-36"
-                />
-                <span
-                  aria-hidden
-                  className="ghost-shadow absolute -top-8 left-4 z-10 h-2.5 w-20 rounded-full bg-violet-950/50 blur-[2px] sm:left-5 sm:w-24 lg:-top-10 lg:left-3"
-                />
+                <div className="pointer-events-none absolute -top-16 left-3 h-24 w-24 sm:-top-20 sm:h-28 sm:w-28 lg:-top-24 lg:left-1 lg:h-32 lg:w-32">
+                  {/* Rings, centred on the ghost: the 0×0 anchor is the centre. */}
+                  <IconTornado className="left-1/2 top-1/2" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={ART.sad}
+                    alt=""
+                    aria-hidden
+                    className="ghost-float relative z-20 h-full w-full drop-shadow-lg"
+                  />
+                  <span
+                    aria-hidden
+                    className="ghost-shadow absolute -bottom-1 left-1/2 h-2.5 w-3/5 -translate-x-1/2 rounded-full bg-violet-950/45 blur-[3px]"
+                  />
+                </div>
                 <div className="relative z-10">
                   <ProductWindow />
                 </div>
@@ -575,31 +613,54 @@ export function Landing() {
         <section
           id="features"
           aria-label="Features"
-          className="mx-auto max-w-5xl scroll-mt-20 px-4 py-16 sm:py-24"
+          className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 py-16 sm:px-6 sm:py-24"
         >
-          <h2 className="max-w-3xl text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.02em]">
+          <h2 className="max-w-2xl text-2xl font-bold leading-[1.15] tracking-[-0.02em] sm:text-3xl">
             Everything a job hunt needs, nothing it doesn&apos;t
           </h2>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 sm:mt-12">
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 sm:mt-14 lg:grid-cols-4">
             {FEATURES.map((f) => (
               <Card
                 key={f.title}
                 className={cn(
-                  "flex flex-col bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-950/40",
+                  "flex flex-col bg-gradient-to-br from-card to-violet-100/40 dark:to-violet-900/40",
                   f.span,
                 )}
               >
-                <CardContent className="flex flex-1 flex-col p-5 sm:p-6">
-                  <f.icon className="h-5 w-5 text-violet-500" aria-hidden />
+                <CardContent
+                  className={cn(
+                    "flex flex-1 flex-col p-6",
+                    f.visual && "sm:p-8",
+                  )}
+                >
+                  {f.art ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={f.art}
+                      alt=""
+                      aria-hidden
+                      className={cn(
+                        "shrink-0",
+                        f.visual ? "h-16 w-16" : "h-12 w-12",
+                      )}
+                    />
+                  ) : f.icon ? (
+                    <f.icon className="h-5 w-5 text-violet-500" aria-hidden />
+                  ) : null}
                   <h3
                     className={cn(
-                      "mt-4 font-semibold tracking-[-0.01em]",
-                      f.visual ? "text-[1.125rem] sm:text-[1.25rem]" : "text-[0.9375rem]",
+                      "mt-5 font-semibold tracking-[-0.01em]",
+                      f.visual ? "text-lg sm:text-xl" : "text-base",
                     )}
                   >
                     {f.title}
                   </h3>
-                  <p className="mt-2 text-[0.9375rem] leading-relaxed text-muted-foreground">
+                  <p
+                    className={cn(
+                      "mt-2 text-sm leading-relaxed text-muted-foreground",
+                      f.visual && "max-w-[46ch]",
+                    )}
+                  >
                     {f.body}
                   </p>
                   {f.visual === "silence" && <SilenceMarks />}
@@ -617,15 +678,15 @@ export function Landing() {
           aria-label="What we're not doing"
           className="border-y border-zinc-800 bg-zinc-950 text-zinc-50 dark:bg-zinc-900"
         >
-          <div className="mx-auto max-w-5xl px-4 py-16 sm:py-24">
-            <h2 className="max-w-3xl text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.02em]">
+          <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
+            <h2 className="max-w-2xl text-2xl font-bold leading-[1.15] tracking-[-0.02em] sm:text-3xl">
               What we&apos;re not doing
             </h2>
-            <p className="mt-4 max-w-[52ch] text-[1.125rem] leading-relaxed text-zinc-400 sm:text-[1.25rem]">
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
               Ghosted is a logbook for your job hunt — not an automation
               software. A simple tool for simple needs.
             </p>
-            <ul className="mt-12 grid gap-8 sm:grid-cols-3 sm:gap-6">
+            <ul className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8">
               {NOT_DOING.map((item) => (
                 <li key={item.title}>
                   <div className="flex items-center gap-2.5">
@@ -635,11 +696,11 @@ export function Landing() {
                     >
                       <X className="h-3.5 w-3.5" />
                     </span>
-                    <h3 className="text-[1.125rem] font-semibold tracking-[-0.01em] text-zinc-100 sm:text-[1.25rem]">
+                    <h3 className="text-lg font-semibold tracking-[-0.01em] text-zinc-100">
                       {item.title}
                     </h3>
                   </div>
-                  <p className="mt-3 text-[0.9375rem] leading-relaxed text-zinc-400">
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">
                     {item.body}
                   </p>
                 </li>
@@ -648,13 +709,21 @@ export function Landing() {
           </div>
         </section>
 
-        {/* CTA band — one job, one button: the purple is the page's bookend. */}
+        {/* CTA band — one job, one button, and the payoff pose: the same ghost
+            as the hero, this time holding a phone that answered. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
-          <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:py-24">
-            <h2 className="text-[clamp(1.75rem,3.5vw,2.5rem)] font-bold leading-[1.15] tracking-[-0.02em] text-white">
+          <div className="mx-auto w-full max-w-2xl px-5 py-16 text-center sm:px-6 sm:py-24">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={ART.happy}
+              alt=""
+              aria-hidden
+              className="ghost-float mx-auto h-24 w-24 drop-shadow-lg sm:h-28 sm:w-28"
+            />
+            <h2 className="mt-6 text-2xl font-bold leading-[1.15] tracking-[-0.02em] text-white sm:text-3xl">
               Ready to stop getting ghosted?
             </h2>
-            <p className="mx-auto mt-4 max-w-[52ch] text-[1.125rem] leading-relaxed text-violet-100 sm:text-[1.25rem]">
+            <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">
               Create your free account and start your first timeline in under a
               minute.
             </p>
