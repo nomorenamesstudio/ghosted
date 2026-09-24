@@ -234,6 +234,15 @@ export function KanbanBoard({
           removed. */}
       <div
         data-testid="kanban-board"
+        // The strip scrolls sideways, which makes it a scrollable region: axe
+        // requires one of those to be reachable by keyboard (WCAG 2.1.1 —
+        // `scrollable-region-focusable`), and until the cards arrive it holds
+        // nothing focusable at all, so the loading state was the one that failed.
+        // A tab stop on the region itself fixes it in both states and lets a
+        // keyboard user arrow across the columns.
+        role="region"
+        aria-label="Application board"
+        tabIndex={0}
         className={cn(
           // `scroll-px-4` matches the padding: without it, snapping aligns the
           // first column to the padding *box* and the container auto-scrolls by
@@ -241,6 +250,7 @@ export function KanbanBoard({
           // `board-scroll` slims the scrollbar this strip needs (see globals.css):
           // the default desktop bar sits under the cards and dominates them.
           "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 pb-4 sm:mx-0 sm:scroll-px-0 sm:px-0 board-scroll",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           allEmpty && "hidden",
         )}
       >
