@@ -4,6 +4,60 @@ All notable changes, by date and type.
 
 ## 2026-09-24
 
+### Fixed
+- **`updated_at` is the silence clock, and now only employer-facing events move
+  it.** The rule was already written down in `updateApplication` ("editing notes
+  … must not un-ghost an application"), but only half enforced: the field moved
+  whenever a *status* was present in the patch, not when the status actually
+  changed. The edit modal PATCHes the whole form, status included, so editing a
+  note on a ghosted application restarted the clock and pulled the card back
+  into Applied — reproduced end-to-end before the fix (40 days of silence, a
+  note-only save, the card out of the Ghosted column that same second). The
+  modal now sends a diff (`changedFields`), and sends nothing at all when the
+  diff is empty; the service is also transition-aware, so no other client can
+  resurrect the old behaviour. Two pure helpers in `lib/utils/status.ts` carry
+  the rule: `signalEffect(from, to)` classifies a move as `advance` (forward
+  progress, or back into the pipeline out of an outcome — un-ghosting by hand,
+  reopening an archived application), `restore` (a step back) or `hold`
+  (bookkeeping, or a move into an outcome, which the ghosted rule ignores
+  anyway). `timelineSignalAt(createdAt, milestones)` is the newest evidence left
+  on the timeline — the application's own date, or a *completed* step's date,
+  whichever is later — and is what a correction restores the clock to. So a card
+  dragged forward by accident and dragged back now returns to the date it was
+  sent instead of reading as freshly touched, which is exactly the silence the
+  board exists to show. The same rule reaches the timeline writes: a step's
+  comment, title or date is bookkeeping and moves nothing, marking a step done
+  restarts the clock, undoing that restores it, deleting a step and
+  `resetTimeline` restore it (both are corrections), and archiving no longer
+  stamps "touched just now" on a card nobody touched. Verified through the real
+  UI against the real API, both scenarios, with the clock read back from
+  Postgres.
+- **Progress bars expose the number they draw.** `components/ui/progress.tsx`
+  destructured `value` for the fill transform and never handed it to
+  `ProgressPrimitive.Root`, so every bar in the app was an indeterminate
+  progressbar to a screen reader: `aria-valuenow` was absent, not wrong. axe
+  cannot catch this — the role, the name and the min/max were all correct — so
+  the accessibility suite was green throughout. Confirmed live on the board
+  before the fix (`aria-valuenow=null`, min 0, max 100) and asserted after it in
+  `tests/component/progress-bar.test.tsx`.
+- **The landing page no longer promises two things the app does not do.** "Go
+  quiet for **two weeks**" contradicted the patience setting that drives the
+  feature (7/10/14 days, `realistic` = 10 by default), and "**Stats at a
+  glance**" advertised a dashboard whose stat cards were deliberately removed —
+  counts already sit in the column and section headers, and a totals strip would
+  double-count anything stale, since a ghosted application is displayed in
+  Applied *and* Ghosted. The copy now describes the patience window, and the
+  card is a "Board or a list" one instead: the two views of the same data are
+  real, visible, and not advertised anywhere else on the page.
+
+### Added
+- `tests/integration/applications.test.ts`: a status sent unchanged is
+  bookkeeping; a step back restores the clock instead of restarting it; a step's
+  comment is bookkeeping while its state is progress. `tests/unit/status.test.ts`
+  covers `signalEffect` and `timelineSignalAt` directly, and
+  `tests/component/edit-application-modal.test.tsx` pins the diff (notes-only
+  save sends `{ notes }`, an unchanged form sends no request at all).
+
 ### Added
 - **The list view's cards carry the "Move to" menu.** Status changing was the
   board's privilege: a card in the list could only be moved by opening the

@@ -86,9 +86,15 @@ export function ghostedCutoff(days: number = ghostedAfterDays()): Date {
 }
 
 /**
- * "Ghosted": status is 'applied' or 'interviewing' AND the application has not
- * been updated within the user's patience threshold (based on updated_at). Any
- * edit or milestone change refreshes updated_at and un-ghosts it.
+ * "Ghosted": status is 'applied' or 'interviewing' AND the employer has been
+ * quiet for longer than the user's patience threshold.
+ *
+ * `updatedAt` is the *silence clock*, not "the row was written": it only moves
+ * on an employer-facing event - real forward progress, or a correction that
+ * puts it back on the timeline's evidence (see `signalEffect` and
+ * `timelineSignalAt`). Editing notes, adding a company website, favouriting or
+ * moving a card forward and straight back must not un-ghost anything, or the
+ * board hides exactly the silence it exists to show.
  */
 export function isGhosted(
   status: ApplicationStatus,
@@ -107,6 +113,70 @@ export function displayStatusOf(
   days?: number,
 ): DisplayStatus {
   return isGhosted(status, updatedAt, days) ? "ghosted" : status;
+}
+
+/* ------------------------------------------------------------------ */
+/* The silence clock                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What a status change does to the silence clock (`applications.updated_at`).
+ *
+ * The clock answers one question - how long has the employer been quiet? - so
+ * only employer-facing events may move it:
+ *
+ * - `advance`: real forward progress (applied → interviewing → offer), or a
+ *   move back into the pipeline out of an outcome (un-ghosting by hand,
+ *   reopening an archived application). Something happened, so the silence
+ *   starts over.
+ * - `restore`: a correction that moves the pipeline backwards. The clock goes
+ *   back to the newest evidence on the timeline instead of restarting, so a
+ *   card dragged forward by accident and dragged back does not read as freshly
+ *   touched.
+ * - `hold`: the status did not change (the edit modal sends the whole form,
+ *   status included), or the move is into an outcome - the ghosted rule only
+ *   applies to 'applied' and 'interviewing', so a dead end or the filing
+ *   cabinet has no clock to restart.
+ */
+export type SignalEffect = "advance" | "restore" | "hold";
+
+export function signalEffect(
+  from: ApplicationStatus,
+  to: ApplicationStatus,
+): SignalEffect {
+  if (from === to) return "hold";
+  const fromRank = pipelineRank(from);
+  const toRank = pipelineRank(to);
+  if (toRank > fromRank) return "advance";
+  if (toRank >= 0 && toRank < fromRank) return "restore";
+  return "hold";
+}
+
+/**
+ * The newest evidence of employer activity on an application: when it was sent,
+ * or the date of a step that is actually `done`, whichever is later.
+ *
+ * Used to put the silence clock back where it belongs after a correction.
+ * Pending steps are ignored - a plan is not a signal, and counting one would
+ * make the employer look more recent than they are. A completed step without a
+ * date falls back to when its row was written (marking a step done stamps it
+ * with today's date, so this is the rare case).
+ */
+export function timelineSignalAt(
+  createdAt: Date | string,
+  milestones: Array<{
+    status: MilestoneStatus;
+    date: Date | string | null;
+    createdAt: Date | string;
+  }>,
+): Date {
+  let newest = new Date(createdAt).getTime();
+  for (const milestone of milestones) {
+    if (milestone.status !== "done") continue;
+    const at = new Date(milestone.date ?? milestone.createdAt).getTime();
+    if (at > newest) newest = at;
+  }
+  return new Date(newest);
 }
 
 /** Status groups on the dashboard, most important first (list view). */

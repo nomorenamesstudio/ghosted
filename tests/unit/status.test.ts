@@ -13,6 +13,8 @@ import {
   PATIENCE_LEVELS,
   DEFAULT_PATIENCE_LEVEL,
   ghostedAfterDays,
+  signalEffect,
+  timelineSignalAt,
 } from "@/lib/utils/status";
 import type { Milestone } from "@/lib/db/schema";
 
@@ -272,5 +274,90 @@ describe("patience level", () => {
     expect(
       displayStatusOf("interviewing", twelveDaysAgo, ghostedAfterDays("impatient")),
     ).toBe("ghosted");
+  });
+});
+
+describe("signalEffect", () => {
+  it("advances on real forward progress", () => {
+    expect(signalEffect("applied", "interviewing")).toBe("advance");
+    expect(signalEffect("applied", "offer")).toBe("advance");
+    expect(signalEffect("interviewing", "offer")).toBe("advance");
+  });
+
+  it("advances when a card comes back into the pipeline from an outcome", () => {
+    // Un-ghosting by hand and reopening an archived application are both the
+    // user asserting "this one is alive again".
+    expect(signalEffect("ghosted", "applied")).toBe("advance");
+    expect(signalEffect("rejected", "interviewing")).toBe("advance");
+    expect(signalEffect("archived", "applied")).toBe("advance");
+  });
+
+  it("restores on a step back, so an accidental move cannot look like progress", () => {
+    expect(signalEffect("interviewing", "applied")).toBe("restore");
+    expect(signalEffect("offer", "interviewing")).toBe("restore");
+    expect(signalEffect("offer", "applied")).toBe("restore");
+  });
+
+  it("holds when the status did not change", () => {
+    // What the edit modal sends: the whole form, status included.
+    for (const status of ["applied", "interviewing", "offer", "rejected"] as const) {
+      expect(signalEffect(status, status)).toBe("hold");
+    }
+  });
+
+  it("holds on a move into an outcome", () => {
+    // The ghosted rule only applies to applied/interviewing, so a dead end or
+    // the filing cabinet has no silence clock to restart.
+    expect(signalEffect("applied", "ghosted")).toBe("hold");
+    expect(signalEffect("interviewing", "rejected")).toBe("hold");
+    expect(signalEffect("applied", "archived")).toBe("hold");
+  });
+});
+
+describe("timelineSignalAt", () => {
+  const sent = new Date("2026-08-01T00:00:00.000Z");
+  const round = new Date("2026-08-20T00:00:00.000Z");
+  const older = new Date("2026-07-01T00:00:00.000Z");
+
+  const step = (
+    status: "pending" | "done" | "skipped",
+    date: Date | null,
+    createdAt: Date = date ?? sent,
+  ) => ({ status, date, createdAt });
+
+  it("is the application's own date when nothing else has happened", () => {
+    expect(
+      timelineSignalAt(sent, [step("done", sent), step("pending", null)]).toISOString(),
+    ).toBe(sent.toISOString());
+  });
+
+  it("picks the newest completed step", () => {
+    expect(
+      timelineSignalAt(sent, [
+        step("done", sent),
+        step("done", round),
+        step("pending", null),
+      ]).toISOString(),
+    ).toBe(round.toISOString());
+  });
+
+  it("ignores steps that are only planned", () => {
+    // A pending step is a plan, not a signal: it must not make the employer
+    // look more recent than they are.
+    expect(
+      timelineSignalAt(sent, [step("done", sent), step("pending", round)]).toISOString(),
+    ).toBe(sent.toISOString());
+  });
+
+  it("falls back to a completed step's own timestamp when it has no date", () => {
+    expect(timelineSignalAt(sent, [step("done", null, round)]).toISOString()).toBe(
+      round.toISOString(),
+    );
+  });
+
+  it("never goes older than the application itself", () => {
+    expect(timelineSignalAt(round, [step("done", older)]).toISOString()).toBe(
+      round.toISOString(),
+    );
   });
 });

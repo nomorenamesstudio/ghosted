@@ -27,6 +27,8 @@ import {
   displayStatusOf,
   ghostedAfterDays,
   ghostedCutoff,
+  signalEffect,
+  timelineSignalAt,
   STATUS_ORDER,
   type DisplayStatus,
 } from "@/lib/utils/status";
@@ -677,29 +679,44 @@ export async function updateApplication(
   applicationId: string,
   input: UpdateApplicationInput,
 ): Promise<Application | null> {
-  // When archiving via a direct status update, remember the previous status
-  // so a later reopen can restore it (instead of always falling back to
-  // "applied").
-  let archivedFromStatus: Application["status"] | null | undefined;
-  if (input.status === "archived") {
-    const [existing] = await db
-      .select({ status: applications.status })
+  // The silence clock is read from the *previous* status, so the row is read
+  // first whenever a status is part of the patch. That read also feeds the
+  // archive case: when archiving via a direct status update, remember the
+  // previous status so a later reopen can restore it (instead of always falling
+  // back to "applied").
+  let existing: Application | undefined;
+  if (input.status !== undefined) {
+    [existing] = await db
+      .select()
       .from(applications)
       .where(
         and(eq(applications.id, applicationId), eq(applications.userId, userId)),
       )
       .limit(1);
-    if (existing && existing.status !== "archived") {
-      archivedFromStatus = existing.status;
-    }
   }
 
-  // `updated_at` is what the ghosted clock and the "Updated …" line read, so it
-  // only moves when the application's *state* does. Editing notes, the company
-  // website or contact details is bookkeeping, not progress: it must not
-  // un-ghost an application or make it look freshly touched.
+  // `updated_at` is the silence clock the ghosted rule and the "Updated …" line
+  // read, so only employer-facing events move it. A patch that merely repeats
+  // the status it just read is bookkeeping (the edit modal sends the whole
+  // form), and a step back is a correction that puts the clock back on the
+  // timeline's evidence rather than restarting it.
   const values: Partial<Application> = {};
-  if (input.status !== undefined) values.updatedAt = new Date();
+  if (existing && input.status !== undefined) {
+    const effect = signalEffect(existing.status, input.status);
+    if (effect === "advance") {
+      values.updatedAt = new Date();
+    } else if (effect === "restore") {
+      const timeline = await db
+        .select({
+          status: milestones.status,
+          date: milestones.date,
+          createdAt: milestones.createdAt,
+        })
+        .from(milestones)
+        .where(eq(milestones.applicationId, applicationId));
+      values.updatedAt = timelineSignalAt(existing.createdAt, timeline);
+    }
+  }
   if (input.company !== undefined)
     values.company = sanitizeText(input.company) ?? input.company;
   if (input.role !== undefined)
@@ -715,8 +732,12 @@ export async function updateApplication(
     values.contactPhone = sanitizeText(input.contactPhone);
   if (input.notes !== undefined) values.notes = sanitizeText(input.notes);
   if (input.status !== undefined) values.status = input.status;
-  if (archivedFromStatus !== undefined) {
-    values.archivedFromStatus = archivedFromStatus;
+  if (
+    input.status === "archived" &&
+    existing &&
+    existing.status !== "archived"
+  ) {
+    values.archivedFromStatus = existing.status;
   }
 
   const [updated] = await db
@@ -748,7 +769,8 @@ export async function softDeleteApplication(
     .set({
       status: "archived",
       archivedFromStatus: existing.status,
-      updatedAt: new Date(),
+      // Archiving is not employer activity: the silence clock stays where it
+      // was, so an archived card does not claim to have been touched just now.
     })
     .where(
       and(eq(applications.id, applicationId), eq(applications.userId, userId)),
@@ -817,7 +839,9 @@ export async function resetTimeline(
       .set({
         status: deriveStatus(app.status, all),
         totalSteps: all.length,
-        updatedAt: new Date(),
+        // A reset is a correction: the clock goes back to the evidence that
+        // survives it - the application itself, whose date a reset keeps.
+        updatedAt: timelineSignalAt(app.createdAt, all),
       })
       .where(eq(applications.id, applicationId))
       .returning();
@@ -962,7 +986,14 @@ export async function addMilestone(
 
     const [updatedApp] = await tx
       .update(applications)
-      .set({ status, totalSteps, updatedAt: new Date() })
+      .set({
+        status,
+        totalSteps,
+        // Adding a step is something you learned about the process, so the
+        // silence clock starts over. (Removing one is a correction - see
+        // deleteMilestone.)
+        updatedAt: new Date(),
+      })
       .where(eq(applications.id, applicationId))
       .returning();
 
@@ -1043,9 +1074,24 @@ export async function updateMilestone(
 
     const status = deriveStatus(app.status, reordered);
 
+    // A comment, a title or a date on a step is bookkeeping and must not move
+    // the clock (the same rule as the notes on the application). Only the
+    // step's own state is progress: marking it done restarts the silence, and
+    // undoing that is a correction that puts the clock back on the evidence
+    // left on the timeline.
+    const stepStatusChanged =
+      input.status !== undefined && input.status !== m.status;
+    const appValues: Partial<Application> = { status };
+    if (stepStatusChanged) {
+      appValues.updatedAt =
+        input.status === "done"
+          ? new Date()
+          : timelineSignalAt(app.createdAt, reordered);
+    }
+
     const [updatedApp] = await tx
       .update(applications)
-      .set({ status, updatedAt: new Date() })
+      .set(appValues)
       .where(eq(applications.id, app.id))
       .returning();
 
@@ -1099,7 +1145,13 @@ export async function deleteMilestone(
 
     const [updatedApp] = await tx
       .update(applications)
-      .set({ status, totalSteps, updatedAt: new Date() })
+      .set({
+        status,
+        totalSteps,
+        // Deleting a step is a correction, not progress: the clock goes back to
+        // the evidence that is left rather than restarting.
+        updatedAt: timelineSignalAt(app.createdAt, all),
+      })
       .where(eq(applications.id, app.id))
       .returning();
 

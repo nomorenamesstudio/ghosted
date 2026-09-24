@@ -1,6 +1,5 @@
 import Link from "next/link";
 import {
-  BarChart3,
   Bell,
   BellOff,
   BookOpen,
@@ -13,6 +12,7 @@ import {
   FileText,
   Ghost,
   Globe,
+  LayoutGrid,
   Mail,
   MailX,
   MessageSquare,
@@ -62,12 +62,12 @@ const FEATURES = [
   {
     icon: Ghost,
     title: "Ghosted detection",
-    body: "Applications that go quiet for two weeks quietly float into their own section, so nothing slips your mind.",
+    body: "Applications the employer has gone quiet on float into their own section once they pass your patience window — 10 days by default, and you set the pace.",
   },
   {
-    icon: BarChart3,
-    title: "Stats at a glance",
-    body: "Offers, interviews, rejections and stale applications — a lightweight dashboard that tells you where your hunt stands.",
+    icon: LayoutGrid,
+    title: "A board or a list",
+    body: "The same applications as a Kanban board you drag through the stages, or a grouped list you scan top down. Your call, and it remembers.",
   },
   {
     icon: Star,

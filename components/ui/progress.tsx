@@ -36,6 +36,10 @@ const Progress = React.forwardRef<
   ) => (
     <ProgressPrimitive.Root
       ref={ref}
+      // Handed to Radix, not only used for the fill: without it the bar exposes
+      // no aria-valuenow, so a screen reader announces an indeterminate
+      // progress bar and never the number the card is showing.
+      value={value}
       className={cn(
         "relative h-2 w-full overflow-hidden rounded-full bg-primary/20",
         className,

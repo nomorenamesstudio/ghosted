@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
@@ -23,7 +23,7 @@ import { PATCH as PATCH_MILESTONE } from "@/app/api/milestones/[id]/route";
 import { PATCH as PATCH_PROFILE } from "@/app/api/auth/profile/route";
 import { GET as GET_STATS } from "@/app/api/dashboard/stats/route";
 import { db } from "@/lib/db/client";
-import { applications } from "@/lib/db/schema";
+import { applications, milestones } from "@/lib/db/schema";
 import {
   authMock,
   createUser,
@@ -628,6 +628,150 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     expect(new Date(afterMove.updatedAt).getTime()).toBeGreaterThan(
       stale.getTime(),
     );
+  });
+
+  it("a status sent unchanged is bookkeeping, not progress", async () => {
+    // Regression: the edit modal PATCHes the whole form, status included, so a
+    // PATCH that merely repeats the status it just read used to restart the
+    // clock - editing a note pulled a ghosted application back into the pile.
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    const stale = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000);
+    await db
+      .update(applications)
+      .set({ updatedAt: stale })
+      .where(eq(applications.id, app.id));
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const patched = await PATCH_APP(
+      jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
+        company: "Acme Corp",
+        role: "Frontend Engineer",
+        url: null,
+        companyWebsite: null,
+        contactName: null,
+        contactEmail: null,
+        contactPhone: null,
+        status: "applied",
+        notes: "Referred by Sam",
+      }),
+      { params: { id: app.id } },
+    );
+    expect(patched.status).toBe(200);
+    const edited = (await readJson(patched)).data as {
+      notes: string;
+      updatedAt: string;
+    };
+    expect(edited.notes).toBe("Referred by Sam");
+    expect(new Date(edited.updatedAt).getTime()).toBe(stale.getTime());
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const ghosted = await GET(
+      new Request(`${base}?status=ghosted&page=1&limit=10`),
+    );
+    expect(
+      ((await readJson(ghosted)).data as Array<{ id: string }>).map((a) => a.id),
+    ).toContain(app.id);
+  });
+
+  it("a step back restores the clock instead of restarting it", async () => {
+    // The accident this guards: a card dragged forward by mistake and dragged
+    // back used to read as freshly touched, hiding months of silence - the one
+    // thing this board exists to show.
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    const stale = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await db
+      .update(applications)
+      .set({ status: "interviewing", createdAt: stale, updatedAt: new Date() })
+      .where(eq(applications.id, app.id));
+    await db
+      .update(milestones)
+      .set({ date: stale, createdAt: stale })
+      .where(
+        and(
+          eq(milestones.applicationId, app.id),
+          eq(milestones.stepOrder, 0),
+        ),
+      );
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const moved = await PATCH_APP(
+      jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
+        status: "applied",
+      }),
+      { params: { id: app.id } },
+    );
+    expect(moved.status).toBe(200);
+    const after = (await readJson(moved)).data as { updatedAt: string };
+    expect(new Date(after.updatedAt).getTime()).toBe(stale.getTime());
+
+    // ... and the application is back in the ghosted section, where it belongs.
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const ghosted = await GET(
+      new Request(`${base}?status=ghosted&page=1&limit=10`),
+    );
+    expect(
+      ((await readJson(ghosted)).data as Array<{ id: string }>).map((a) => a.id),
+    ).toContain(app.id);
+  });
+
+  it("a step's comment is bookkeeping; its state is progress", async () => {
+    const user = await createUser();
+    const { app } = await createApp(user.id);
+
+    const stale = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await db
+      .update(applications)
+      .set({ createdAt: stale, updatedAt: stale })
+      .where(eq(applications.id, app.id));
+    await db
+      .update(milestones)
+      .set({ date: stale, createdAt: stale })
+      .where(
+        and(eq(milestones.applicationId, app.id), eq(milestones.stepOrder, 0)),
+      );
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const detail = await GET_APP(new Request(`${base}/${app.id}`), {
+      params: { id: app.id },
+    });
+    const steps = (
+      (await readJson(detail)).data as { milestones: Array<{ id: string }> }
+    ).milestones;
+
+    // The milestone response carries a summary, not the clock, so read the row.
+    const clock = async () => {
+      const [row] = await db
+        .select({ updatedAt: applications.updatedAt })
+        .from(applications)
+        .where(eq(applications.id, app.id));
+      return row.updatedAt.getTime();
+    };
+
+    const patchStep = async (body: Record<string, unknown>) => {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await PATCH_MILESTONE(
+        jsonRequest(`http://localhost/api/milestones/${steps[1].id}`, "PATCH", body),
+        { params: { id: steps[1].id } },
+      );
+      expect(res.status).toBe(200);
+      return clock();
+    };
+
+    // A comment moves nothing.
+    expect(await patchStep({ comment: "Recruiter was vague" })).toBe(
+      stale.getTime(),
+    );
+
+    // Completing the step is progress: the clock restarts.
+    expect(await patchStep({ status: "done" })).toBeGreaterThan(stale.getTime());
+
+    // Undoing that is a correction: the clock goes back to the evidence that is
+    // left on the timeline, which is the application itself.
+    expect(await patchStep({ status: "pending" })).toBe(stale.getTime());
   });
 
   it("resets a timeline: every step pending, dates cleared, status re-derived", async () => {

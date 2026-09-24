@@ -6,6 +6,7 @@ import { Save, X } from "lucide-react";
 import {
   updateApplication,
   type ApplicationDetail,
+  type UpdateApplicationInput,
 } from "@/lib/api";
 import { ApiClientError } from "@/lib/api";
 import type { ApplicationStatus } from "@/lib/db/schema";
@@ -44,18 +45,35 @@ interface FormState {
   status: ApplicationStatus;
 }
 
-function snapshot(f: FormState) {
-  return {
-    company: f.company,
-    role: f.role,
-    url: f.url || null,
-    companyWebsite: f.companyWebsite || null,
-    contactName: f.contactName || null,
-    contactEmail: f.contactEmail || null,
-    contactPhone: f.contactPhone || null,
-    notes: f.notes || null,
-    status: f.status,
-  };
+/**
+ * The PATCH body: only the fields the user actually changed.
+ *
+ * Sending the whole form used to look harmless, but the status rode along with
+ * every save, and the server treats a status in the payload as a state change -
+ * so editing a note restarted the ghosted clock and pulled a ghosted
+ * application back into the active pile. A PATCH is a diff, not a full row.
+ * An empty diff sends nothing at all (the API rejects an empty body).
+ */
+function changedFields(
+  app: ApplicationDetail,
+  f: FormState,
+): UpdateApplicationInput {
+  const before = fromApp(app);
+  const patch: UpdateApplicationInput = {};
+  if (f.company !== before.company) patch.company = f.company;
+  if (f.role !== before.role) patch.role = f.role;
+  if (f.url !== before.url) patch.url = f.url || null;
+  if (f.companyWebsite !== before.companyWebsite)
+    patch.companyWebsite = f.companyWebsite || null;
+  if (f.contactName !== before.contactName)
+    patch.contactName = f.contactName || null;
+  if (f.contactEmail !== before.contactEmail)
+    patch.contactEmail = f.contactEmail || null;
+  if (f.contactPhone !== before.contactPhone)
+    patch.contactPhone = f.contactPhone || null;
+  if (f.notes !== before.notes) patch.notes = f.notes || null;
+  if (f.status !== before.status) patch.status = f.status;
+  return patch;
 }
 
 function fromApp(app: ApplicationDetail): FormState {
@@ -100,10 +118,18 @@ export function EditApplicationModal({
   }
 
   async function handleSave() {
+    const patch = changedFields(app, form);
+    // Nothing to send: closing the modal is the whole action, and the API
+    // rejects an empty body anyway.
+    if (Object.keys(patch).length === 0) {
+      onOpenChange(false);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
-      await updateApplication(app.id, snapshot(form));
+      await updateApplication(app.id, patch);
       const qcInvalidate = () => {
         qc.invalidateQueries({ queryKey: ["application", app.id] });
         qc.invalidateQueries({ queryKey: ["applications"] });
