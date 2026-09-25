@@ -11,7 +11,6 @@ import {
   Calendar,
   Clock,
   Coffee,
-  ExternalLink,
   ListChecks,
   FileText,
   Ghost,
@@ -42,10 +41,9 @@ import { cn } from "@/lib/utils";
 // dashboard, and the look is identical because it is literally the same markup.
 import { ApplicationCardShell } from "./ApplicationCardShell";
 import { AppBrand } from "./AppBrand";
-import { LandingViewSplit } from "./LandingViewSplit";
+import { LandingMock } from "./LandingMock";
+import { LandingThemeFollow } from "./LandingThemeFollow";
 import type { ApplicationListItem } from "@/lib/api";
-
-const REPO_URL = "https://github.com/krisztianhadi/ghosted";
 
 /**
  * The mock cards name real companies, so they carry their real icons. Shipped as
@@ -87,8 +85,9 @@ const FEATURES: {
   span: string;
   /** Two-column tile on sm and up: bigger padding and a bigger heading. */
   wide?: boolean;
-  link?: { href: string; label: string };
-  note?: string;
+  /** Footer note, prefixed with the repo mark. The GitHub link itself lands when
+   *  the repo goes public. */
+  soon?: boolean;
 }[] = [
   {
     icon: Ghost,
@@ -109,14 +108,14 @@ const FEATURES: {
     title: "Self-hostable",
     body: "One container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
-    link: { href: REPO_URL, label: "view on github" },
+    soon: true,
   },
   {
     icon: Plug,
     title: "MCP integration",
     body: "Your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
     span: "",
-    note: "coming soon",
+    soon: true,
   },
   {
     icon: ShieldCheck,
@@ -131,6 +130,19 @@ const FEATURES: {
     span: "",
   },
 ];
+
+/**
+ * The GitHub mark, inline. lucide dropped brand icons, and this is the one place
+ * the page needs one; `currentColor` keeps it on the same muted grey as the rest
+ * of the tile footer.
+ */
+function GithubMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+    </svg>
+  );
+}
 
 /** Things Ghosted deliberately does NOT do — a logbook, not automation. */
 const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
@@ -150,6 +162,17 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
     body: "Applications are written and sent by you. This is a logbook, not a robot.",
   },
 ];
+
+/**
+ * Both calls to action are the same button: the same size, weight, lift on hover
+ * and the same arrow, so the page reads as one action offered twice rather than
+ * two differently-shaped invitations.
+ */
+const CTA_CLASSES =
+  "group h-12 w-full justify-center bg-white px-7 text-base text-violet-700 shadow-xl ring-1 ring-white/40 transition-all duration-200 hover:-translate-y-0.5 hover:bg-violet-100 hover:shadow-2xl motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:w-auto";
+
+const CTA_ARROW =
+  "h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none";
 
 /** Sample applications rendered with the real dashboard card component. */
 const DAY = 86_400_000;
@@ -390,7 +413,7 @@ function FloatingGhost({
         src={src}
         alt=""
         aria-hidden
-        className="float-bob h-full w-full drop-shadow-lg"
+        className="float-bob h-full w-full opacity-95 drop-shadow-lg"
         style={{ animationDelay: delay }}
       />
     </div>
@@ -400,6 +423,7 @@ function FloatingGhost({
 export function Landing() {
   return (
     <div className="flex min-h-screen flex-col">
+      <LandingThemeFollow />
       <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-5 sm:px-6">
           {/* The same component the app's header renders, rather than a second
@@ -423,8 +447,8 @@ export function Landing() {
             them. Left-aligned with the CTA in the hero: a centred hero is the
             default shape, and the asymmetry is what makes this section lead. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
-          <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-28 lg:pt-20">
-            <div>
+          <div className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-24 pt-12 sm:px-6 sm:pb-32 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-44 lg:pt-20">
+            <div className="order-2 mt-14 lg:order-1 lg:mt-0">
               <h1 className="text-[2rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[2.5rem] lg:text-[3.25rem]">
                 Never let a job application go quiet on you.
               </h1>
@@ -432,20 +456,18 @@ export function Landing() {
                 A simple logbook for your jobhunt. Every application, interview
                 and ghosting on one timeline. Nothing more, nothing less.
               </p>
-              <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <Button
-                  size="lg"
-                  className="h-12 bg-white px-7 text-base text-violet-700 shadow-xl ring-1 ring-white/40 hover:bg-violet-100"
-                  asChild
-                >
+              {/* Phones get the standard shape: two full-width rows, primary
+                  first, instead of a wrapped row of two different widths. */}
+              <div className="mt-9 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+                <Button size="lg" className={CTA_CLASSES} asChild>
                   <Link href="/register">
                     Start tracking free
-                    <ArrowRight className="h-4 w-4" aria-hidden />
+                    <ArrowRight className={CTA_ARROW} aria-hidden />
                   </Link>
                 </Button>
                 <Link
                   href="#features"
-                  className="group inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700"
+                  className="group inline-flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700 sm:w-auto"
                 >
                   See how it works
                   <ArrowDown
@@ -466,32 +488,33 @@ export function Landing() {
                 clipped by the section. The mascots are flat vectors on a
                 transparent ground, which is why nothing here is tinted by the
                 OS: illustrations rather than silhouettes, hence images. */}
-            <div data-testid="hero-pile" className="relative mt-20 h-[24rem] sm:mt-24 sm:h-[26rem] lg:mt-0 lg:h-[27rem]">
+            <div data-testid="hero-pile" className="relative order-1 mt-12 h-[28rem] lg:order-2 lg:mt-0 lg:h-[27rem]">
               <IconTornado className="left-1/2 top-[45%]" />
 
-              {/* row one — the interview stage and the fresh application; row two
-                  sits just under it, close enough to read as one drifting pile
-                  and far enough that no card covers another's name. */}
+              {/* One column of four on a phone — same rotations, same drift,
+                  tucked under each other and staggered left/right — and the
+                  desktop arrangement of two roughly diagonal pairs. The pile sits
+                  above the copy on a phone and beside it on a wide screen. */}
               <FloatingCard
                 app={MOCK_APPS[0]}
-                className="left-0 top-0 w-[15rem] -rotate-3 sm:top-[8%] sm:w-[19rem] sm:-rotate-6"
+                className="left-6 top-0 w-[15rem] -rotate-6 sm:left-0 sm:top-[8%] sm:w-[19rem]"
                 delay="-1.2s"
               />
               <FloatingCard
                 app={MOCK_APPS[1]}
-                className="hidden right-0 top-[19%] w-[19rem] rotate-6 sm:block"
+                className="right-6 top-[20%] w-[15rem] rotate-6 sm:right-0 sm:top-[19%] sm:w-[19rem]"
                 delay="-2.8s"
               />
 
               {/* row two — the one that went quiet, and the one that answered */}
               <FloatingCard
                 app={MOCK_APPS[3]}
-                className="left-0 top-[39%] w-[15rem] rotate-2 sm:left-2 sm:top-[46%] sm:w-[19rem] sm:-rotate-3"
+                className="left-6 top-[40%] w-[15rem] -rotate-3 sm:left-2 sm:top-[46%] sm:w-[19rem]"
                 delay="-4.5s"
               />
               <FloatingCard
                 app={MOCK_APPS[2]}
-                className="hidden right-2 top-[57%] w-[19rem] rotate-3 sm:block"
+                className="right-6 top-[60%] w-[15rem] rotate-3 sm:right-2 sm:top-[57%] sm:w-[19rem]"
                 delay="-6.1s"
               />
 
@@ -502,17 +525,17 @@ export function Landing() {
                   on top of the pile. */}
               <FloatingGhost
                 src={ART.confused}
-                className="right-2 -top-16 z-20 h-24 w-24 rotate-3 sm:left-1/2 sm:right-auto sm:-top-[7rem] sm:h-[7.5rem] sm:w-[7.5rem] sm:-translate-x-1/2"
+                className="left-[45%] -top-16 z-20 h-[7.5rem] w-[7.5rem] rotate-3 sm:-top-8"
                 delay="-2.1s"
               />
               <FloatingGhost
                 src={ART.sad}
-                className="bottom-[6.5rem] right-2 z-20 h-24 w-24 -rotate-6 sm:-left-[3.25rem] sm:bottom-[6%] sm:right-auto sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-0"
+                className="-left-6 bottom-[25%] z-20 h-[7.5rem] w-[7.5rem] rotate-[-5deg] sm:-left-[3.25rem] sm:bottom-[6%]"
                 delay="-3.4s"
               />
               <FloatingGhost
                 src={ART.fingerGuns}
-                className="hidden sm:-bottom-2 sm:right-2 sm:z-20 sm:block sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-6"
+                className="right-0 bottom-0 z-20 h-[7.5rem] w-[7.5rem] rotate-6 sm:right-[-3rem] sm:bottom-12"
                 delay="-5.6s"
               />
             </div>
@@ -525,9 +548,9 @@ export function Landing() {
             hidden), taken at 1280 and sliced below the app bar. */}
         <section
           aria-label="The app"
-          className="mx-auto w-full max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24"
+          className="relative z-10 mx-auto w-full max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24"
         >
-          <LandingViewSplit />
+          <LandingMock />
         </section>
 
         {/* Features — a bento, not six equal cards: the differentiator is a big
@@ -571,20 +594,10 @@ export function Landing() {
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {f.body}
                     </p>
-                    {f.link && (
-                      <a
-                        href={f.link.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="mt-4 inline-flex items-center gap-1.5 self-start rounded-md font-mono text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-4 transition-colors hover:decoration-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-violet-300"
-                      >
-                        {f.link.label}
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                      </a>
-                    )}
-                    {f.note && (
-                      <span className="mt-4 font-mono text-xs text-muted-foreground">
-                        {f.note}
+                    {f.soon && (
+                      <span className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                        <GithubMark className="h-3.5 w-3.5" />
+                        coming soon
                       </span>
                     )}
                   </div>
@@ -657,23 +670,19 @@ export function Landing() {
               src={ART.happy}
               alt=""
               aria-hidden
-              className="ghost-float mx-auto h-28 w-28 drop-shadow-lg sm:h-36 sm:w-36"
+              className="ghost-float mx-auto h-28 w-28 opacity-95 drop-shadow-lg sm:h-36 sm:w-36"
             />
             <h2 className="mt-6 text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-4xl">
-              Ready to stop getting ghosted?
+              Keep hunting, stop the haunting
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">
-              Create your free account and start your first timeline in under a
-              minute.
+              Few seconds to set up, free for as long as the hunt takes. Log
+              the next application tonight.
             </p>
-            <Button
-              size="lg"
-              className="mt-9 h-12 bg-white px-8 text-base text-violet-700 shadow-xl ring-1 ring-white/40 hover:bg-violet-100"
-              asChild
-            >
+            <Button size="lg" className={cn(CTA_CLASSES, "mt-9")} asChild>
               <Link href="/register">
-                <Ghost className="h-5 w-5" aria-hidden />
                 Create your free account
+                <ArrowRight className={CTA_ARROW} aria-hidden />
               </Link>
             </Button>
           </div>

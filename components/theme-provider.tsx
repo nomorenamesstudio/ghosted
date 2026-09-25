@@ -34,8 +34,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   // Initial theme: localStorage override, else the user's system preference.
+  //
+  // The landing is the exception: it follows the operating system, because it is
+  // the page strangers see first and a "light" picked inside the app should not
+  // keep it bright for a visitor whose whole desktop is dark. The pre-paint
+  // script in the root layout applies the same rule before first paint.
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const onLanding = window.location.pathname === "/";
+    const stored = onLanding ? null : localStorage.getItem(STORAGE_KEY);
     const initial: Theme =
       stored === "light" || stored === "dark" ? stored : systemTheme();
     setTheme(initial);
@@ -50,7 +56,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Follow live system changes while the user has no explicit override.
   useEffect(() => {
     if (!hydrated) return;
-    if (localStorage.getItem(STORAGE_KEY)) return;
+    if (window.location.pathname === "/") {
+      // no stored override on the landing: keep following the system
+    } else if (localStorage.getItem(STORAGE_KEY)) {
+      return;
+    }
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = (e: MediaQueryListEvent) =>
       setTheme(e.matches ? "dark" : "light");
