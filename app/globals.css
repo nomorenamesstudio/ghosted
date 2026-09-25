@@ -144,6 +144,15 @@
   animation: float-bob 7s ease-in-out infinite;
 }
 
+
+/* Geist's stylistic sets, chosen by the owner from the specimen: ss02 is the
+   alternate `a`, ss04 the `R`, ss06 the `G`, ss09 the dotted `1`/`0`. Set on the
+   root so it inherits to every page; the app face is Geist Sans, and Geist Mono
+   carries its own versions of all four. */
+html {
+  font-feature-settings: "ss02" 1, "ss04" 1, "ss06" 1, "ss09" 1;
+}
+
 /* Smooth anchor scrolling for the landing's "see how it works" link (and any
    other in-page jump); the reduced-motion block below turns it back off. */
 html {
