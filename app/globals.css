@@ -144,7 +144,17 @@
   animation: float-bob 7s ease-in-out infinite;
 }
 
+/* Smooth anchor scrolling for the landing's "see how it works" link (and any
+   other in-page jump); the reduced-motion block below turns it back off. */
+html {
+  scroll-behavior: smooth;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
   .ghost-float,
   .ghost-shadow,
   .float-bob,

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
+  ArrowDown,
   ArrowRight,
   Bell,
   BellOff,
@@ -11,6 +12,7 @@ import {
   Clock,
   Coffee,
   ExternalLink,
+  ListChecks,
   FileText,
   Ghost,
   Globe,
@@ -72,60 +74,59 @@ const ART = {
 } as const;
 
 /**
- * Features are a bento, not six equal cards: the differentiator takes a 2×2 tile
- * with a drawn silence panel, the timeline a 2×1 with the step rail, and the
- * small ones stay square. `span` is the desktop footprint, `art` the mascot that
- * fronts the tile, `visual` the drawing that carries it, `href` an optional link.
+ * Features are a bento: two wide tiles on top (the differentiator and the
+ * timeline, each with its drawing beside the copy) and four squares below. The
+ * mascots deliberately stay out of this grid — six tiles of ghost art turned the
+ * page into a sticker sheet, and the poses read better in the hero and the CTA.
  */
 const FEATURES: {
-  icon?: LucideIcon;
-  art?: string;
+  icon: LucideIcon;
   title: string;
   body: ReactNode;
   span: string;
   visual?: "silence" | "steps";
-  href?: string;
-  hrefLabel?: string;
+  link?: { href: string; label: string };
+  note?: string;
 }[] = [
   {
-    art: ART.confused,
+    icon: Ghost,
     title: "Ghosted detection",
     body: "Applications the employer has gone quiet on float into their own section once they pass your patience window — 10 days by default, and you set the pace.",
-    span: "sm:col-span-2 lg:col-span-2 lg:row-span-2",
+    span: "sm:col-span-2",
     visual: "silence",
   },
   {
-    art: ART.content,
+    icon: ListChecks,
     title: "One timeline per application",
     body: "Start with the 5 usual steps and add as many as the process actually needs — a second technical round, a take-home review, a team chat.",
-    span: "sm:col-span-2 lg:col-span-2",
+    span: "sm:col-span-2",
     visual: "steps",
   },
   {
     icon: Server,
     title: "Self-hostable",
-    body: "One container and a Postgres, migrations on start: clone the repo and run it on your own box if you would rather not trust anyone's server, ours included.",
+    body: "One container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
-    href: REPO_URL,
-    hrefLabel: "krisztianhadi/ghosted",
+    link: { href: REPO_URL, label: "view on github" },
   },
   {
     icon: Plug,
-    title: "MCP, coming soon",
-    body: "An MCP server is on the way, so your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
+    title: "MCP",
+    body: "Your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
     span: "",
+    note: "coming soon",
   },
   {
     icon: ShieldCheck,
     title: "Private by default",
-    body: "No public profile, no ads, nothing sold. Download everything as JSON or delete the account for good, and the analytics are self-hosted. It is a logbook, not a vault — no encryption claims beyond the database it sits in.",
-    span: "sm:col-span-2 lg:col-span-2",
+    body: "No public profile, no ads, nothing sold. Download everything as JSON or delete the account for good, and the analytics are self-hosted.",
+    span: "",
   },
   {
     icon: Wallet,
     title: "Free forever",
     body: "Job hunting is a pain already — the log shouldn't cost you too. Free for casual use, always.",
-    span: "sm:col-span-2 lg:col-span-2",
+    span: "",
   },
 ];
 
@@ -173,13 +174,13 @@ const MOCK_APPS: ApplicationListItem[] = [
     role: "Frontend Engineer",
     url: null,
     companyWebsite: null,
-    status: "interviewing",
-    displayStatus: "interviewing",
+    status: "applied",
+    displayStatus: "applied",
     isFavorite: false,
     totalSteps: 5,
     updatedAt: new Date(now - 3 * DAY),
-    progress: 40,
-    currentRound: "HR Screen",
+    progress: 20,
+    currentRound: "Application",
     milestoneCount: 5,
   },
   {
@@ -188,13 +189,13 @@ const MOCK_APPS: ApplicationListItem[] = [
     role: "Product Engineer",
     url: null,
     companyWebsite: null,
-    status: "applied",
-    displayStatus: "applied",
-    isFavorite: false,
+    status: "offer",
+    displayStatus: "offer",
+    isFavorite: true,
     totalSteps: 5,
     updatedAt: new Date(now - 1 * DAY),
-    progress: 20,
-    currentRound: "Application",
+    progress: 100,
+    currentRound: "Offer / Decision",
     milestoneCount: 5,
   },
   {
@@ -409,7 +410,7 @@ function FloatingGhost({
         src={src}
         alt=""
         aria-hidden
-        className="float-bob h-full w-full drop-shadow-md"
+        className="float-bob h-full w-full drop-shadow-lg"
         style={{ animationDelay: delay }}
       />
     </div>
@@ -423,7 +424,7 @@ function FloatingGhost({
  */
 function SilenceCalendar() {
   return (
-    <div aria-hidden className="mt-8">
+    <div aria-hidden className="flex flex-1 flex-col">
       <div className="grid grid-cols-10 gap-1">
         {Array.from({ length: 10 }, (_, i) => (
           <span
@@ -478,7 +479,7 @@ function StepRail() {
   const done = 2;
   const steps = 6;
   return (
-    <div aria-hidden className="mt-8">
+    <div aria-hidden className="flex flex-1 flex-col">
       <div className="flex items-center">
         {Array.from({ length: steps }, (_, i) => (
           <span key={i} className="flex flex-1 items-center last:flex-none">
@@ -554,73 +555,80 @@ export function Landing() {
                   className="h-12 bg-white px-7 text-base text-violet-700 shadow-xl ring-1 ring-white/40 hover:bg-violet-100"
                   asChild
                 >
-                  <Link href="/register">Start tracking free</Link>
+                  <Link href="/register">
+                    Start tracking free
+                    <ArrowRight className="h-4 w-4" aria-hidden />
+                  </Link>
                 </Button>
                 <Link
                   href="#features"
                   className="group inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700"
                 >
                   See how it works
-                  <ArrowRight
-                    className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
+                  <ArrowDown
+                    className="h-4 w-4 transition-transform group-hover:translate-y-0.5"
                     aria-hidden
                   />
                 </Link>
               </div>
             </div>
 
-            {/* The pile. Everything is absolutely placed inside a sized box, so
-                the composition holds at every breakpoint instead of reflowing
-                into a column, and the outer rings are clipped by the section.
-                The mascots are flat vectors on a transparent ground, which is
-                why nothing here is tinted by the OS: illustrations rather than
-                silhouettes, hence images rather than inline SVG. */}
-            <div className="relative mt-20 h-[26rem] sm:mt-24 sm:h-[30rem] lg:mt-0 lg:h-[34rem]">
-              <IconTornado className="left-1/2 top-1/2" />
+            {/* The pile: two rows of cards with a clear band between them, so
+                the mascots can sit on top (`z-20`, as asked) without covering a
+                company name or a meta line. Row one is interviewing + applied
+                with `confused` between them; row two is ghosted + offer, with the
+                sad phone ghost beside the ghosted card and `finger-guns` beside
+                the offer. Everything is absolutely placed inside a sized box so
+                the composition holds at every breakpoint, and the outer rings are
+                clipped by the section. The mascots are flat vectors on a
+                transparent ground, which is why nothing here is tinted by the
+                OS: illustrations rather than silhouettes, hence images. */}
+            <div className="relative mt-20 h-[30rem] sm:mt-24 sm:h-[32rem] lg:mt-0 lg:h-[34rem]">
+              <IconTornado className="left-1/2 top-[45%]" />
 
-              {/* The mascots go in first, so the cards paint over them: a ghost
-                  drawn on top of a card covers its company name, and "ipe" is
-                  not a company. Positioned to peek out above, beside and from
-                  under the pile instead. */}
-              <FloatingGhost
-                src={ART.sad}
-                className="right-2 top-2 h-20 w-20 rotate-6 sm:right-auto sm:left-6 sm:-top-2 sm:h-24 sm:w-24"
-                delay="-3.4s"
-              />
-              <FloatingGhost
-                src={ART.fingerGuns}
-                className="left-2 bottom-2 h-16 w-16 -rotate-6 sm:left-auto sm:right-6 sm:top-6 sm:h-20 sm:w-20"
-                delay="-5.6s"
-              />
-              <FloatingGhost
-                src={ART.confused}
-                className="-bottom-4 left-6 hidden h-24 w-24 rotate-3 lg:block"
-                delay="-2.1s"
-              />
-
-              {/* Two cards on a phone, three from sm, four on a wide screen: a
-                  pile that only ever shows part of itself reads as clutter, not
-                  as zero gravity. Rotations stay shallow at the small sizes so no
-                  corner leaves the frame. */}
-              <FloatingCard
-                app={MOCK_APPS[3]}
-                className="bottom-4 right-2 w-[14rem] rotate-2 sm:right-0 sm:w-[16rem] sm:-rotate-3"
-                delay="-4.5s"
-              />
+              {/* row one — the interview stage and the fresh application */}
               <FloatingCard
                 app={MOCK_APPS[0]}
-                className="left-3 top-6 w-[15rem] -rotate-3 sm:left-0 sm:top-24 sm:w-[18rem] sm:-rotate-6"
+                className="left-0 top-0 w-[14rem] -rotate-3 sm:w-[16.5rem] sm:-rotate-6"
                 delay="-1.2s"
               />
               <FloatingCard
                 app={MOCK_APPS[1]}
-                className="hidden right-0 top-44 w-[18rem] rotate-3 lg:block"
+                className="hidden right-0 top-10 w-[16.5rem] rotate-6 sm:block"
                 delay="-2.8s"
+              />
+
+              {/* row two — the one that went quiet, and the one that answered */}
+              <FloatingCard
+                app={MOCK_APPS[3]}
+                className="bottom-24 left-0 w-[14rem] rotate-2 sm:bottom-16 sm:w-[16.5rem] sm:-rotate-3"
+                delay="-4.5s"
               />
               <FloatingCard
                 app={MOCK_APPS[2]}
-                className="hidden bottom-10 left-0 w-[15rem] rotate-2 sm:block sm:w-[17rem]"
+                className="hidden bottom-24 right-0 w-[16.5rem] rotate-3 sm:block"
                 delay="-6.1s"
+              />
+
+              {/* The mascots, painted over the cards (`z-20`). Each overlaps its
+                  card by about a corner's worth — the horizontal overlap is kept
+                  near 30px and pushed to an outer edge, so the company name, the
+                  role and the meta line stay readable while the ghost still sits
+                  on top of the pile. */}
+              <FloatingGhost
+                src={ART.confused}
+                className="left-1/2 top-[9.5rem] z-20 h-20 w-20 -translate-x-1/2 rotate-3 sm:top-[11.5rem] sm:h-24 sm:w-24"
+                delay="-2.1s"
+              />
+              <FloatingGhost
+                src={ART.sad}
+                className="bottom-[9rem] right-2 z-20 h-20 w-20 -rotate-6 sm:-left-[4.25rem] sm:bottom-2 sm:right-auto sm:h-24 sm:w-24 sm:rotate-0"
+                delay="-3.4s"
+              />
+              <FloatingGhost
+                src={ART.fingerGuns}
+                className="hidden sm:-bottom-2 sm:right-2 sm:z-20 sm:block sm:h-24 sm:w-24 sm:rotate-6"
+                delay="-5.6s"
               />
             </div>
           </div>
@@ -669,53 +677,53 @@ export function Landing() {
               >
                 <CardContent
                   className={cn(
-                    "flex flex-1 flex-col p-6",
-                    f.visual && "sm:p-8",
+                    "flex flex-1 flex-col gap-6 p-6",
+                    f.visual &&
+                      "sm:flex-row sm:items-start sm:justify-between sm:gap-10 sm:p-8",
                   )}
                 >
-                  {f.art ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={f.art}
-                      alt=""
-                      aria-hidden
+                  <div className={cn("flex flex-col", f.visual && "sm:max-w-[34ch]")}>
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-300">
+                      <f.icon className="h-6 w-6" aria-hidden />
+                    </span>
+                    <h3
                       className={cn(
-                        "shrink-0",
-                        f.visual ? "h-16 w-16" : "h-12 w-12",
+                        "mt-4 font-semibold tracking-[-0.02em]",
+                        f.visual ? "text-xl sm:text-2xl" : "text-lg",
                       )}
-                    />
-                  ) : f.icon ? (
-                    <f.icon className="h-5 w-5 text-violet-500" aria-hidden />
-                  ) : null}
-                  <h3
-                    className={cn(
-                      "mt-5 font-semibold tracking-[-0.01em]",
-                      f.visual ? "text-lg sm:text-xl" : "text-base",
-                    )}
-                  >
-                    {f.title}
-                  </h3>
-                  <p
-                    className={cn(
-                      "mt-2 text-sm leading-relaxed text-muted-foreground",
-                      f.visual && "max-w-[46ch]",
-                    )}
-                  >
-                    {f.body}
-                  </p>
-                  {f.href && (
-                    <a
-                      href={f.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex items-center gap-1.5 rounded-md font-mono text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-4 transition-colors hover:decoration-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-violet-300"
                     >
-                      {f.hrefLabel}
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-                    </a>
+                      {f.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {f.body}
+                    </p>
+                    {f.link && (
+                      <a
+                        href={f.link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-4 inline-flex items-center gap-1.5 self-start rounded-md font-mono text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-4 transition-colors hover:decoration-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-violet-300"
+                      >
+                        {f.link.label}
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                      </a>
+                    )}
+                    {f.note && (
+                      <span className="mt-4 font-mono text-xs text-muted-foreground">
+                        {f.note}
+                      </span>
+                    )}
+                  </div>
+                  {f.visual === "silence" && (
+                    <div className="sm:w-[46%]">
+                      <SilenceCalendar />
+                    </div>
                   )}
-                  {f.visual === "silence" && <SilenceCalendar />}
-                  {f.visual === "steps" && <StepRail />}
+                  {f.visual === "steps" && (
+                    <div className="sm:w-[46%]">
+                      <StepRail />
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
@@ -727,32 +735,43 @@ export function Landing() {
             refusals as boxes whose mark is the crossed glyph. */}
         <section
           aria-label="What we're not doing"
-          className="border-y border-zinc-800 bg-zinc-950 text-zinc-50 dark:bg-zinc-900"
+          className="relative border-y border-zinc-800 bg-zinc-950 text-zinc-50 dark:bg-zinc-900"
         >
-          <div className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-6 sm:py-24">
-            <h2 className="max-w-2xl text-2xl font-bold leading-[1.15] tracking-[-0.02em] sm:text-3xl">
-              What we&apos;re not doing
-            </h2>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-zinc-400 sm:text-lg">
-              Ghosted is a logbook for your job hunt — not an automation
-              software. A simple tool for simple needs.
-            </p>
-            <ul className="mt-12 grid gap-5 sm:grid-cols-3 sm:gap-6">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-[0.35]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.08) 1px, transparent 0)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+          <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
+              <h2 className="text-3xl font-bold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
+                What we&apos;re not doing
+              </h2>
+              <p className="text-base leading-relaxed text-zinc-400 sm:text-lg">
+                Ghosted is a logbook for your job hunt — not an automation
+                software. A simple tool for simple needs.
+              </p>
+            </div>
+            <ul className="mt-14 grid gap-5 sm:grid-cols-3 sm:gap-6">
               {NOT_DOING.map(({ icon: Icon, title, body }) => (
                 <li
                   key={title}
-                  className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6"
+                  className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-7 transition-colors hover:border-zinc-700 sm:p-8"
                 >
                   <span
                     aria-hidden
-                    className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/80 text-zinc-300"
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/80 text-zinc-300"
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-7 w-7" />
                   </span>
-                  <h3 className="mt-5 text-lg font-semibold tracking-[-0.01em] text-zinc-100">
+                  <h3 className="mt-6 text-xl font-semibold tracking-[-0.02em] text-zinc-50">
                     {title}
                   </h3>
-                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">
                     {body}
                   </p>
                 </li>

@@ -5,6 +5,29 @@ All notable changes, by date and type.
 ## 2026-09-24
 
 ### Changed
+- **Landing, fourth pass: the pile gets a narrative, the bento gets icons, the
+  mock becomes one window.** The hero's four cards now tell the story in order —
+  interviewing, applied, ghosted, offer — with `confused` between the two live
+  ones, the sad phone ghost beside the ghosted card and `finger-guns` beside the
+  offer, all three painted *above* the cards as asked; the horizontal overlap is
+  kept to roughly a corner (about 30px pushed to an outer edge) so the ghosts sit
+  over the pile without covering a company name. The hero's primary button gained
+  an arrow and "see how it works" points *down* at `#features`, which now scrolls
+  smoothly (`html { scroll-behavior: smooth }`, off again under reduced motion).
+  The two views are no longer two shrunken screenshots side by side: they are two
+  halves of one window, cut from full-size captures at the app's own header —
+  which is taken once from a single screenshot and run across the whole width, so
+  the seam is a seam rather than two headers meeting. The donation banner is
+  hidden in the capture. The bento dropped the mascot art (six tiles of ghost
+  drawings read as a sticker sheet), shrank Ghosted detection from a 2×2 to a wide
+  tile with its calendar beside the copy, and now runs two wide tiles over four
+  squares: self-hostable (link reads "view on github"), MCP (its title lost
+  "coming soon", which is now a grey mono footnote), private by default without
+  the encryption line, and free forever. "What we're not doing" fills its band
+  properly: a 4xl heading with the intro beside it, bigger boxes, 14-unit crossed
+  badges and a faint dot grid behind them.
+
+### Fixed
 - **Landing, third pass: the hero is a pile, the app is a screenshot, and the
   tiles say what the product actually is.** The hero no longer frames a fake
   window: four real dashboard cards drift in the band with three mascots — the
