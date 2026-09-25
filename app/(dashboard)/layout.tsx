@@ -38,7 +38,7 @@ export default async function DashboardLayout({
             />
           </div>
         </header>
-        <main className="app-shell mx-auto max-w-5xl px-4 pb-28">{children}</main>
+        <main className="app-shell mx-auto max-w-5xl px-4 pb-8">{children}</main>
       </div>
     </AppProviders>
   );
