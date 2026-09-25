@@ -93,14 +93,14 @@ const FEATURES: {
     icon: Ghost,
     title: "Ghosted detection",
     body: "Applications the employer has gone quiet on float into their own section once they pass your patience window — 10 days by default, and you set the pace.",
-    span: "sm:col-span-2",
+    span: "lg:col-span-2",
     wide: true,
   },
   {
     icon: ListChecks,
     title: "One timeline per application",
     body: "Start with the 5 usual steps and add as many as the process actually needs — a second technical round, a take-home review, a team chat.",
-    span: "sm:col-span-2",
+    span: "lg:col-span-2",
     wide: true,
   },
   {
@@ -447,9 +447,9 @@ export function Landing() {
             them. Left-aligned with the CTA in the hero: a centred hero is the
             default shape, and the asymmetry is what makes this section lead. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
-          <div className="mx-auto flex w-full max-w-6xl flex-col px-5 pb-24 pt-12 sm:px-6 sm:pb-32 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-44 lg:pt-20">
-            <div className="order-2 mt-14 lg:order-1 lg:mt-0">
-              <h1 className="text-[2rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[2.5rem] lg:text-[3.25rem]">
+          <div className="mx-auto flex w-full max-w-[650px] flex-col px-5 pb-24 pt-12 sm:px-6 sm:pb-32 sm:pt-16 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-44 lg:pt-20">
+            <div className="order-2 mt-14 text-center lg:order-1 lg:mt-0 lg:text-left">
+              <h1 className="text-[2.75rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[3rem] lg:text-[3.25rem]">
                 Never let a job application go quiet on you.
               </h1>
               <p className="mt-6 text-base leading-relaxed text-violet-100 sm:text-lg">
@@ -458,7 +458,7 @@ export function Landing() {
               </p>
               {/* Phones get the standard shape: two full-width rows, primary
                   first, instead of a wrapped row of two different widths. */}
-              <div className="mt-9 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-6 sm:gap-y-3">
+              <div className="mt-9 flex flex-col gap-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center sm:gap-x-6 sm:gap-y-3 lg:justify-start">
                 <Button size="lg" className={CTA_CLASSES} asChild>
                   <Link href="/register">
                     Start tracking free
@@ -561,7 +561,7 @@ export function Landing() {
           aria-label="Features"
           className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 py-16 sm:px-6 sm:py-24"
         >
-          <h2 className="max-w-2xl text-2xl font-bold leading-[1.15] tracking-[-0.02em] sm:text-3xl">
+          <h2 className="mx-auto max-w-2xl text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:mx-0 lg:text-left">
             Everything a job hunt needs, nothing it doesn&apos;t
           </h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 sm:mt-14 lg:grid-cols-4">
@@ -576,7 +576,7 @@ export function Landing() {
                 <CardContent
                   className={cn(
                     "flex flex-1 flex-col gap-6 p-6",
-                    f.wide && "sm:p-8",
+                    f.wide && "lg:p-8",
                   )}
                 >
                   <div className="flex flex-col">
@@ -626,15 +626,15 @@ export function Landing() {
           <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
             <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:items-start lg:gap-16">
               <div className="lg:sticky lg:top-24">
-                <h2 className="text-3xl font-bold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
+                <h2 className="text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:text-left">
                   What we&apos;re not doing
                 </h2>
-                <p className="mt-6 max-w-md text-base leading-relaxed text-zinc-400 sm:text-lg">
+                <p className="mx-auto mt-6 max-w-md text-center text-base leading-relaxed text-zinc-400 sm:text-lg lg:mx-0 lg:text-left">
                   Ghosted is a logbook for your job hunt — not an automation
                   software. A simple tool for simple needs.
                 </p>
               </div>
-              <ul className="flex flex-col gap-5">
+              <ul className="mx-auto flex w-full max-w-[700px] flex-col gap-5 lg:mx-0 lg:max-w-none">
                 {NOT_DOING.map(({ icon: Icon, title, body }) => (
                   <li
                     key={title}
@@ -672,7 +672,7 @@ export function Landing() {
               aria-hidden
               className="ghost-float mx-auto h-28 w-28 opacity-95 drop-shadow-lg sm:h-36 sm:w-36"
             />
-            <h2 className="mt-6 text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-4xl">
+            <h2 className="mt-6 text-[2rem] font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-[2.5rem]">
               Keep hunting, stop the haunting
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">

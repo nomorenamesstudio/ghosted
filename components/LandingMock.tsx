@@ -77,7 +77,7 @@ function MobileShot() {
     /* Pulled up into the hero's band and pushed out to the page gutters: a phone
        mock floating over the section break reads as a product shot, one sitting
        politely inside its own white box reads as a diagram. */
-    <div className="-mt-[7.1rem] w-full lg:hidden">
+    <div className="-mt-[7.1rem] w-full sm:hidden">
       <div className="mx-auto aspect-[9/16] w-full max-w-[21rem] rounded-[1.7rem] border bg-card shadow-xl">
         <div className="h-full overflow-hidden rounded-[1.5rem] bg-card">
           {(["light", "dark"] as const).map((theme) => (
@@ -105,10 +105,42 @@ function MobileShot() {
   );
 }
 
+/**
+ * The middle band (640–1023px) gets a landscape tablet: a phone capture would
+ * look like a phone that ate the screen, and the desktop window is too wide to
+ * read at that size. Same thin border as the other two, 16:10 as an iPad held
+ * sideways.
+ */
+function TabletShot() {
+  return (
+    <div className="-mt-[8.3rem] hidden w-full sm:block lg:hidden">
+      <div className="mx-auto aspect-[16/10] w-full max-w-[40rem] overflow-hidden rounded-[1.2rem] border bg-card shadow-xl">
+        {(["light", "dark"] as const).map((theme) => (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={theme}
+            src={`/landing-views/board-tablet-${theme}.jpg`}
+            width={2048}
+            height={1280}
+            alt={
+              theme === "light"
+                ? "The Ghosted dashboard on a landscape tablet: the board view, with applications as cards grouped by stage."
+                : ""
+            }
+            aria-hidden={theme === "dark"}
+            className={cn("h-full w-full object-cover object-top", theme === "dark" ? "hidden dark:block" : "block dark:hidden")}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function LandingMock() {
   return (
     <>
       <DesktopShot />
+      <TabletShot />
       <MobileShot />
     </>
   );
