@@ -1,27 +1,32 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   Bell,
+  BellOff,
   BookOpen,
+  BotOff,
   Briefcase,
   Calendar,
   Clock,
   Coffee,
+  ExternalLink,
   FileText,
   Ghost,
   Globe,
-  LayoutGrid,
   Mail,
+  MailX,
   MessageSquare,
   Paperclip,
   Phone,
+  Plug,
   Send,
+  Server,
   ShieldCheck,
   Tag,
   Users,
   Video,
   Wallet,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -35,8 +40,9 @@ import { cn } from "@/lib/utils";
 // dashboard, and the look is identical because it is literally the same markup.
 import { ApplicationCardShell } from "./ApplicationCardShell";
 import { AppBrand } from "./AppBrand";
-import { StatusIcon } from "./status-icons";
 import type { ApplicationListItem } from "@/lib/api";
+
+const REPO_URL = "https://github.com/krisztianhadi/ghosted";
 
 /**
  * The mock cards name real companies, so they carry their real icons. Shipped as
@@ -52,11 +58,10 @@ const MOCK_LOGOS: Record<string, string> = {
 
 /**
  * The mascot poses, all 1024×1024 flat vectors on a transparent ground, drawn
- * for this product: the sad one holds a phone and stares at it, `confused`
- * scratches its head under a question mark, `content` is calm, `finger-guns`
- * winks, and the happy one is the phone ghost finally getting an answer. They
- * carry the tiles where the product has a feeling; the two policy tiles keep
- * plain glyphs, because terms of service do not have a face.
+ * for this product: the sad one stares at its phone, `confused` scratches its
+ * head under a question mark, `content` is calm, `finger-guns` winks, and the
+ * happy one is the phone ghost finally getting an answer. Three drift through
+ * the hero, one fronts the timeline tile, and the happy one closes the page.
  */
 const ART = {
   sad: "/staring-at-phone-sad.svg",
@@ -68,17 +73,19 @@ const ART = {
 
 /**
  * Features are a bento, not six equal cards: the differentiator takes a 2×2 tile
- * with a drawn silence panel, the timeline a 2×1 with the five-step rail, and
- * only the smaller features stay square. `span` is the desktop footprint, `art`
- * the mascot that fronts the tile, `visual` the drawing that carries it.
+ * with a drawn silence panel, the timeline a 2×1 with the step rail, and the
+ * small ones stay square. `span` is the desktop footprint, `art` the mascot that
+ * fronts the tile, `visual` the drawing that carries it, `href` an optional link.
  */
 const FEATURES: {
   icon?: LucideIcon;
   art?: string;
   title: string;
-  body: string;
+  body: ReactNode;
   span: string;
   visual?: "silence" | "steps";
+  href?: string;
+  hrefLabel?: string;
 }[] = [
   {
     art: ART.confused,
@@ -90,26 +97,28 @@ const FEATURES: {
   {
     art: ART.content,
     title: "One timeline per application",
-    body: "Start with the 5 standard steps — Application, HR Screen, Technical Interview, Test, Offer — and add your own as the process grows.",
+    body: "Start with the 5 usual steps and add as many as the process actually needs — a second technical round, a take-home review, a team chat.",
     span: "sm:col-span-2 lg:col-span-2",
     visual: "steps",
   },
   {
-    icon: LayoutGrid,
-    title: "A board or a list",
-    body: "The same applications as a Kanban board you drag through the stages, or a grouped list you scan top down. Your call, and it remembers.",
+    icon: Server,
+    title: "Self-hostable",
+    body: "One container and a Postgres, migrations on start: clone the repo and run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
+    href: REPO_URL,
+    hrefLabel: "krisztianhadi/ghosted",
   },
   {
-    art: ART.fingerGuns,
-    title: "Favourites first",
-    body: "Pin the applications that matter most and they always stay on top of their section.",
+    icon: Plug,
+    title: "MCP, coming soon",
+    body: "An MCP server is on the way, so your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
     span: "",
   },
   {
     icon: ShieldCheck,
-    title: "Private by design",
-    body: "Your data stays yours: export everything as JSON or delete your account permanently, any time (GDPR friendly).",
+    title: "Private by default",
+    body: "No public profile, no ads, nothing sold. Download everything as JSON or delete the account for good, and the analytics are self-hosted. It is a logbook, not a vault — no encryption claims beyond the database it sits in.",
     span: "sm:col-span-2 lg:col-span-2",
   },
   {
@@ -121,16 +130,19 @@ const FEATURES: {
 ];
 
 /** Things Ghosted deliberately does NOT do — a logbook, not automation. */
-const NOT_DOING = [
+const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
   {
+    icon: BellOff,
     title: "No notifications",
     body: "No pings, no push alerts, no inbox noise — you open the log when you feel like it.",
   },
   {
+    icon: MailX,
     title: "No email scanning",
     body: "Your mailbox stays yours. Ghosted only knows what you type into it.",
   },
   {
+    icon: BotOff,
     title: "No auto-applying",
     body: "Applications are written and sent by you. This is a logbook, not a robot.",
   },
@@ -204,9 +216,9 @@ const MOCK_APPS: ApplicationListItem[] = [
 
 /**
  * Communication/office icon pool and concentric orbit rings around the hero
- * ghost — an "email tornado". Each ring spins at its own speed (faster near
- * the center, like a vortex) and fades the further it gets from the ghost.
- * Icons grow outward and are rotated so their bottoms face the ghost.
+ * — an "email tornado". Each ring spins at its own speed (faster near the
+ * center, like a vortex) and fades the further it gets from the ghost. Icons
+ * grow outward and are rotated so their bottoms face the centre.
  */
 const CLOUD_POOL: LucideIcon[] = [
   Mail,
@@ -245,55 +257,18 @@ const CLOUD_RINGS: {
   offset: number;
   poolOffset: number;
 }[] = [
-  { radius: 84, count: 8, size: 24, opacity: 0.18, duration: 48, offset: 0, poolOffset: 0 },
-  { radius: 129, count: 10, size: 34, opacity: 0.12, duration: 66, offset: 0.3, poolOffset: 5 },
-  { radius: 191.5, count: 12, size: 47, opacity: 0.08, duration: 84, offset: 0.72, poolOffset: 11 },
+  { radius: 84, count: 8, size: 24, opacity: 0.16, duration: 48, offset: 0, poolOffset: 0 },
+  { radius: 129, count: 10, size: 34, opacity: 0.11, duration: 66, offset: 0.3, poolOffset: 5 },
+  { radius: 191.5, count: 12, size: 47, opacity: 0.075, duration: 84, offset: 0.72, poolOffset: 11 },
   { radius: 276, count: 14, size: 64, opacity: 0.05, duration: 102, offset: 1.1, poolOffset: 3 },
   { radius: 388, count: 16, size: 86, opacity: 0.035, duration: 120, offset: 1.45, poolOffset: 13 },
   { radius: 533, count: 18, size: 112, opacity: 0.02, duration: 138, offset: 1.9, poolOffset: 7 },
 ];
 
-/** Tab-style section header in the mock (segmented control look). */
-function MockTab({
-  status,
-  title,
-  count,
-  active = false,
-}: {
-  status: "applied" | "interviewing" | "ghosted";
-  title: string;
-  count: number;
-  active?: boolean;
-}) {
-  return (
-    <span
-      className={cn(
-        "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-1.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide sm:px-2 sm:text-xs",
-        active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground",
-      )}
-    >
-      <StatusIcon status={status} className="h-3.5 w-3.5 shrink-0" />
-      <span className="truncate">{title}</span>
-      {/* The count is the first thing to go on a phone: three tabs do not fit
-          at 390px with it, and a clipped tab reads as broken. */}
-      <span
-        className={cn(
-          "hidden rounded-full px-1.5 py-0.5 font-mono text-[10px] tabular-nums sm:inline",
-          active ? "bg-muted" : "bg-muted/60",
-        )}
-      >
-        {count}
-      </span>
-    </span>
-  );
-}
-
 /**
  * The rotating icon tornado, anchored at a point (`0×0` box) rather than filling
- * the hero: in the two-column hero it swirls around the ghost in the right
- * column, so the rings have to be centred on the character, not the viewport.
+ * the hero: it spins behind the floating pile, so the rings are centred on the
+ * pile's middle, not the viewport.
  */
 function IconTornado({ className }: { className?: string }) {
   return (
@@ -328,7 +303,7 @@ function IconTornado({ className }: { className?: string }) {
                   top: `calc(50% + ${Math.sin(a) * placeR}px)`,
                 }}
               >
-                {/* Rotated so the icon's bottom faces the ghost. */}
+                {/* Rotated so the icon's bottom faces the centre. */}
                 <span
                   className="block"
                   style={{ transform: `rotate(${(a * 180) / Math.PI + 90}deg)` }}
@@ -345,111 +320,131 @@ function IconTornado({ className }: { className?: string }) {
 }
 
 /**
- * The hero's product shot: the real dashboard cards inside a fake app window.
- * A framed window is what makes a marketing page read "real product" instead of
- * "four floating cards", so it carries app chrome (traffic lights and a URL
- * bar), two offset panels behind it for depth, and a hard crop at the bottom —
- * the list continues past the frame. Decorative in full: `aria-hidden`, since
- * every word in it is repeated in the copy around it.
+ * The fake app chrome: traffic lights and a URL. Decorative wherever it appears,
+ * so it is `aria-hidden` — the thing it frames carries the meaning.
  */
-function ProductWindow() {
+function AppChrome() {
   return (
-    <div aria-hidden className="relative">
-      {/* Panels behind the window: depth without another screenshot to keep
-          truthful. */}
-      <div className="absolute inset-x-2 -bottom-3 top-8 rotate-[1.6deg] rounded-2xl border border-white/15 bg-white/[0.06]" />
-      <div className="absolute inset-x-5 -bottom-6 top-16 rotate-[3.2deg] rounded-2xl border border-white/10 bg-white/[0.04]" />
-
-      <div className="relative overflow-hidden rounded-2xl border border-white/25 bg-card shadow-2xl lg:-rotate-[1.2deg]">
-        {/* App chrome */}
-        <div className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2">
-          <span className="flex gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
-            <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
-          </span>
-          <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground">
-            ghosted.lostsignals.studio
-          </span>
-        </div>
-
-        {/* Cropped at the bottom: the log keeps going past the frame. */}
-        <div className="max-h-[25rem] overflow-hidden p-4 sm:max-h-[29rem] sm:p-5">
-          <div className="mb-3 flex gap-1 overflow-hidden rounded-lg border bg-muted/50 p-1">
-            <MockTab status="applied" title="Applied" count={1} active />
-            <MockTab status="interviewing" title="Interviewing" count={2} />
-            <MockTab status="ghosted" title="Ghosted" count={1} />
-          </div>
-          <ul className="space-y-2">
-            {MOCK_APPS.map((app) => (
-              <li key={app.id}>
-                {/* Static twin of the real card: same shell, same classes, but
-                    no client boundary. The logo is a plain <img> of the file in
-                    public/landing-logos (the mock has no application row for
-                    /logos/<id> to look up), and the timestamp is formatted here
-                    on the server instead of in the browser. */}
-                <ApplicationCardShell
-                  status={app.displayStatus}
-                  company={app.company}
-                  role={app.role}
-                  isFavorite={app.isFavorite}
-                  currentRound={app.currentRound}
-                  updatedLabel={`Updated ${formatDistanceToNow(
-                    new Date(app.updatedAt),
-                    { addSuffix: true },
-                  )}`}
-                  progress={app.progress}
-                  milestoneCount={app.milestoneCount}
-                  avatar={
-                    // A local file from public/landing-logos, 0.6–2.6 kB and
-                    // already the size it is drawn at: next/image would add its
-                    // own client runtime and an optimisation hop for nothing.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={MOCK_LOGOS[app.company]}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className="h-9 w-9 shrink-0 rounded-lg object-contain"
-                    />
-                  }
-                />
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+    <div
+      aria-hidden
+      className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2"
+    >
+      <span className="flex gap-1.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+      </span>
+      <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground">
+        ghosted.lostsignals.studio
+      </span>
     </div>
   );
 }
 
 /**
- * The Ghosted tile's little drawing: ten day marks, the last one stamped. It is
- * the differentiator in one glance — count the days, then the stamp arrives.
+ * One application card, adrift. The rotation lives on the wrapper and the bob on
+ * the inner element, because the keyframes own `transform` — putting both on one
+ * element silently drops the rotation.
  */
-function SilenceMarks() {
+function FloatingCard({
+  app,
+  className,
+  delay = "0s",
+}: {
+  app: ApplicationListItem;
+  className: string;
+  delay?: string;
+}) {
+  return (
+    <div className={cn("absolute", className)}>
+      <div
+        className="float-bob rounded-lg shadow-xl shadow-violet-950/20"
+        style={{ animationDelay: delay }}
+      >
+        <ApplicationCardShell
+          // `compact` is the board's own narrow-card layout: at this width the
+          // wide card's single meta line truncates to "Last r…", which is what a
+          // floating card must not look like.
+          compact
+          status={app.displayStatus}
+          company={app.company}
+          role={app.role}
+          isFavorite={app.isFavorite}
+          currentRound={app.currentRound}
+          updatedLabel={`Updated ${formatDistanceToNow(new Date(app.updatedAt), {
+            addSuffix: true,
+          })}`}
+          progress={app.progress}
+          milestoneCount={app.milestoneCount}
+          avatar={
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={MOCK_LOGOS[app.company]}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="h-9 w-9 shrink-0 rounded-lg object-contain"
+            />
+          }
+        />
+      </div>
+    </div>
+  );
+}
+
+/** One mascot, adrift: rotation on the wrapper, bob on the image. */
+function FloatingGhost({
+  src,
+  className,
+  delay = "0s",
+}: {
+  src: string;
+  className: string;
+  delay?: string;
+}) {
+  return (
+    <div className={cn("absolute", className)}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={src}
+        alt=""
+        aria-hidden
+        className="float-bob h-full w-full drop-shadow-md"
+        style={{ animationDelay: delay }}
+      />
+    </div>
+  );
+}
+
+/**
+ * The Ghosted tile's drawing: ten calendar days, the last one stamped. It is the
+ * differentiator in one glance — count the days, then the stamp arrives — and the
+ * patience control underneath is the setting that decides when it lands.
+ */
+function SilenceCalendar() {
   return (
     <div aria-hidden className="mt-8">
-      <div className="flex items-end gap-1.5">
+      <div className="grid grid-cols-10 gap-1">
         {Array.from({ length: 10 }, (_, i) => (
           <span
             key={i}
             className={cn(
-              "h-12 flex-1 rounded-[4px] border sm:h-16 lg:h-20",
+              "flex aspect-square items-center justify-center rounded-[4px] border font-mono text-[10px] tabular-nums sm:text-[11px]",
               i < 6
-                ? "border-violet-300/70 bg-violet-500/25 dark:border-violet-700/60 dark:bg-violet-500/20"
-                : "border-dashed border-border bg-muted/40",
+                ? "border-violet-300/70 bg-violet-500/20 text-violet-700 dark:border-violet-700/60 dark:bg-violet-500/15 dark:text-violet-300"
+                : "border-dashed border-border bg-muted/40 text-muted-foreground",
             )}
-          />
+          >
+            {i + 1}
+          </span>
         ))}
       </div>
       <div className="mt-4 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em]">
-        <span className="text-muted-foreground">Day 1 → 10</span>
+        <span className="text-muted-foreground">Days 1 → 10</span>
         <span className="-rotate-[4deg] rounded-md border-2 border-violet-500/70 px-2 py-1 font-bold text-violet-600 dark:border-violet-400/70 dark:text-violet-300">
           Ghosted
         </span>
       </div>
-      {/* The setting that drives the whole tile, shown as the control it is. */}
       <div className="mt-auto flex items-center gap-2 border-t pt-6">
         <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
           Patience
@@ -475,40 +470,42 @@ function SilenceMarks() {
 }
 
 /**
- * The timeline tile's drawing: the five fixed steps as one rail, two of them
- * done, the third in progress. No dates — the point is the fixed shape.
+ * The timeline tile's drawing: a process as long as it needs to be — six steps,
+ * two of them done, and an open slot for the next one. Nothing here claims a
+ * fixed number of stages.
  */
 function StepRail() {
-  const steps = ["Application", "HR Screen", "Technical Interview", "Test", "Offer"];
+  const done = 2;
+  const steps = 6;
   return (
-    <div aria-hidden className="mt-auto pt-10">
+    <div aria-hidden className="mt-8">
       <div className="flex items-center">
-        {steps.map((step, i) => (
-          <span key={step} className="flex flex-1 items-center last:flex-none">
+        {Array.from({ length: steps }, (_, i) => (
+          <span key={i} className="flex flex-1 items-center last:flex-none">
             <span
               className={cn(
                 "h-3 w-3 shrink-0 rounded-full border",
-                i < 2
+                i < done
                   ? "border-violet-500 bg-violet-500"
-                  : i === 2
+                  : i === done
                     ? "border-violet-500 bg-background ring-2 ring-violet-500/25"
                     : "border-border bg-background",
               )}
             />
-            {i < steps.length - 1 && (
+            {i < steps - 1 && (
               <span
-                className={cn(
-                  "h-px flex-1",
-                  i < 2 ? "bg-violet-500" : "bg-border",
-                )}
+                className={cn("h-px flex-1", i < done ? "bg-violet-500" : "bg-border")}
               />
             )}
           </span>
         ))}
+        <span className="ml-2 flex h-5 items-center rounded-md border border-dashed border-border px-1.5 font-mono text-[10px] text-muted-foreground">
+          +1
+        </span>
       </div>
       <div className="mt-4 flex items-baseline justify-between gap-4">
         <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          5 fixed steps
+          As long as it takes
         </span>
         <span className="text-sm text-foreground">Technical Interview</span>
       </div>
@@ -536,25 +533,25 @@ export function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero — inverted purple band, copy left and the framed product shot
-            right. Left-aligned with the CTA in it: a centred hero is the default
-            shape, and the asymmetry is what makes this section carry the page.
-            The icon tornado is anchored on the ghost, not the viewport, and
-            `overflow-hidden` clips the outer rings. */}
+        {/* Hero — inverted purple band, copy left and the pile right: the real
+            dashboard cards adrift among the mascots, like the aftermath of a
+            small explosion in zero gravity, with the icon tornado spinning behind
+            them. Left-aligned with the CTA in the hero: a centred hero is the
+            default shape, and the asymmetry is what makes this section lead. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
-          <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16 lg:pb-28 lg:pt-20">
+          <div className="mx-auto w-full max-w-6xl px-5 pb-24 pt-12 sm:px-6 sm:pt-16 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-28 lg:pt-20">
             <div>
               <h1 className="text-[2rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[2.5rem] lg:text-[3.25rem]">
                 Never let a job application go quiet on you.
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">
+              <p className="mt-6 text-base leading-relaxed text-violet-100 sm:text-lg">
                 A simple logbook for your jobhunt. Every application, interview
                 and ghosting on one timeline. Nothing more, nothing less.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Button
                   size="lg"
-                  className="bg-white text-violet-700 shadow-lg hover:bg-violet-100"
+                  className="h-12 bg-white px-7 text-base text-violet-700 shadow-xl ring-1 ring-white/40 hover:bg-violet-100"
                   asChild
                 >
                   <Link href="/register">Start tracking free</Link>
@@ -572,38 +569,81 @@ export function Landing() {
               </div>
             </div>
 
-            {/* Product shot column. The ghost, its shadow and the icon tornado
-                are siblings inside one ghost-sized box, so the rings are centred
-                on the character and the shadow sits at its hem by construction —
-                anchoring them independently is what had them drifting apart.
-                Same character as the app icon and the social card, drawn full
-                body on a transparent ground, which is why nothing here is tinted
-                by the OS. An illustration rather than a silhouette, hence an
-                image: 11 kB of paths drawn at their own size, so next/image would
-                only add its runtime and a re-encode hop, the same call as the
-                mock logos. Decorative, so an empty alt. */}
-            <div className="relative mt-20 sm:mt-24 lg:mt-0">
-              <div className="relative">
-                <div className="pointer-events-none absolute -top-16 left-3 h-24 w-24 sm:-top-20 sm:h-28 sm:w-28 lg:-top-24 lg:left-1 lg:h-32 lg:w-32">
-                  {/* Rings, centred on the ghost: the 0×0 anchor is the centre. */}
-                  <IconTornado className="left-1/2 top-1/2" />
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={ART.sad}
-                    alt=""
-                    aria-hidden
-                    className="ghost-float relative z-20 h-full w-full drop-shadow-lg"
-                  />
-                  <span
-                    aria-hidden
-                    className="ghost-shadow absolute -bottom-1 left-1/2 h-2.5 w-3/5 -translate-x-1/2 rounded-full bg-violet-950/45 blur-[3px]"
-                  />
-                </div>
-                <div className="relative z-10">
-                  <ProductWindow />
-                </div>
-              </div>
+            {/* The pile. Everything is absolutely placed inside a sized box, so
+                the composition holds at every breakpoint instead of reflowing
+                into a column, and the outer rings are clipped by the section.
+                The mascots are flat vectors on a transparent ground, which is
+                why nothing here is tinted by the OS: illustrations rather than
+                silhouettes, hence images rather than inline SVG. */}
+            <div className="relative mt-20 h-[26rem] sm:mt-24 sm:h-[30rem] lg:mt-0 lg:h-[34rem]">
+              <IconTornado className="left-1/2 top-1/2" />
+
+              {/* The mascots go in first, so the cards paint over them: a ghost
+                  drawn on top of a card covers its company name, and "ipe" is
+                  not a company. Positioned to peek out above, beside and from
+                  under the pile instead. */}
+              <FloatingGhost
+                src={ART.sad}
+                className="right-2 top-2 h-20 w-20 rotate-6 sm:right-auto sm:left-6 sm:-top-2 sm:h-24 sm:w-24"
+                delay="-3.4s"
+              />
+              <FloatingGhost
+                src={ART.fingerGuns}
+                className="left-2 bottom-2 h-16 w-16 -rotate-6 sm:left-auto sm:right-6 sm:top-6 sm:h-20 sm:w-20"
+                delay="-5.6s"
+              />
+              <FloatingGhost
+                src={ART.confused}
+                className="-bottom-4 left-6 hidden h-24 w-24 rotate-3 lg:block"
+                delay="-2.1s"
+              />
+
+              {/* Two cards on a phone, three from sm, four on a wide screen: a
+                  pile that only ever shows part of itself reads as clutter, not
+                  as zero gravity. Rotations stay shallow at the small sizes so no
+                  corner leaves the frame. */}
+              <FloatingCard
+                app={MOCK_APPS[3]}
+                className="bottom-4 right-2 w-[14rem] rotate-2 sm:right-0 sm:w-[16rem] sm:-rotate-3"
+                delay="-4.5s"
+              />
+              <FloatingCard
+                app={MOCK_APPS[0]}
+                className="left-3 top-6 w-[15rem] -rotate-3 sm:left-0 sm:top-24 sm:w-[18rem] sm:-rotate-6"
+                delay="-1.2s"
+              />
+              <FloatingCard
+                app={MOCK_APPS[1]}
+                className="hidden right-0 top-44 w-[18rem] rotate-3 lg:block"
+                delay="-2.8s"
+              />
+              <FloatingCard
+                app={MOCK_APPS[2]}
+                className="hidden bottom-10 left-0 w-[15rem] rotate-2 sm:block sm:w-[17rem]"
+                delay="-6.1s"
+              />
             </div>
+          </div>
+        </section>
+
+        {/* The two views, as the app actually looks: board on the left of the
+            seam, list on the right, in the same chrome. Two screenshots stitched
+            at a vertical split, because a landing page with one view has to
+            explain the other in words, and this one does not. */}
+        <section
+          aria-label="The app"
+          className="mx-auto w-full max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24"
+        >
+          <div className="overflow-hidden rounded-xl border bg-card shadow-xl">
+            <AppChrome />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/landing-views/board-list-split.jpg"
+              width={1440}
+              height={633}
+              alt="The Ghosted dashboard: the Kanban board on the left of the seam, the grouped list on the right."
+              className="block w-full"
+            />
           </div>
         </section>
 
@@ -663,7 +703,18 @@ export function Landing() {
                   >
                     {f.body}
                   </p>
-                  {f.visual === "silence" && <SilenceMarks />}
+                  {f.href && (
+                    <a
+                      href={f.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-4 inline-flex items-center gap-1.5 rounded-md font-mono text-xs text-violet-700 underline decoration-violet-400/50 underline-offset-4 transition-colors hover:decoration-violet-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:text-violet-300"
+                    >
+                      {f.hrefLabel}
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden />
+                    </a>
+                  )}
+                  {f.visual === "silence" && <SilenceCalendar />}
                   {f.visual === "steps" && <StepRail />}
                 </CardContent>
               </Card>
@@ -672,8 +723,8 @@ export function Landing() {
         </section>
 
         {/* What we're not doing — the page's personality, so it gets its own
-            weight: a dark band in both themes, a statement-sized heading, and
-            the refusals as large text with a cross instead of three more cards. */}
+            weight: a dark band in both themes, a statement-sized heading, and the
+            refusals as boxes whose mark is the crossed glyph. */}
         <section
           aria-label="What we're not doing"
           className="border-y border-zinc-800 bg-zinc-950 text-zinc-50 dark:bg-zinc-900"
@@ -686,22 +737,23 @@ export function Landing() {
               Ghosted is a logbook for your job hunt — not an automation
               software. A simple tool for simple needs.
             </p>
-            <ul className="mt-12 grid gap-10 sm:grid-cols-3 sm:gap-8">
-              {NOT_DOING.map((item) => (
-                <li key={item.title}>
-                  <div className="flex items-center gap-2.5">
-                    <span
-                      aria-hidden
-                      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/80 text-zinc-400"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </span>
-                    <h3 className="text-lg font-semibold tracking-[-0.01em] text-zinc-100">
-                      {item.title}
-                    </h3>
-                  </div>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-                    {item.body}
+            <ul className="mt-12 grid gap-5 sm:grid-cols-3 sm:gap-6">
+              {NOT_DOING.map(({ icon: Icon, title, body }) => (
+                <li
+                  key={title}
+                  className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6"
+                >
+                  <span
+                    aria-hidden
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-zinc-700 bg-zinc-800/80 text-zinc-300"
+                  >
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="mt-5 text-lg font-semibold tracking-[-0.01em] text-zinc-100">
+                    {title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                    {body}
                   </p>
                 </li>
               ))}
@@ -709,8 +761,8 @@ export function Landing() {
           </div>
         </section>
 
-        {/* CTA band — one job, one button, and the payoff pose: the same ghost
-            as the hero, this time holding a phone that answered. */}
+        {/* CTA band — one job, one button, and the payoff pose: the same ghost as
+            the hero, this time holding a phone that answered. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
           <div className="mx-auto w-full max-w-2xl px-5 py-16 text-center sm:px-6 sm:py-24">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -718,9 +770,9 @@ export function Landing() {
               src={ART.happy}
               alt=""
               aria-hidden
-              className="ghost-float mx-auto h-24 w-24 drop-shadow-lg sm:h-28 sm:w-28"
+              className="ghost-float mx-auto h-28 w-28 drop-shadow-lg sm:h-36 sm:w-36"
             />
-            <h2 className="mt-6 text-2xl font-bold leading-[1.15] tracking-[-0.02em] text-white sm:text-3xl">
+            <h2 className="mt-6 text-3xl font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-4xl">
               Ready to stop getting ghosted?
             </h2>
             <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-violet-100 sm:text-lg">
@@ -729,7 +781,7 @@ export function Landing() {
             </p>
             <Button
               size="lg"
-              className="mt-8 bg-white text-violet-700 shadow-lg hover:bg-violet-100"
+              className="mt-9 h-12 bg-white px-8 text-base text-violet-700 shadow-xl ring-1 ring-white/40 hover:bg-violet-100"
               asChild
             >
               <Link href="/register">

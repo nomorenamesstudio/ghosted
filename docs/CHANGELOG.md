@@ -5,6 +5,29 @@ All notable changes, by date and type.
 ## 2026-09-24
 
 ### Changed
+- **Landing, third pass: the hero is a pile, the app is a screenshot, and the
+  tiles say what the product actually is.** The hero no longer frames a fake
+  window: four real dashboard cards drift in the band with three mascots — the
+  sad phone ghost above the pile, `finger-guns` off to the right, `confused`
+  peeking out from underneath — with the icon tornado spinning behind them and
+  every piece bobbing on its own delay (one shared `float-bob`, disabled under
+  reduced motion). Cards pass `compact`, the board's own narrow-card layout, or
+  the single meta line truncates to "Last r…"; the mascots are painted *first*
+  so the cards cover them, because a ghost on top of a card hides the company
+  name. Below the hero the two views appear as the app really looks: the board
+  and the list stitched at a vertical seam (`public/landing-views/board-list-split.jpg`,
+  generated from the running app at 1024px and halved to 720 each) inside the
+  same chrome bar. The bento lost "Favourites first" (not a feature worth a tile)
+  and "A board or a list" (the screenshot says it better), gained **Self-hostable**
+  with the repo link and **MCP, coming soon**, and "Private by design" became
+  **Private by default** — no public profile, JSON export, self-hosted analytics,
+  and no encryption claim, because none is true. The Ghosted tile now draws ten
+  numbered calendar days instead of abstract bars, and the timeline rail shows a
+  process that grows (six steps and a `+1` slot) rather than "5 fixed steps".
+  "What we're not doing" keeps its dark band but its three refusals are boxes
+  again, marked with the crossed bell, envelope and robot.
+
+### Fixed
 - **Landing refinement pass: one grid, one type scale, and the mascots on the
   page.** The first pass had three different left edges (header 1024, hero 1152,
   features 1024) which is why the margins read as random; every container is now
