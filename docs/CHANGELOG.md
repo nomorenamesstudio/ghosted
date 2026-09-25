@@ -5,6 +5,22 @@ All notable changes, by date and type.
 ## 2026-09-24
 
 ### Changed
+- **Landing, fifth pass: the pile overlaps, the mock is draggable, the refusals
+  stack.** The hero's cards are wider and closer (about 65px of overlap per row)
+  with the mascots 25% bigger and still painted above them; the meta lines stay
+  readable because each ghost overlaps its card near an outer corner. The product
+  shot is now a real interaction: `components/LandingViewSplit.tsx` puts the board
+  and the list in one window with a seam you drag (pointer events on the window,
+  so the seam keeps following the cursor, plus arrow / Home / End keys and
+  `aria-valuenow` — it is a slider, not a div with a cursor). Three captures feed
+  it: the app bar, the board and the list, all from the demo account, which now
+  has dates spread across the last few days so no column or section is empty in
+  the shots. The bento dropped the calendar and step-rail drawings for now (they
+  read cramped at tile size) and "MCP" became "MCP integration" with "coming
+  soon" as a grey mono footnote. "What we're not doing" is now the heading and
+  intro on the left with the three refusals stacked down the right.
+
+### Fixed
 - **Landing, fourth pass: the pile gets a narrative, the bento gets icons, the
   mock becomes one window.** The hero's four cards now tell the story in order —
   interviewing, applied, ghosted, offer — with `confused` between the two live

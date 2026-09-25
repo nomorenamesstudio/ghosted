@@ -42,6 +42,7 @@ import { cn } from "@/lib/utils";
 // dashboard, and the look is identical because it is literally the same markup.
 import { ApplicationCardShell } from "./ApplicationCardShell";
 import { AppBrand } from "./AppBrand";
+import { LandingViewSplit } from "./LandingViewSplit";
 import type { ApplicationListItem } from "@/lib/api";
 
 const REPO_URL = "https://github.com/krisztianhadi/ghosted";
@@ -84,7 +85,8 @@ const FEATURES: {
   title: string;
   body: ReactNode;
   span: string;
-  visual?: "silence" | "steps";
+  /** Two-column tile on sm and up: bigger padding and a bigger heading. */
+  wide?: boolean;
   link?: { href: string; label: string };
   note?: string;
 }[] = [
@@ -93,14 +95,14 @@ const FEATURES: {
     title: "Ghosted detection",
     body: "Applications the employer has gone quiet on float into their own section once they pass your patience window — 10 days by default, and you set the pace.",
     span: "sm:col-span-2",
-    visual: "silence",
+    wide: true,
   },
   {
     icon: ListChecks,
     title: "One timeline per application",
     body: "Start with the 5 usual steps and add as many as the process actually needs — a second technical round, a take-home review, a team chat.",
     span: "sm:col-span-2",
-    visual: "steps",
+    wide: true,
   },
   {
     icon: Server,
@@ -111,7 +113,7 @@ const FEATURES: {
   },
   {
     icon: Plug,
-    title: "MCP",
+    title: "MCP integration",
     body: "Your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
     span: "",
     note: "coming soon",
@@ -321,28 +323,6 @@ function IconTornado({ className }: { className?: string }) {
 }
 
 /**
- * The fake app chrome: traffic lights and a URL. Decorative wherever it appears,
- * so it is `aria-hidden` — the thing it frames carries the meaning.
- */
-function AppChrome() {
-  return (
-    <div
-      aria-hidden
-      className="flex items-center gap-2 border-b bg-muted/60 px-3 py-2"
-    >
-      <span className="flex gap-1.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-red-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
-        <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
-      </span>
-      <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground">
-        ghosted.lostsignals.studio
-      </span>
-    </div>
-  );
-}
-
-/**
  * One application card, adrift. The rotation lives on the wrapper and the bob on
  * the inner element, because the keyframes own `transform` — putting both on one
  * element silently drops the rotation.
@@ -413,103 +393,6 @@ function FloatingGhost({
         className="float-bob h-full w-full drop-shadow-lg"
         style={{ animationDelay: delay }}
       />
-    </div>
-  );
-}
-
-/**
- * The Ghosted tile's drawing: ten calendar days, the last one stamped. It is the
- * differentiator in one glance — count the days, then the stamp arrives — and the
- * patience control underneath is the setting that decides when it lands.
- */
-function SilenceCalendar() {
-  return (
-    <div aria-hidden className="flex flex-1 flex-col">
-      <div className="grid grid-cols-10 gap-1">
-        {Array.from({ length: 10 }, (_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "flex aspect-square items-center justify-center rounded-[4px] border font-mono text-[10px] tabular-nums sm:text-[11px]",
-              i < 6
-                ? "border-violet-300/70 bg-violet-500/20 text-violet-700 dark:border-violet-700/60 dark:bg-violet-500/15 dark:text-violet-300"
-                : "border-dashed border-border bg-muted/40 text-muted-foreground",
-            )}
-          >
-            {i + 1}
-          </span>
-        ))}
-      </div>
-      <div className="mt-4 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.12em]">
-        <span className="text-muted-foreground">Days 1 → 10</span>
-        <span className="-rotate-[4deg] rounded-md border-2 border-violet-500/70 px-2 py-1 font-bold text-violet-600 dark:border-violet-400/70 dark:text-violet-300">
-          Ghosted
-        </span>
-      </div>
-      <div className="mt-auto flex items-center gap-2 border-t pt-6">
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          Patience
-        </span>
-        <span className="flex gap-1.5">
-          {["7", "10", "14"].map((days) => (
-            <span
-              key={days}
-              className={cn(
-                "rounded-md border px-2 py-1 font-mono text-[11px] tabular-nums",
-                days === "10"
-                  ? "border-violet-500 bg-violet-500/10 text-violet-700 dark:text-violet-300"
-                  : "border-border text-muted-foreground",
-              )}
-            >
-              {days}d
-            </span>
-          ))}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/**
- * The timeline tile's drawing: a process as long as it needs to be — six steps,
- * two of them done, and an open slot for the next one. Nothing here claims a
- * fixed number of stages.
- */
-function StepRail() {
-  const done = 2;
-  const steps = 6;
-  return (
-    <div aria-hidden className="flex flex-1 flex-col">
-      <div className="flex items-center">
-        {Array.from({ length: steps }, (_, i) => (
-          <span key={i} className="flex flex-1 items-center last:flex-none">
-            <span
-              className={cn(
-                "h-3 w-3 shrink-0 rounded-full border",
-                i < done
-                  ? "border-violet-500 bg-violet-500"
-                  : i === done
-                    ? "border-violet-500 bg-background ring-2 ring-violet-500/25"
-                    : "border-border bg-background",
-              )}
-            />
-            {i < steps - 1 && (
-              <span
-                className={cn("h-px flex-1", i < done ? "bg-violet-500" : "bg-border")}
-              />
-            )}
-          </span>
-        ))}
-        <span className="ml-2 flex h-5 items-center rounded-md border border-dashed border-border px-1.5 font-mono text-[10px] text-muted-foreground">
-          +1
-        </span>
-      </div>
-      <div className="mt-4 flex items-baseline justify-between gap-4">
-        <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
-          As long as it takes
-        </span>
-        <span className="text-sm text-foreground">Technical Interview</span>
-      </div>
     </div>
   );
 }
@@ -589,24 +472,24 @@ export function Landing() {
               {/* row one — the interview stage and the fresh application */}
               <FloatingCard
                 app={MOCK_APPS[0]}
-                className="left-0 top-0 w-[14rem] -rotate-3 sm:w-[16.5rem] sm:-rotate-6"
+                className="left-0 top-0 w-[15rem] -rotate-3 sm:w-[19rem] sm:-rotate-6"
                 delay="-1.2s"
               />
               <FloatingCard
                 app={MOCK_APPS[1]}
-                className="hidden right-0 top-10 w-[16.5rem] rotate-6 sm:block"
+                className="hidden right-0 top-12 w-[19rem] rotate-6 sm:block"
                 delay="-2.8s"
               />
 
               {/* row two — the one that went quiet, and the one that answered */}
               <FloatingCard
                 app={MOCK_APPS[3]}
-                className="bottom-24 left-0 w-[14rem] rotate-2 sm:bottom-16 sm:w-[16.5rem] sm:-rotate-3"
+                className="bottom-24 left-0 w-[15rem] rotate-2 sm:bottom-16 sm:left-2 sm:w-[19rem] sm:-rotate-3"
                 delay="-4.5s"
               />
               <FloatingCard
                 app={MOCK_APPS[2]}
-                className="hidden bottom-24 right-0 w-[16.5rem] rotate-3 sm:block"
+                className="hidden bottom-24 right-2 w-[19rem] rotate-3 sm:block"
                 delay="-6.1s"
               />
 
@@ -617,42 +500,32 @@ export function Landing() {
                   on top of the pile. */}
               <FloatingGhost
                 src={ART.confused}
-                className="left-1/2 top-[9.5rem] z-20 h-20 w-20 -translate-x-1/2 rotate-3 sm:top-[11.5rem] sm:h-24 sm:w-24"
+                className="left-1/2 top-[9rem] z-20 h-24 w-24 -translate-x-1/2 rotate-3 sm:top-[10rem] sm:h-[7.5rem] sm:w-[7.5rem]"
                 delay="-2.1s"
               />
               <FloatingGhost
                 src={ART.sad}
-                className="bottom-[9rem] right-2 z-20 h-20 w-20 -rotate-6 sm:-left-[4.25rem] sm:bottom-2 sm:right-auto sm:h-24 sm:w-24 sm:rotate-0"
+                className="bottom-[8rem] right-2 z-20 h-24 w-24 -rotate-6 sm:-left-[3rem] sm:bottom-6 sm:right-auto sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-0"
                 delay="-3.4s"
               />
               <FloatingGhost
                 src={ART.fingerGuns}
-                className="hidden sm:-bottom-2 sm:right-2 sm:z-20 sm:block sm:h-24 sm:w-24 sm:rotate-6"
+                className="hidden sm:bottom-2 sm:right-2 sm:z-20 sm:block sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-6"
                 delay="-5.6s"
               />
             </div>
           </div>
         </section>
 
-        {/* The two views, as the app actually looks: board on the left of the
-            seam, list on the right, in the same chrome. Two screenshots stitched
-            at a vertical split, because a landing page with one view has to
-            explain the other in words, and this one does not. */}
+        {/* The two views, as the app actually looks: one window with a draggable
+            seam, so the visitor pulls it to whichever view they care about. The
+            captures are real screenshots of the dashboard (donation banner
+            hidden), taken at 1280 and sliced below the app bar. */}
         <section
           aria-label="The app"
           className="mx-auto w-full max-w-6xl px-5 pt-16 sm:px-6 sm:pt-24"
         >
-          <div className="overflow-hidden rounded-xl border bg-card shadow-xl">
-            <AppChrome />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/landing-views/board-list-split.jpg"
-              width={1440}
-              height={633}
-              alt="The Ghosted dashboard: the Kanban board on the left of the seam, the grouped list on the right."
-              className="block w-full"
-            />
-          </div>
+          <LandingViewSplit />
         </section>
 
         {/* Features — a bento, not six equal cards: the differentiator is a big
@@ -678,18 +551,17 @@ export function Landing() {
                 <CardContent
                   className={cn(
                     "flex flex-1 flex-col gap-6 p-6",
-                    f.visual &&
-                      "sm:flex-row sm:items-start sm:justify-between sm:gap-10 sm:p-8",
+                    f.wide && "sm:p-8",
                   )}
                 >
-                  <div className={cn("flex flex-col", f.visual && "sm:max-w-[34ch]")}>
+                  <div className="flex flex-col">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-300">
                       <f.icon className="h-6 w-6" aria-hidden />
                     </span>
                     <h3
                       className={cn(
                         "mt-4 font-semibold tracking-[-0.02em]",
-                        f.visual ? "text-xl sm:text-2xl" : "text-lg",
+                        f.wide ? "text-xl sm:text-2xl" : "text-lg",
                       )}
                     >
                       {f.title}
@@ -714,16 +586,6 @@ export function Landing() {
                       </span>
                     )}
                   </div>
-                  {f.visual === "silence" && (
-                    <div className="sm:w-[46%]">
-                      <SilenceCalendar />
-                    </div>
-                  )}
-                  {f.visual === "steps" && (
-                    <div className="sm:w-[46%]">
-                      <StepRail />
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             ))}
@@ -747,36 +609,40 @@ export function Landing() {
             }}
           />
           <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-end lg:gap-16">
-              <h2 className="text-3xl font-bold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
-                What we&apos;re not doing
-              </h2>
-              <p className="text-base leading-relaxed text-zinc-400 sm:text-lg">
-                Ghosted is a logbook for your job hunt — not an automation
-                software. A simple tool for simple needs.
-              </p>
-            </div>
-            <ul className="mt-14 grid gap-5 sm:grid-cols-3 sm:gap-6">
-              {NOT_DOING.map(({ icon: Icon, title, body }) => (
-                <li
-                  key={title}
-                  className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-7 transition-colors hover:border-zinc-700 sm:p-8"
-                >
-                  <span
-                    aria-hidden
-                    className="flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-800/80 text-zinc-300"
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:items-start lg:gap-16">
+              <div className="lg:sticky lg:top-24">
+                <h2 className="text-3xl font-bold leading-[1.1] tracking-[-0.02em] sm:text-4xl">
+                  What we&apos;re not doing
+                </h2>
+                <p className="mt-6 max-w-md text-base leading-relaxed text-zinc-400 sm:text-lg">
+                  Ghosted is a logbook for your job hunt — not an automation
+                  software. A simple tool for simple needs.
+                </p>
+              </div>
+              <ul className="flex flex-col gap-5">
+                {NOT_DOING.map(({ icon: Icon, title, body }) => (
+                  <li
+                    key={title}
+                    className="flex items-start gap-5 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-6 transition-colors hover:border-zinc-700"
                   >
-                    <Icon className="h-7 w-7" />
-                  </span>
-                  <h3 className="mt-6 text-xl font-semibold tracking-[-0.02em] text-zinc-50">
-                    {title}
-                  </h3>
-                  <p className="mt-3 text-sm leading-relaxed text-zinc-400">
-                    {body}
-                  </p>
-                </li>
-              ))}
-            </ul>
+                    <span
+                      aria-hidden
+                      className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-zinc-700 bg-zinc-800/80 text-zinc-300"
+                    >
+                      <Icon className="h-6 w-6" />
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-semibold tracking-[-0.02em] text-zinc-50 sm:text-xl">
+                        {title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+                        {body}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </section>
 
