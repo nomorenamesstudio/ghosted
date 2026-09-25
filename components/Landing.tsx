@@ -466,30 +466,32 @@ export function Landing() {
                 clipped by the section. The mascots are flat vectors on a
                 transparent ground, which is why nothing here is tinted by the
                 OS: illustrations rather than silhouettes, hence images. */}
-            <div className="relative mt-20 h-[30rem] sm:mt-24 sm:h-[32rem] lg:mt-0 lg:h-[34rem]">
+            <div data-testid="hero-pile" className="relative mt-20 h-[24rem] sm:mt-24 sm:h-[26rem] lg:mt-0 lg:h-[27rem]">
               <IconTornado className="left-1/2 top-[45%]" />
 
-              {/* row one — the interview stage and the fresh application */}
+              {/* row one — the interview stage and the fresh application; row two
+                  sits just under it, close enough to read as one drifting pile
+                  and far enough that no card covers another's name. */}
               <FloatingCard
                 app={MOCK_APPS[0]}
-                className="left-0 top-0 w-[15rem] -rotate-3 sm:w-[19rem] sm:-rotate-6"
+                className="left-0 top-0 w-[15rem] -rotate-3 sm:top-[8%] sm:w-[19rem] sm:-rotate-6"
                 delay="-1.2s"
               />
               <FloatingCard
                 app={MOCK_APPS[1]}
-                className="hidden right-0 top-12 w-[19rem] rotate-6 sm:block"
+                className="hidden right-0 top-[19%] w-[19rem] rotate-6 sm:block"
                 delay="-2.8s"
               />
 
               {/* row two — the one that went quiet, and the one that answered */}
               <FloatingCard
                 app={MOCK_APPS[3]}
-                className="bottom-24 left-0 w-[15rem] rotate-2 sm:bottom-16 sm:left-2 sm:w-[19rem] sm:-rotate-3"
+                className="left-0 top-[39%] w-[15rem] rotate-2 sm:left-2 sm:top-[46%] sm:w-[19rem] sm:-rotate-3"
                 delay="-4.5s"
               />
               <FloatingCard
                 app={MOCK_APPS[2]}
-                className="hidden bottom-24 right-2 w-[19rem] rotate-3 sm:block"
+                className="hidden right-2 top-[57%] w-[19rem] rotate-3 sm:block"
                 delay="-6.1s"
               />
 
@@ -500,17 +502,17 @@ export function Landing() {
                   on top of the pile. */}
               <FloatingGhost
                 src={ART.confused}
-                className="left-1/2 top-[9rem] z-20 h-24 w-24 -translate-x-1/2 rotate-3 sm:top-[10rem] sm:h-[7.5rem] sm:w-[7.5rem]"
+                className="right-2 -top-16 z-20 h-24 w-24 rotate-3 sm:left-1/2 sm:right-auto sm:-top-[7rem] sm:h-[7.5rem] sm:w-[7.5rem] sm:-translate-x-1/2"
                 delay="-2.1s"
               />
               <FloatingGhost
                 src={ART.sad}
-                className="bottom-[8rem] right-2 z-20 h-24 w-24 -rotate-6 sm:-left-[3rem] sm:bottom-6 sm:right-auto sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-0"
+                className="bottom-[6.5rem] right-2 z-20 h-24 w-24 -rotate-6 sm:-left-[3.25rem] sm:bottom-[6%] sm:right-auto sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-0"
                 delay="-3.4s"
               />
               <FloatingGhost
                 src={ART.fingerGuns}
-                className="hidden sm:bottom-2 sm:right-2 sm:z-20 sm:block sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-6"
+                className="hidden sm:-bottom-2 sm:right-2 sm:z-20 sm:block sm:h-[7.5rem] sm:w-[7.5rem] sm:rotate-6"
                 delay="-5.6s"
               />
             </div>

@@ -64,6 +64,13 @@
       "when": 1789749399993,
       "tag": "0008_chief_power_man",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790318664359,
+      "tag": "0009_young_jack_flag",
+      "breakpoints": true
     }
   ]
 }

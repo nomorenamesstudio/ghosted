@@ -105,21 +105,24 @@ export function LandingViewSplit() {
         className="relative cursor-ew-resize touch-pan-y select-none"
         style={{ aspectRatio: "1280 / 743" }}
       >
-        {/* Board: the base layer, clipped to the left of the seam. */}
+        {/* Two halves of one window, and nothing moves while you drag: the seam
+            decides how much of each capture you get, which is what a split view
+            does. The list sits on the left because its cards lead with the
+            company name — a vertical cut through the board takes a card's left
+            edge, a cut through a full-width list card would take its middle. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/landing-views/board.jpg"
+          src="/landing-views/list.jpg"
           width={1280}
           height={743}
-          alt="The Ghosted dashboard in board view: applications as columns of cards."
+          alt="The Ghosted dashboard in list view: applications grouped by stage."
           className="absolute inset-0 h-full w-full object-cover"
           style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
           draggable={false}
         />
-        {/* List: the top layer, clipped to the right of it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/landing-views/list.jpg"
+          src="/landing-views/board.jpg"
           width={1280}
           height={743}
           alt=""

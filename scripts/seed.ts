@@ -313,6 +313,9 @@ async function main() {
         name: "Demo User",
         passwordHash,
         provider: "email",
+        // The live app icon stands in as the demo account's avatar so the user
+        // menu and the marketing captures show a face rather than "DU".
+        image: "/icon-192.png",
       })
       .returning();
     console.log(`created demo user ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);

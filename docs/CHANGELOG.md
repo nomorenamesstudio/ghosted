@@ -2,6 +2,31 @@
 
 All notable changes, by date and type.
 
+## 2026-09-25
+
+### Added
+- **Users have an avatar.** `users.image` (nullable) is the one place a profile
+  picture lives; `authorize()` hands it to Auth.js on credentials sign-in, the
+  JWT carries it as `picture`, and a stored avatar now wins over the anonymous
+  Gravatar probe — so the user menu shows a face instead of two initials. The
+  demo account points at the live app icon (`/icon-192.png`) as a stand-in until
+  there is something to upload; `scripts/seed.ts` creates it that way. Migration
+  `drizzle/0009_young_jack_flag.sql` applied to dev and test.
+
+### Changed
+- **The landing's split view is a window, not a slider.** Dragging the seam no
+  longer moves either capture: both are clipped at the boundary, so dragging
+  reveals and hides rather than shoving the list sideways, which is what made it
+  read as broken. The list sits on the left and the board on the right, because a
+  vertical cut takes a list card's company name off but only ever clips the edge
+  of a board card. The captures were also cleaned up for the shot: the list's
+  own toolbar (search / status / sort) is hidden, since the board's lives in the
+  app bar and two toolbars meeting at a seam looked like two windows.
+- **The hero pile is a heap.** The four cards overlap vertically instead of
+  sitting in two tidy rows, the confused ghost has moved to the top of the pile,
+  and the mascots follow their cards (sad by the ghosted one, finger-guns by the
+  offer).
+
 ## 2026-09-24
 
 ### Changed

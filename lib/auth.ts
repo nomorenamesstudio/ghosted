@@ -78,6 +78,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
+          image: user.image ?? undefined,
           emailVerified: user.emailVerified,
         };
       },
@@ -218,6 +219,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const userEmailVerified = (user as { emailVerified?: unknown })
           .emailVerified;
         token.emailVerified = userEmailVerified === true;
+
+        // A stored avatar — the demo account's app icon, or anything a user
+        // sets later — beats the anonymous Gravatar probe below.
+        if (!token.picture && typeof user.image === "string") {
+          token.picture = user.image;
+        }
 
         // Email/password users have no provider photo, so ask Gravatar once,
         // here — and only here. `account` is present at sign-in only, while

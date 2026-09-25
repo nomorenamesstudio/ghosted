@@ -56,6 +56,10 @@ export const users = pgTable(
     // Nullable for OAuth-only accounts.
     passwordHash: text("password_hash"),
     name: text("name").notNull(),
+    /** Avatar URL. Null for accounts without a picture (the menu falls back to
+     *  initials); OAuth providers fill it, and the demo account points at the
+     *  app icon. */
+    image: text("image"),
     provider: providerEnum("provider").notNull().default("email"),
     providerId: text("provider_id"),
     emailVerified: boolean("email_verified").notNull().default(false),
