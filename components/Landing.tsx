@@ -85,8 +85,8 @@ const FEATURES: {
   span: string;
   /** Two-column tile on sm and up: bigger padding and a bigger heading. */
   wide?: boolean;
-  /** Footer note, prefixed with the repo mark. The GitHub link itself lands when
-   *  the repo goes public. */
+  /** Footer note, prefixed with the repo mark, for tiles whose feature is not
+   *  built yet. */
   soon?: boolean;
 }[] = [
   {
@@ -105,10 +105,9 @@ const FEATURES: {
   },
   {
     icon: Server,
-    title: "Self-hostable",
-    body: "One container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
+    title: "Open source",
+    body: "MIT-licensed and self-hostable: one container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
-    soon: true,
   },
   {
     icon: Plug,

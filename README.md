@@ -5,6 +5,14 @@ through a 5-step default timeline (extendable), and view a lightweight
 dashboard with stats - and never lose track of the applications that went
 quiet on you (ghosted).
 
+## Built with AI
+
+Ghosted is hand-written and AI-enhanced. It was built in pair-programming
+sessions with **DeepSeek V4.1 Flash** running in **DeepSeek Harness**: the
+architecture, design and product decisions are mine, the AI wrote and refactored
+much of the code, and every change was read, tested and committed by hand. Code
+that a machine wrote is still code a human is accountable for.
+
 ## Documentation
 
 - [Setup & run](docs/SETUP.md) - install, env vars, commands, testing, CI/CD
@@ -89,5 +97,4 @@ CSV import/export.
 
 ## License
 
-See [Imprint / legal templates](docs/ARCHITECTURE.md) notes (complete before
-going live).
+MIT - see [LICENSE](LICENSE).

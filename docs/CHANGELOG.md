@@ -2,6 +2,24 @@
 
 All notable changes, by date and type.
 
+## 2026-09-28
+
+### Added
+- **MIT licence.** `LICENSE` (MIT, Copyright (c) 2026 Krisztian Hadi) plus a
+  `"license": "MIT"` field in `package.json`, so the repo — previously public
+  with no licence at all, which means all rights reserved — is now genuinely
+  open source.
+
+### Changed
+- **The landing's "Self-hostable" tile says "Open source".** The licence makes
+  the claim true, so the tile is retitled and its body now leads with MIT; its
+  "coming soon" footer is gone, because the repo and the licence are live — the
+  "MCP integration" tile keeps its own footer, since no MCP code exists yet.
+- **README states the AI disclosure.** A "Built with AI" section names the
+  tooling (DeepSeek V4.1 Flash in DeepSeek Harness) and the split of work:
+  human direction, architecture and review, AI-authored code. The stale
+  "See Imprint / legal templates notes" licence pointer is gone.
+
 ## 2026-09-25
 
 ### Added
