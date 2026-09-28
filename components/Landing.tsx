@@ -85,8 +85,9 @@ const FEATURES: {
   span: string;
   /** Two-column tile on sm and up: bigger padding and a bigger heading. */
   wide?: boolean;
-  /** Footer note, prefixed with the repo mark, for tiles whose feature is not
-   *  built yet. */
+  /** Footer note, prefixed with the repo mark, for tiles that are not released
+   *  yet — whatever the reason, including a repo that is public but not ready
+   *  to point people at. */
   soon?: boolean;
 }[] = [
   {
@@ -108,6 +109,7 @@ const FEATURES: {
     title: "Open source",
     body: "MIT-licensed and self-hostable: one container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
+    soon: true,
   },
   {
     icon: Plug,
