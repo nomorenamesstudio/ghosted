@@ -170,7 +170,7 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   cleared, status re-derived). Both variants also offer a tertiary "leave it as
   is, but move", which is a plain status PATCH. Confirming rewrites the timeline
   *first* and PATCHes the status last, because the timeline calls re-derive the
-  status. Cancelling writes nothing at all — which is why the card is never
+  status. Canceling writes nothing at all — which is why the card is never
   optimistically moved for a step back: it stays in its column while the dialog
   is open.
 - **The board owns the page width, and the view lives in Dashboard**: which view
@@ -195,7 +195,7 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   hold is the *job posting* URL, and a favicon from `linkedin.com` or
   `boards.greenhouse.io` is the board's logo, not the employer's. Candidates
   are derived in `lib/utils/company-domain.ts`, in order of trustworthiness:
-  the application's explicit `companyWebsite` (normalised on write) -> posting
+  the application's explicit `companyWebsite` (normalized on write) -> posting
   host -> parent domain -> board subdomain/path slug -> single-word company
   name. A slug guess can land on an unrelated company (`Acme` -> the real
   `acme.com`), which is exactly why the explicit field exists and comes first.
@@ -253,7 +253,7 @@ What the refactor actually changed, each traced to a measurement:
 
 One more decision worth keeping: **the application card has one shell, shared by
 the dashboard and the landing page.** `ApplicationCardShell` is a server
-component holding the markup and the per-status colour tokens (now in
+component holding the markup and the per-status color tokens (now in
 `lib/utils/card-styles.ts`, since a server component cannot import values from a
 client one); `ApplicationCardView` wraps it with the client-only pieces — live
 relative timestamp, Radix avatar, Radix progress — and the landing passes a plain
@@ -261,7 +261,7 @@ relative timestamp, Radix avatar, Radix progress — and the landing passes a pl
 pulling date-fns and two Radix primitives onto the first page a stranger loads,
 without a copied card that would drift.
 
-Those per-status colours are authored in **OKLCH, one lightness and one chroma
+Those per-status colors are authored in **OKLCH, one lightness and one chroma
 per layer, varying only the hue** — surface 0.951/0.030, border 0.885/0.050,
 progress track 0.862/0.062, with a dark twin of each. Tailwind's ramp cannot do
 this job: at the same lightness `amber-100` carries 2.3x the chroma of `sky-100`,

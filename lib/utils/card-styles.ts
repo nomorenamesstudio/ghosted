@@ -1,7 +1,7 @@
 import type { DisplayStatus } from "@/lib/utils/status";
 
 /**
- * The card's per-status colour tokens, kept out of `components/ApplicationCard`
+ * The card's per-status color tokens, kept out of `components/ApplicationCard`
  * on purpose: that module is a client component, and a server component cannot
  * import values from one (it gets an opaque client reference instead). The
  * landing page renders the same card with static data, so the tokens live here
@@ -9,7 +9,7 @@ import type { DisplayStatus } from "@/lib/utils/status";
  *
  * These are written as `oklch()` instead of picked off Tailwind's ramp, because
  * the ramp's steps are not perceptually even: at the same lightness `amber-100`
- * carries 2.3x the colour of `sky-100` (OKLCH chroma 0.058 against 0.025), with
+ * carries 2.3x the color of `sky-100` (OKLCH chroma 0.058 against 0.025), with
  * `emerald-100` at 0.051 and `red-100`/`violet-100` down at 0.031/0.028. Picking
  * the same step number for every status therefore produced cards of very
  * different volume — interviewing and offer shouted next to a ghosted one, and
@@ -38,7 +38,7 @@ import type { DisplayStatus } from "@/lib/utils/status";
  */
 
 /** The badge variant each status wears — deliberately one step louder than the
- *  card it labels, so the label stays readable on a normalised surface. */
+ *  card it labels, so the label stays readable on a normalized surface. */
 export const STATUS_VARIANT: Record<
   DisplayStatus,
   "default" | "info" | "warning" | "success" | "danger" | "violet" | "muted"
@@ -51,7 +51,7 @@ export const STATUS_VARIANT: Record<
   ghosted: "violet",
 };
 
-/** The card's own tint: opaque, and the same colour wherever the card sits. */
+/** The card's own tint: opaque, and the same color wherever the card sits. */
 export const STATUS_TINT: Partial<Record<DisplayStatus, string>> = {
   applied:
     "bg-[color:oklch(0.951_0.03_236.8)] dark:bg-[color:oklch(0.22_0.03_236.8)]",
@@ -73,7 +73,7 @@ export const STATUS_TINT: Partial<Record<DisplayStatus, string>> = {
   archived: "bg-[color:oklch(0.951_0_0)] dark:bg-[color:oklch(0.22_0_0)]",
 };
 
-/** Border matching each status colour (pairs with the tint). */
+/** Border matching each status color (pairs with the tint). */
 export const STATUS_BORDER: Partial<Record<DisplayStatus, string>> = {
   applied:
     "border-[color:oklch(0.885_0.05_236.8)] hover:border-[color:oklch(0.845_0.07_236.8)] dark:border-[color:oklch(0.34_0.05_236.8)] dark:hover:border-[color:oklch(0.4_0.07_236.8)]",
@@ -89,7 +89,7 @@ export const STATUS_BORDER: Partial<Record<DisplayStatus, string>> = {
     "border-zinc-300/70 hover:border-zinc-400/70 dark:border-zinc-700/60 dark:hover:border-zinc-600/60",
 };
 
-/** Progress bar colours harmonised with each status (track + fill). */
+/** Progress bar colors harmonised with each status (track + fill). */
 export const STATUS_PROGRESS: Record<
   DisplayStatus,
   { track: string; fill: string }
@@ -121,7 +121,7 @@ export const STATUS_PROGRESS: Record<
   },
   // Neutral, but at the same lightness as the five above (chroma 0), so the
   // archived bar carries the same weight as theirs. It used to be a couple of
-  // steps darker "because the card is the muted grey" — the card is not any more,
+  // steps darker "because the card is the muted gray" — the card is not any more,
   // and against a light surface that track read as the heaviest bar on the page.
   archived: {
     track: "bg-[color:oklch(0.862_0_0)] dark:bg-[color:oklch(0.3_0_0)]",

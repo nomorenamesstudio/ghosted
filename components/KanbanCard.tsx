@@ -57,9 +57,9 @@ export function KanbanCard({
       <MoveToMenu
         app={app}
         onMove={onMove}
-        // The same rule as the list card's kebab: centred on the progress bar it
+        // The same rule as the list card's kebab: centerd on the progress bar it
         // reserves room from. A compact card is p-3 here, plus the 1px card
-        // border, so its bar's centre is 21px above the bottom edge and a 28px
+        // border, so its bar's center is 21px above the bottom edge and a 28px
         // trigger needs 21 - 14. The column stacks, which puts the bar on the
         // card's last line whatever the round or date above it says.
         className="absolute bottom-[7px] right-1.5"

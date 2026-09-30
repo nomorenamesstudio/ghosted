@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 
 /**
  * The web app manifest, for "add to home screen" on Android — and on iOS, which
- * reads the manifest for the standalone window and its colours but takes its icons
+ * reads the manifest for the standalone window and its colors but takes its icons
  * from the `appleWebApp` metadata in the root layout.
  *
  * Icons are cut from `public/staring-at-phone-sad-app-icon-alt.png` (the 2048px

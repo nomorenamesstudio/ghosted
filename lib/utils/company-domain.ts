@@ -4,7 +4,7 @@
  * The only URL we store is the *job posting* URL, and job seekers usually paste
  * a board link (`linkedin.com/jobs/...`, `boards.greenhouse.io/acme/...`) rather
  * than the employer's own site. A favicon taken from a board link is the board's
- * logo, so those hosts are recognised and stripped before anything is fetched.
+ * logo, so those hosts are recognized and stripped before anything is fetched.
  *
  * Pure and synchronous on purpose: candidate selection never touches the
  * network, so the caller can cache the outcome per domain.
@@ -107,11 +107,11 @@ function hasDeadTld(host: string): boolean {
 }
 
 /**
- * Normalise a URL or bare host to a lowercase domain, or null when the input
+ * Normalize a URL or bare host to a lowercase domain, or null when the input
  * cannot be one. Deliberately rejects IP literals: nothing here should ever be
  * able to point a fetch at an internal address.
  */
-export function normaliseDomain(
+export function normalizeDomain(
   input: string | null | undefined,
 ): string | null {
   if (!input) return null;
@@ -220,10 +220,10 @@ export function logoDomainCandidates(
   };
 
   // The employer's own site, when the user told us what it is.
-  const stated = normaliseDomain(companyWebsite);
+  const stated = normalizeDomain(companyWebsite);
   if (stated && !hasDeadTld(stated)) push(stated);
 
-  const host = normaliseDomain(url);
+  const host = normalizeDomain(url);
   const onBoard = host ? isJobBoardHost(host) : false;
 
   if (host && !onBoard && !hasDeadTld(host)) push(host);

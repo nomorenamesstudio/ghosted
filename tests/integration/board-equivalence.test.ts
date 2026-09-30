@@ -53,7 +53,7 @@ async function seedBoard(userId: string) {
     .set({ status: "ghosted" })
     .where(eqId(handFiled.id));
 
-  // A favourite, so the shared sort's favourite-first rule is exercised too.
+  // A favorite, so the shared sort's favorite-first rule is exercised too.
   await db
     .update(applications)
     .set({ isFavorite: true })

@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light mode: the page is a soft grey so white cards and tinted surfaces
+  /* Light mode: the page is a soft gray so white cards and tinted surfaces
      read as surfaces. A pure-white page made the columns, hairlines and the
      paler status tints nearly invisible. */
   :root {
@@ -174,7 +174,7 @@ html {
 
 /* The board's column strip scrolls sideways on purpose — the columns snap past
    each other — but a desktop browser reserves a full-height scrollbar for it and
-   draws that chunky grey bar right under the cards, which is what it looked like
+   draws that chunky gray bar right under the cards, which is what it looked like
    at narrower widths. Slimming it to a quiet hairline keeps the affordance (this
    is the only hint a mouse user gets that there is more to the right) while
    letting the cards own the space.
@@ -242,7 +242,7 @@ html[data-board-content] main.app-shell {
    1.4.4), and 16px is the accessible minimum for form text anyway.
 
    Scoped to coarse pointers (phones, tablets) so the desktop design keeps its
-   14px labels: the zoom is a touch-only behaviour, and non-text controls such
+   14px labels: the zoom is a touch-only behavior, and non-text controls such
    as checkboxes and range sliders never trigger it.
 
    `!important` is load-bearing, not laziness. Tailwind v3 emits its utilities

@@ -113,8 +113,8 @@ export function ApplicationCard({
       <MoveToMenu
         app={app}
         onMove={(id, to, company) => onMove(id, app.displayStatus, to, company)}
-        // Centred on the progress bar it makes room for. Measured: the bar's
-        // centre sits 25px above the card's bottom edge (p-4, the 1px card
+        // Centerd on the progress bar it makes room for. Measured: the bar's
+        // center sits 25px above the card's bottom edge (p-4, the 1px card
         // border, and the bar's own half-row), so a 28px trigger needs
         // 25 - 14. `reserveActions` keeps the bar out of its way horizontally.
         className="absolute bottom-[11px] right-4"

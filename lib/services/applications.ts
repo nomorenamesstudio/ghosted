@@ -200,7 +200,7 @@ function orderByFor(sort?: SortKey): SQL[] {
       ];
     case "progress":
       // Progress is derived from milestones (done / total steps), so order by
-      // the same ratio in SQL — favourites stay pinned on top.
+      // the same ratio in SQL — favorites stay pinned on top.
       return [
         sql`${applications.isFavorite} desc`,
         sql`(
@@ -891,7 +891,7 @@ export async function reopenApplication(
   return updated ?? null;
 }
 
-/** Toggle the favourite flag (favourites are pinned to the top of lists). */
+/** Toggle the favorite flag (favorites are pinned to the top of lists). */
 export async function toggleFavorite(
   userId: string,
   applicationId: string,

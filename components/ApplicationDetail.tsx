@@ -100,7 +100,7 @@ export function ApplicationDetail({ id }: { id: string }) {
     onError: (err) => setActionError((err as Error).message),
   });
 
-  /** Toggle favourite (optimistic). */
+  /** Toggle favorite (optimistic). */
   const favorite = useMutation({
     mutationFn: () => toggleFavorite(id),
     onMutate: async () => {
@@ -170,7 +170,7 @@ export function ApplicationDetail({ id }: { id: string }) {
 
   const app = data.data;
 
-  // One kebab inside the details card: edit, favourite, archive/reopen. It used
+  // One kebab inside the details card: edit, favorite, archive/reopen. It used
   // to be split between a star and a menu in the page header, plus an Edit
   // button in the card — three places for the same set of actions.
   const cardActions = (
@@ -195,7 +195,7 @@ export function ApplicationDetail({ id }: { id: string }) {
               app.isFavorite && "fill-amber-400 text-amber-500",
             )}
           />
-          {app.isFavorite ? "Remove from favourites" : "Add to favourites"}
+          {app.isFavorite ? "Remove from favorites" : "Add to favorites"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {app.status === "archived" ? (

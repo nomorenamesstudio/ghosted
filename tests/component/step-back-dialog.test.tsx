@@ -69,7 +69,7 @@ describe("StepBackDialog — back from Offers", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("cancelling writes nothing", () => {
+  it("canceling writes nothing", () => {
     const { onConfirm, onMoveAnyway, onOpenChange } = setup();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onConfirm).not.toHaveBeenCalled();

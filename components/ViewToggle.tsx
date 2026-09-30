@@ -8,7 +8,7 @@ import type { ViewMode } from "./ApplicationList";
  * Segmented control for List / Board.
  *
  * Deliberately not built from Button variants: the selected segment is a raised
- * card-coloured chip on a muted track, which is what makes the active state
+ * card-colored chip on a muted track, which is what makes the active state
  * readable. `secondary` sits within ~1.1:1 of its own background in both themes,
  * so the old version looked like neither side was selected.
  */

@@ -223,7 +223,7 @@ export function resetTimeline(id: string): Promise<{ data: Application }> {
   return request(`/api/applications/${id}/milestones/reset`, { method: "POST" });
 }
 
-/** Toggle the favourite flag (favourites are pinned to the top of lists). */
+/** Toggle the favorite flag (favorites are pinned to the top of lists). */
 export function toggleFavorite(id: string): Promise<{ data: Application }> {
   return request(`/api/applications/${id}/favorite`, { method: "POST" });
 }

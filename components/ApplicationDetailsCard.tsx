@@ -21,7 +21,7 @@ export function ApplicationDetailsCard({
   actions,
 }: {
   app: ApplicationDetail;
-  /** Kebab menu rendered in the header — edit, favourite, archive/reopen. */
+  /** Kebab menu rendered in the header — edit, favorite, archive/reopen. */
   actions?: React.ReactNode;
 }) {
   return (

@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
  *
  * iOS takes `<link rel="apple-touch-icon">` and ignores the manifest's icons;
  * Android takes the manifest's. iOS also paints transparency as black, so the
- * apple icon has to be flat — which is why this checks the PNG colour type rather
+ * apple icon has to be flat — which is why this checks the PNG color type rather
  * than just its dimensions, the one mistake that looks fine everywhere else.
  */
 /** Every file that has to be served and correctly shaped. */
@@ -29,9 +29,9 @@ const ARCHIVE = [
 const pngHeader = (body: Buffer) => ({
   width: body.readUInt32BE(16),
   height: body.readUInt32BE(20),
-  // IHDR: 8-bit depth, then colour type — 2 is truecolour, 6 is truecolour+alpha.
+  // IHDR: 8-bit depth, then color type — 2 is truecolor, 6 is truecolor+alpha.
   bitDepth: body[24],
-  colourType: body[25],
+  colorType: body[25],
 });
 
 test("the manifest describes an installable app with the icon set", async ({
@@ -66,9 +66,9 @@ test("every icon is served, at the size it claims, flat for iOS", async ({
     const header = pngHeader(Buffer.from(await res.body()));
     expect(header.width, `${src} width`).toBe(size);
     expect(header.height, `${src} height`).toBe(size);
-    // Truecolour without an alpha channel: iOS composites transparency onto
+    // Truecolor without an alpha channel: iOS composites transparency onto
     // black, so a transparent icon arrives as a black square.
-    expect(header.colourType, `${src} colour type`).toBe(2);
+    expect(header.colorType, `${src} color type`).toBe(2);
   }
 });
 

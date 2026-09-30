@@ -22,7 +22,7 @@ describe("createApplicationSchema", () => {
     expect(r.success).toBe(true);
   });
 
-  it("normalises the company website to a domain", () => {
+  it("normalizes the company website to a domain", () => {
     const bare = createApplicationSchema.safeParse({
       company: "Acme",
       role: "Engineer",

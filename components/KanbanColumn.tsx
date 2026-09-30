@@ -94,7 +94,7 @@ export function KanbanColumn({
       }}
       onDrop={handleDrop}
       className={cn(
-        // White in light mode (surfaces read against the grey page), with the
+        // White in light mode (surfaces read against the gray page), with the
         // same subtle lift over the page in dark mode. 300px is a floor, not a
         // fixed width: with room to spare the columns share it evenly and fill
         // the window, and when there is not enough (six of them on a laptop)
@@ -127,7 +127,7 @@ export function KanbanColumn({
         ) : items.length === 0 ? (
           <p
             className={cn(
-              // Top of the column, not centred: a 10-card column elsewhere used
+              // Top of the column, not centerd: a 10-card column elsewhere used
               // to leave this floating in the middle of nothing.
               "rounded-lg border border-dashed px-4 py-6 text-center text-xs text-muted-foreground",
               over && droppable && "border-violet-400/70 text-foreground",

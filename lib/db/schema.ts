@@ -86,7 +86,7 @@ export const applications = pgTable(
     role: text("role").notNull(),
     url: text("url"),
     /**
-     * Employer's own domain, normalised on write (`stripe.com`), and only used
+     * Employer's own domain, normalized on write (`stripe.com`), and only used
      * to resolve the company logo. It is the reliable answer when the job URL
      * is a board link, and it overrides every guess (see
      * lib/utils/company-domain.ts).
@@ -97,7 +97,7 @@ export const applications = pgTable(
     contactPhone: text("contact_phone"),
     notes: text("notes"),
     status: applicationStatusEnum("status").notNull().default("applied"),
-    // Favourites are pinned to the top of every list/section.
+    // Favorites are pinned to the top of every list/section.
     isFavorite: boolean("is_favorite").notNull().default(false),
     // The status an archived application had before archiving, so Reopen can
     // restore it exactly (including manual states like 'rejected').

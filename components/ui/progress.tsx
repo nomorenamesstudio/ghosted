@@ -63,7 +63,7 @@ const Progress = React.forwardRef<
               "pointer-events-none absolute inset-y-0 w-[2px] bg-card",
               segmentClassName,
             )}
-            // Centred on the boundary, so the first and last pieces are equal.
+            // Centerd on the boundary, so the first and last pieces are equal.
             style={{ left: `${((i + 1) / segments) * 100}%`, marginLeft: "-1px" }}
           />
         ))}

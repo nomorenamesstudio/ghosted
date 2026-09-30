@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Toggle the favourite flag (favourites are pinned to the top of lists). */
+/** Toggle the favorite flag (favorites are pinned to the top of lists). */
 export async function POST(
   _req: Request,
   { params }: { params: { id: string } },

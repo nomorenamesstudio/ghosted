@@ -97,7 +97,7 @@ export function ApplicationSection({
       >
         {/* Same optical nudge as the brand mark, and for the same reason: the
             line box reserves room below the baseline that uppercase text never
-            uses, so a box-centred icon sits low against the caps — measured at
+            uses, so a box-centerd icon sits low against the caps — measured at
             1.87px in the rendered pixels, against 0.75px on the wordmark because
             this title has no ascenders to pull its ink upward. */}
         <Icon className="h-4 w-4 -translate-y-0.5" />

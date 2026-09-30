@@ -4,7 +4,7 @@ import { createAppViaApi, registerUser, uniqueEmail } from "./helpers";
 
 /**
  * Accessibility audit with axe on the key routes, in **both themes**: the light
- * palette is the one people squint at (pale tints, grey-on-grey surfaces), so
+ * palette is the one people squint at (pale tints, gray-on-gray surfaces), so
  * auditing only the default theme would miss it. Runs in CI with the rest of
  * the e2e suite, so regressions fail the build.
  */

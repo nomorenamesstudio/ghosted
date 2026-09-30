@@ -4,7 +4,7 @@ import {
   milestoneStatusEnum,
 } from "@/lib/db/schema";
 import { isSafeHttpUrl } from "./sanitize";
-import { normaliseDomain } from "./company-domain";
+import { normalizeDomain } from "./company-domain";
 import { PATIENCE_LEVELS } from "./status";
 
 /* ------------------------------------------------------------------ */
@@ -60,7 +60,7 @@ const optionalDateSchema = z
 
 /**
  * The employer's own website, used for the company logo. Accepts a full URL or
- * a bare domain (`stripe.com`) and stores the normalised domain either way;
+ * a bare domain (`stripe.com`) and stores the normalized domain either way;
  * empty string / null clears it.
  */
 const optionalCompanyWebsiteSchema = z
@@ -71,11 +71,11 @@ const optionalCompanyWebsiteSchema = z
       .string()
       .trim()
       .max(253)
-      .refine((s) => normaliseDomain(s) !== null, {
+      .refine((s) => normalizeDomain(s) !== null, {
         message: "Enter a website like stripe.com",
       }),
   ])
-  .transform((v) => (v === "" || v === null ? null : normaliseDomain(v)))
+  .transform((v) => (v === "" || v === null ? null : normalizeDomain(v)))
   .optional();
 
 export const createApplicationSchema = z.object({

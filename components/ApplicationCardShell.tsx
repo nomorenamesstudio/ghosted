@@ -96,9 +96,9 @@ export function ApplicationCardShell({
 
         {/* Hairline across the full card, then the dates and the progress:
             side by side on the wide list card, stacked in a kanban column.
-            Bottom-aligned, not centred: if the round and the date below wrap to
+            Bottom-aligned, not centerd: if the round and the date below wrap to
             two lines on a narrow list card, the progress bar has to stay on the
-            card's last line — that is the line the "Move to" menu is centred
+            card's last line — that is the line the "Move to" menu is centerd
             on. With both on one line the two are identical. */}
         <div
           className={cn(

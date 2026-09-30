@@ -1,32 +1,32 @@
 import { describe, it, expect } from "vitest";
 import {
-  normaliseDomain,
+  normalizeDomain,
   companySlug,
   logoDomainCandidates,
 } from "@/lib/utils/company-domain";
 
-describe("normaliseDomain", () => {
+describe("normalizeDomain", () => {
   it("accepts URLs and bare hosts", () => {
-    expect(normaliseDomain("https://stripe.com/jobs/1?a=1")).toBe("stripe.com");
-    expect(normaliseDomain("  Stripe.COM  ")).toBe("stripe.com");
-    expect(normaliseDomain("careers.figma.com")).toBe("careers.figma.com");
-    expect(normaliseDomain("https://jobs.lever.co/acme")).toBe("jobs.lever.co");
+    expect(normalizeDomain("https://stripe.com/jobs/1?a=1")).toBe("stripe.com");
+    expect(normalizeDomain("  Stripe.COM  ")).toBe("stripe.com");
+    expect(normalizeDomain("careers.figma.com")).toBe("careers.figma.com");
+    expect(normalizeDomain("https://jobs.lever.co/acme")).toBe("jobs.lever.co");
   });
 
   it("strips www and trailing dots", () => {
-    expect(normaliseDomain("https://www.notion.so/careers")).toBe("notion.so");
-    expect(normaliseDomain("notion.so.")).toBe("notion.so");
+    expect(normalizeDomain("https://www.notion.so/careers")).toBe("notion.so");
+    expect(normalizeDomain("notion.so.")).toBe("notion.so");
   });
 
   it("rejects anything that is not a fetchable public domain", () => {
-    expect(normaliseDomain(null)).toBeNull();
-    expect(normaliseDomain("")).toBeNull();
-    expect(normaliseDomain("localhost")).toBeNull();
-    expect(normaliseDomain("192.168.0.1")).toBeNull();
-    expect(normaliseDomain("http://10.0.0.5:8080/admin")).toBeNull();
-    expect(normaliseDomain("http://[::1]/")).toBeNull();
-    expect(normaliseDomain("javascript:alert(1)")).toBeNull();
-    expect(normaliseDomain("not a domain")).toBeNull();
+    expect(normalizeDomain(null)).toBeNull();
+    expect(normalizeDomain("")).toBeNull();
+    expect(normalizeDomain("localhost")).toBeNull();
+    expect(normalizeDomain("192.168.0.1")).toBeNull();
+    expect(normalizeDomain("http://10.0.0.5:8080/admin")).toBeNull();
+    expect(normalizeDomain("http://[::1]/")).toBeNull();
+    expect(normalizeDomain("javascript:alert(1)")).toBeNull();
+    expect(normalizeDomain("not a domain")).toBeNull();
   });
 });
 

@@ -20,7 +20,7 @@ export async function markUserVerified(email: string): Promise<void> {
 }
 
 /**
- * The dashboard opens on the Kanban board now. Specs that assert list behaviour
+ * The dashboard opens on the Kanban board now. Specs that assert list behavior
  * (sections, infinite scroll over the sections) switch to List
  * first - the choice is remembered per browser, so once is enough.
  *

@@ -289,8 +289,8 @@ export function MilestoneTimeline({
           <Button
             variant="outline"
             size="sm"
-            // bg-card: outline's default fill is the page colour, which left it
-            // reading as disabled text with a border on the grey page.
+            // bg-card: outline's default fill is the page color, which left it
+            // reading as disabled text with a border on the gray page.
             className="bg-card"
             onClick={() => setAddOpen(true)}
           >

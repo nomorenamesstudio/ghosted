@@ -19,7 +19,7 @@ export default async function DashboardLayout({
     <AppProviders>
       <div className="min-h-screen">
         {/* Same surface as the board columns (bg-card / dark:bg-muted/20): the
-            header and the columns read as one white frame around the grey page. */}
+            header and the columns read as one white frame around the gray page. */}
         <header className="sticky top-0 z-40 border-b bg-card backdrop-blur dark:bg-muted/20">
           <div className="app-shell mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
             <AppBrand />

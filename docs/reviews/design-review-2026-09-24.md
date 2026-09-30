@@ -69,7 +69,7 @@ language is wrong.
    are off-screen on the default view. Either drop the floor at `lg` or reduce the
    visible set.
 7. **One visual importance tier.** Both reviewers agree the palette is fine; Claude's
-   finding is compositional — six identical grey columns and a page with no landmark.
+   finding is compositional — six identical gray columns and a page with no landmark.
    The cheap experiment: give Offers (and only Offers) a distinct surface treatment and
    see whether the board reads faster.
 
@@ -101,7 +101,7 @@ language is wrong.
   file is 124 lines total and the pattern is not the problem. The real note from
   GPT-6-Sol stands: on mobile the banner eats the opening viewport. Downgraded to a nit.
 - **Destructive-action styling.** Claude says Archive sits at the same visual weight as
-  Favourite; there *is* a `DropdownMenuSeparator` and a confirm dialog
+  Favorite; there *is* a `DropdownMenuSeparator` and a confirm dialog
   (`ApplicationDetail.tsx:185-213`). Downgraded to a nit.
 
 ## Do not do

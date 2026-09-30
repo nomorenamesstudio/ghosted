@@ -49,7 +49,7 @@ timeline. Unverified accounts are capped at `UNVERIFIED_APP_LIMIT` (default
 
 Request: `{ "company": "Acme", "role": "Engineer", "url": "https://...",
 "companyWebsite": "acme.com" }` - `companyWebsite` is optional, accepts a bare
-domain or a full URL, and is stored normalised (`acme.com`); `""` or `null`
+domain or a full URL, and is stored normalized (`acme.com`); `""` or `null`
 clears it. It only feeds the company-logo lookup, where it overrides every
 guess. `PATCH /applications/:id` takes the same fields.
 Response: `201` with the created application + milestones.
@@ -74,7 +74,7 @@ Restore an archived application to its pre-archive status.
 
 ### POST /applications/:id/favorite
 
-Toggle the favourite flag (favourited apps are pinned to the top of lists).
+Toggle the favorite flag (favorited apps are pinned to the top of lists).
 
 ### POST /applications/:id/milestones
 

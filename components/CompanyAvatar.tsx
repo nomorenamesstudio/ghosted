@@ -21,7 +21,7 @@ const SIZES = {
  * A rounded square rather than the round user avatar: favicons are square with
  * detail near the corners, and a circle crops exactly that. The monogram
  * fallback (first letter of the company) is what shows for a company with no
- * logo, and it stays neutral - the card already carries its status colour.
+ * logo, and it stays neutral - the card already carries its status color.
  *
  * The image is decorative: the company name sits right next to it, so it is
  * hidden from assistive tech instead of being announced twice.

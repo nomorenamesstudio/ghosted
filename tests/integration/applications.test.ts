@@ -181,12 +181,12 @@ describe("GET /api/applications", () => {
     expect(data.map((d) => d.progress)).toEqual([100, 60, 20]);
   });
 
-  it("pins favourite applications to the top of the list", async () => {
+  it("pins favorite applications to the top of the list", async () => {
     const user = await createUser();
     const zebra = await createApp(user.id, { company: "Zebra" });
     const apple = await createApp(user.id, { company: "Apple" });
 
-    // Favourite "Apple" (created after Zebra, so it sorts last by default).
+    // Favorite "Apple" (created after Zebra, so it sorts last by default).
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await TOGGLE_FAVORITE(new Request(`${base}/${apple.app.id}/favorite`), {
       params: { id: apple.app.id },
@@ -857,7 +857,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
 });
 
 describe("POST /api/applications/:id/favorite", () => {
-  it("toggles the favourite flag", async () => {
+  it("toggles the favorite flag", async () => {
     const user = await createUser();
     const { app } = await createApp(user.id);
 
