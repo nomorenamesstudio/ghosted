@@ -70,15 +70,30 @@ class SmtpSession {
     reject: (error: Error) => void;
   }> = [];
   private failure: Error | null = null;
+  private readonly onData = (chunk: string) => this.onData_(chunk);
+  private readonly onError = (error: Error) => this.fail(error);
+  private readonly onClose = () => this.fail(new Error("SMTP: connection closed"));
 
   constructor(private socket: Socket | TLSSocket) {
     socket.setEncoding("utf8");
     socket.setTimeout(REPLY_TIMEOUT_MS, () => {
       this.fail(new Error(`SMTP: no reply within ${REPLY_TIMEOUT_MS}ms`));
     });
-    socket.on("data", (chunk: string) => this.onData(chunk));
-    socket.on("error", (error) => this.fail(error));
-    socket.on("close", () => this.fail(new Error("SMTP: connection closed")));
+    socket.on("data", this.onData);
+    socket.on("error", this.onError);
+    socket.on("close", this.onClose);
+  }
+
+  /**
+   * Stop listening, so the same descriptor can be handed to TLS. Without this
+   * the old reader is still attached while the handshake bytes arrive, and it
+   * consumes them as SMTP replies.
+   */
+  detach(): void {
+    this.socket.removeListener("data", this.onData);
+    this.socket.removeListener("error", this.onError);
+    this.socket.removeListener("close", this.onClose);
+    this.socket.setTimeout(0);
   }
 
   private fail(error: Error): void {
@@ -87,7 +102,7 @@ class SmtpSession {
     for (const waiter of this.waiters.splice(0)) waiter.reject(error);
   }
 
-  private onData(chunk: string): void {
+  private onData_(chunk: string): void {
     this.buffer += chunk;
     let index = this.buffer.indexOf("\r\n");
     let code = 0;
@@ -155,6 +170,20 @@ function expect(reply: Reply, codes: number[], step: string): void {
   }
 }
 
+/**
+ * A header or envelope field may not contain a line break: `\r\n` inside `to` or
+ * `from` is header injection (a `Bcc:` smuggled into the message). The subject
+ * is safe by construction because `encodeHeaderValue` base64s anything outside
+ * printable ASCII; these two are not, so they are refused explicitly rather than
+ * relied upon to stay internal.
+ */
+function assertSingleLine(value: string, field: string): string {
+  if (/[\r\n]/.test(value)) {
+    throw new Error(`SMTP: ${field} must not contain a line break`);
+  }
+  return value;
+}
+
 /** `Ghosted <hi@example.com>` or `hi@example.com` → `hi@example.com`. */
 export function bareAddress(value: string): string {
   const angled = /<([^>]+)>/.exec(value);
@@ -182,6 +211,9 @@ export function buildMessage({
   html,
   date = new Date(),
 }: EmailMessage & { from: string; date?: Date }): string {
+  assertSingleLine(from, "from");
+  assertSingleLine(to, "to");
+
   const headers = [
     `From: ${from}`,
     `To: ${to}`,
@@ -231,6 +263,10 @@ export async function sendSmtpMessage(
   message: EmailMessage & { from: string },
 ): Promise<void> {
   const socket = await connect(config);
+  // The socket the session is actually talking through: after STARTTLS that is
+  // the wrapped one, and closing the original would leave the TLS layer to die
+  // on its own.
+  let active: Socket | TLSSocket = socket;
   const session = new SmtpSession(socket);
   try {
     expect(await session.readReply(), [220], "greeting");
@@ -244,9 +280,11 @@ export async function sendSmtpMessage(
     if (!config.secure && capabilities.includes("STARTTLS")) {
       session.write("STARTTLS");
       expect(await session.readReply(), [220], "STARTTLS");
+      // Detach *before* the handshake: the TLS bytes arrive on the same
+      // descriptor, and a reader still attached would eat them.
+      session.detach();
       const upgraded = await upgradeToTls(socket as Socket, config.host);
-      // A new socket, a new reader: the old one must not consume the TLS bytes.
-      socket.removeAllListeners("data");
+      active = upgraded;
       const secureSession = new SmtpSession(upgraded);
       secureSession.write(`EHLO ${hostname}`);
       ehlo = await secureSession.readReply();
@@ -257,7 +295,7 @@ export async function sendSmtpMessage(
 
     return await authenticateAndSend(session, capabilities, config, message);
   } finally {
-    socket.end();
+    active.end();
   }
 }
 
@@ -285,10 +323,10 @@ async function authenticateAndSend(
     expect(await session.readReply(), [235], "AUTH");
   }
 
-  session.write(`MAIL FROM:<${bareAddress(message.from)}>`);
+  session.write(`MAIL FROM:<${assertSingleLine(bareAddress(message.from), "from")}>`);
   expect(await session.readReply(), [250], "MAIL FROM");
 
-  session.write(`RCPT TO:<${bareAddress(message.to)}>`);
+  session.write(`RCPT TO:<${assertSingleLine(bareAddress(message.to), "to")}>`);
   expect(await session.readReply(), [250, 251], "RCPT TO");
 
   session.write("DATA");

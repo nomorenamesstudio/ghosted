@@ -84,7 +84,10 @@ describe("indexability", () => {
   it("takes an explicit answer in both directions", () => {
     expect(readSiteIdentity(selfHosted, { SITE_INDEXABLE: "true" }).indexable).toBe(true);
     expect(readSiteIdentity(hosted, { SITE_INDEXABLE: "false" }).indexable).toBe(false);
-    // A typo must not flip a privacy default; the derived answer stands.
-    expect(readSiteIdentity(selfHosted, { SITE_INDEXABLE: "maybe" }).indexable).toBe(false);
+    // A typo must not silently mean anything at all, least of all on a flag
+    // that decides whether somebody's job hunt is crawlable.
+    expect(() => readSiteIdentity(selfHosted, { SITE_INDEXABLE: "maybe" })).toThrow(
+      /SITE_INDEXABLE="maybe" is not a boolean/,
+    );
   });
 });

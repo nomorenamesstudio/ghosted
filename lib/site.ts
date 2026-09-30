@@ -1,4 +1,8 @@
-import { runtimeConfig, type RuntimeConfig } from "@/lib/config/flags";
+import {
+  readBooleanFlag,
+  runtimeConfig,
+  type RuntimeConfig,
+} from "@/lib/config/flags";
 
 /**
  * Who runs *this* instance, and where the software came from.
@@ -98,17 +102,14 @@ export function readSiteIdentity(
  * Whether search engines may index this instance. Derived from the landing flag
  * so that the hosted instance keeps the behaviour it already had and a
  * self-hosted one is private by default, with `SITE_INDEXABLE` as the explicit
- * override in both directions.
+ * override in both directions. Parsed by the shared flag reader, so a typo here
+ * stops the boot rather than quietly meaning a different privacy default.
  */
 function readIndexable(
   config: RuntimeConfig,
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  const raw = env.SITE_INDEXABLE?.trim().toLowerCase();
-  if (raw === undefined || raw === "") return config.showLanding;
-  if (["1", "true", "yes", "on"].includes(raw)) return true;
-  if (["0", "false", "no", "off"].includes(raw)) return false;
-  return config.showLanding;
+  return readBooleanFlag(env, "SITE_INDEXABLE", config.showLanding);
 }
 
 let cached: SiteIdentity | null = null;

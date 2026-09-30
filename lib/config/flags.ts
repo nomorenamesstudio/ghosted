@@ -57,6 +57,23 @@ function readFlag(
   return fallback;
 }
 
+/**
+ * The boolean reader on its own, for the modules that want one flag and no
+ * report: `lib/site.ts` reads `SITE_INDEXABLE` this way. Strict on purpose — a
+ * typo on a privacy flag must stop the boot rather than silently mean the
+ * default.
+ */
+export function readBooleanFlag(
+  env: EnvRecord,
+  name: string,
+  fallback: boolean,
+): boolean {
+  const problems: string[] = [];
+  const value = readFlag(env, name, fallback, problems);
+  if (problems.length > 0) throw new ConfigError(problems);
+  return value;
+}
+
 function readText(env: EnvRecord, name: string): string | null {
   const value = env[name]?.trim();
   return value ? value : null;

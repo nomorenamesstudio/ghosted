@@ -75,20 +75,24 @@ export async function ensureOwnerAccount({
 
   const name = env.GHOSTED_USER_NAME?.trim() || DEFAULT_OWNER_NAME;
 
-  const [existing] = await sql`SELECT id FROM users WHERE email = ${email}`;
-  if (existing) {
-    return { action: "skipped", reason: "exists", email };
-  }
-
   const supplied = env.GHOSTED_USER_PASSWORD?.trim();
   const password = supplied || randomPassword();
   const passwordHash = await hash(password);
 
+  // One statement, not SELECT-then-INSERT: two replicas starting together would
+  // otherwise both find the account missing and one would lose the race with a
+  // unique-violation. `DO NOTHING` also makes "already there" and "just created"
+  // distinguishable by whether a row came back.
   const [created] = await sql`
     INSERT INTO users (email, password_hash, name, image, provider, email_verified, email_verified_at)
     VALUES (${email}, ${passwordHash}, ${name}, ${DEFAULT_OWNER_AVATAR}, 'email', true, now())
+    ON CONFLICT (email) DO NOTHING
     RETURNING id
   `;
+
+  if (!created) {
+    return { action: "skipped", reason: "exists", email };
+  }
 
   if (supplied) {
     log(`Created the owner account ${name} <${email}>.`);

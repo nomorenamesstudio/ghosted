@@ -9,9 +9,11 @@ import { applications, milestones } from "@/lib/db/schema";
  * The export is a raw dump of the rows, so this is the one place that has to
  * know the shape of both tables. Two properties make it safe to run twice:
  *
- * - Row ids travel with the file and are reused when they are free, so the same
- *   file imported again finds its own rows and skips them instead of growing
- *   duplicates.
+ * - Duplicates are recognised by what an application *is* — company, role and
+ *   creation time — so the same file imported again skips its own rows instead
+ *   of growing copies. Row ids are deliberately not reused: they are global, so
+ *   importing into a second account on the same instance could never reuse them
+ *   without colliding.
  * - Everything lands in one transaction: either the whole file arrives or none
  *   of it does, which matters because `replace` deletes first.
  *
@@ -176,19 +178,24 @@ export async function importUserData(
       importedApplications += 1;
       seen.add(key);
 
-      for (const milestone of app.milestones) {
-        await tx.insert(milestones).values({
-          applicationId: inserted.id,
-          stepOrder: milestone.stepOrder,
-          title: milestone.title,
-          status: milestone.status,
-          comment: milestone.comment ?? null,
-          date: milestone.date ? new Date(milestone.date) : null,
-          ...(milestone.createdAt
-            ? { createdAt: new Date(milestone.createdAt) }
-            : {}),
-        });
-        importedMilestones += 1;
+      if (app.milestones.length > 0) {
+        // One statement per application rather than one per milestone: a file
+        // is imported inside a single transaction, and every round trip there
+        // is a lock held for longer.
+        await tx.insert(milestones).values(
+          app.milestones.map((milestone) => ({
+            applicationId: inserted.id,
+            stepOrder: milestone.stepOrder,
+            title: milestone.title,
+            status: milestone.status,
+            comment: milestone.comment ?? null,
+            date: milestone.date ? new Date(milestone.date) : null,
+            ...(milestone.createdAt
+              ? { createdAt: new Date(milestone.createdAt) }
+              : {}),
+          })),
+        );
+        importedMilestones += app.milestones.length;
       }
     }
 

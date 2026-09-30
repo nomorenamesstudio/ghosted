@@ -57,6 +57,11 @@ Open <http://localhost:8080>, sign in with that address and password, then chang
 it in **Settings → Change password**. No email provider is involved: with
 registration closed nobody needs a verification link.
 
+> **That password line lives in your logs.** "Printed once" means once by the
+> app — whatever collects stdout (a container log driver, journald, a log
+> shipper) keeps it until you rotate or prune. Change the password on first
+> login, and treat the first boot's log as sensitive until you have.
+
 ## 3. Family or friends
 
 Same as above, except registration stays open and email becomes required:
@@ -84,8 +89,15 @@ SMTP_URL=smtps://user:pass@smtp.example.com:465
 EMAIL_FROM="Ghosted <ghosted@yourdomain.com>"
 ```
 
-One URL covers every provider that speaks SMTP: implicit TLS (`smtps://`) or
-STARTTLS (`smtp://`, default port 587), with AUTH PLAIN or AUTH LOGIN.
+One URL covers every provider that speaks SMTP: implicit TLS (`smtps://`,
+usually port 465) or STARTTLS (`smtp://`, usually 587), with AUTH PLAIN or AUTH
+LOGIN.
+
+**Prefer `smtps://` when your provider offers it.** The STARTTLS path is
+implemented and now tested as far as it can be without a trusted certificate —
+the client asks for the upgrade and refuses to continue in the clear if it fails
+— but the TLS handshake itself has not been exercised end to end against a real
+certificate in this project. `smtps://` has no such caveat.
 
 ### No email at all
 

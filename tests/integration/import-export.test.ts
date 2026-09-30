@@ -235,6 +235,23 @@ describe("POST /api/auth/import", () => {
     expect((await readJson(res)).code).toBe("INVALID_IMPORT");
   });
 
+  it("refuses an oversized body while reading it, not after buffering it", async () => {
+    const target = await createUser("route-target4@test.dev");
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    // No Content-Length is set on a streamed body, which is exactly the case the
+    // header check cannot catch.
+    const huge = "x".repeat(6 * 1024 * 1024);
+    const res = await IMPORT(
+      new Request("http://localhost/api/auth/import", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: huge,
+      }),
+    );
+    expect(res.status).toBe(413);
+    expect((await readJson(res)).code).toBe("FILE_TOO_LARGE");
+  });
+
   it("needs a session", async () => {
     authMock.mockResolvedValueOnce(null);
     const res = await IMPORT(

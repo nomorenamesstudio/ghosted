@@ -85,6 +85,11 @@ async function fakeSmtp(
           socket.write(
             options.failRcpt ? "550 5.1.1 no such user\r\n" : "250 2.1.5 ok\r\n",
           );
+        } else if (line === "STARTTLS") {
+          socket.write("220 2.0.0 Ready to start TLS\r\n");
+          // No certificate here: the client must fail the handshake cleanly
+          // rather than continue in the clear.
+          socket.write("this is not a TLS ServerHello\r\n");
         } else if (line === "DATA") {
           inData = true;
           socket.write("354 end with <CRLF>.<CRLF>\r\n");
@@ -180,6 +185,15 @@ describe("buildMessage", () => {
     expect(encoded).not.toContain("Jelszó");
   });
 
+  it("refuses a line break in From or To rather than injecting a header", () => {
+    expect(() =>
+      buildMessage({ ...base, to: "you@example.com\r\nBcc: someone@example.com" }),
+    ).toThrow(/must not contain a line break/);
+    expect(() =>
+      buildMessage({ ...base, from: "hi@example.com\nX-Evil: 1" }),
+    ).toThrow(/must not contain a line break/);
+  });
+
   it("unwraps the display-name form for the envelope", () => {
     expect(bareAddress("Ghosted <hi@example.com>")).toBe("hi@example.com");
     expect(bareAddress("hi@example.com")).toBe("hi@example.com");
@@ -228,6 +242,23 @@ describe("sendSmtpMessage", () => {
     expect(running.dialogue[1]).toBe("AUTH LOGIN");
     expect(running.dialogue[2]).toBe(Buffer.from("apikey").toString("base64"));
     expect(running.dialogue[3]).toBe(Buffer.from("hunter2").toString("base64"));
+  });
+
+  it("asks for STARTTLS when the server offers it", async () => {
+    // Only the pre-handshake half is testable here: upgrading needs a
+    // certificate the client will accept, and a fake server cannot present one.
+    // What this pins is the decision and the write — offered STARTTLS must be
+    // taken, not skipped — plus a clean failure when the upgrade cannot happen.
+    running = await fakeSmtp({ capabilities: ["STARTTLS", "AUTH PLAIN"] });
+    await expect(
+      sendSmtpMessage(
+        { host: "127.0.0.1", port: running.port, secure: false, user: "apikey", password: "hunter2" },
+        { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
+      ),
+    ).rejects.toThrow();
+    expect(running.dialogue).toContain("STARTTLS");
+    // It must not carry on in the clear after being told TLS is coming.
+    expect(running.dialogue.some((line) => line.startsWith("MAIL FROM"))).toBe(false);
   });
 
   it("sends unauthenticated when no credentials are configured", async () => {
