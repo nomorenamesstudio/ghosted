@@ -5,6 +5,29 @@ All notable changes, by date and type.
 ## 2026-09-30
 
 ### Added
+- **`docs/SELFHOST.md`** — the self-hosting walkthrough: the two shapes the same
+  image ships (solo and family), the three-command solo setup, the environment
+  table, email options including SMTP, export/import, backups, upgrades and
+  troubleshooting. Linked from the README and `docs/INDEX.md`.
+- **`GET /api/health`** — version, uptime and a real database check, answering
+  `503` when the database is unreachable. That last part matters: the commonest
+  self-hosting failure is a container that is up while Postgres is not, which a
+  process check cannot see. Railway's `healthcheckPath` now points at it instead
+  of `/`.
+- **The compose file runs the app**, behind a `selfhost` profile so the existing
+  dev workflow (Postgres in Docker, `pnpm dev` on the host) is untouched:
+  `docker compose --profile selfhost up -d`. The service waits for the database
+  healthcheck, sets `PORT=8080`, passes every deployment variable through from
+  `.env`, and refuses to start without `AUTH_SECRET`.
+- **A `.dockerignore`, which the repo did not have.** `COPY . .` was shipping the
+  host's `node_modules`, its `.next` and — the one that matters — its `.env` into
+  the image layers.
+- **Two health tests**: the reachable-database shape, and the 503.
+
+### Changed
+- **`railway.json` healthchecks `/api/health`** rather than `/`, so a deploy that
+  cannot reach its database is reported as unhealthy instead of live.
+
 - **Import: an account can now move between instances.** `POST /api/auth/import`
   takes the JSON the export produces (`?mode=merge`, the default, or
   `?mode=replace` to empty the account first), validates it, and reports what

@@ -1,0 +1,27 @@
+# Build context hygiene. Without this, `COPY . .` in the Dockerfile ships the
+# host's node_modules, its .next (which may be a dev build), its git history and
+# — the one that matters — its .env, straight into the image layers.
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+.tmp-review
+test-results
+playwright-report
+coverage
+.browsers
+.cache
+.config
+.data
+.pnpm-store
+.pnpm-cache
+.pnpm-state
+.pnpm-tool
+.npm-cache
+*.log
+AGENTS.md
+DEPLOYMENT.md
+docs/reviews
