@@ -1,68 +1,42 @@
-import { Resend } from "resend";
 import { logger } from "@/lib/utils/logger";
+import { emailTransport, type EmailMessage } from "@/lib/email/transport";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
-let client: Resend | null = null;
-
-function getClient(): Resend | null {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    // In production, a missing key means verification/reset emails silently
-    // never arrive — fail loudly instead of pretending they were sent.
-    if (IS_PROD) {
-      logger.error("RESEND_API_KEY is not set — transactional emails will not send");
-      throw new Error("Email configuration error: RESEND_API_KEY is not set");
-    }
-    return null;
-  }
-  if (!client) client = new Resend(key);
-  return client;
-}
-
-export interface EmailMessage {
-  to: string;
-  subject: string;
-  text: string;
-  html?: string;
-}
+export type { EmailMessage };
 
 /**
- * Send a transactional email.
- * - No `RESEND_API_KEY` → dev stub: the email is logged instead (structured).
- * - Provider errors are logged but never thrown: sending mail must not break
+ * Send a transactional email through whichever transport this deployment
+ * configured (`lib/email/`): Resend, SMTP, or the log stub.
+ *
+ * - Provider failures are logged but never thrown: sending mail must not break
  *   the calling flow (e.g. registration).
+ * - Configuration failures throw, and the deployment validation in
+ *   `lib/config/flags.ts` catches the important ones at boot instead.
  */
-export async function sendEmail({
-  to,
-  subject,
-  text,
-  html,
-}: EmailMessage): Promise<void> {
-  // In production, a missing EMAIL_FROM would silently send from the Resend
-  // test domain (onboarding@resend.dev), which breaks deliverability and can
-  // look like spam — require it explicitly.
+export async function sendEmail(message: EmailMessage): Promise<void> {
+  const transport = emailTransport();
   const from = process.env.EMAIL_FROM;
-  if (!from) {
-    if (IS_PROD) {
-      logger.error("EMAIL_FROM is not set — emails would use the Resend test domain");
-      throw new Error("Email configuration error: EMAIL_FROM is not set");
-    }
+
+  // Only a transport that really sends needs a From address on a domain the
+  // operator controls; a solo instance on the log stub never sends at all.
+  if (transport.delivers && !from && IS_PROD) {
+    logger.error("EMAIL_FROM is not set — mail would come from a provider test domain");
+    throw new Error("Email configuration error: EMAIL_FROM is not set");
   }
   const resolvedFrom = from ?? "Ghosted <onboarding@resend.dev>";
-  const c = getClient();
-  if (!c) {
-    logger.info(
-      { to, subject },
-      `[email stub — set RESEND_API_KEY to send] ${subject}\n\n${text}`,
-    );
-    return;
-  }
+
   try {
-    await c.emails.send({ from: resolvedFrom, to, subject, text, html: html ?? text });
-    logger.info({ to, subject }, "email sent");
+    await transport.send(message, resolvedFrom);
+    logger.info(
+      { to: message.to, subject: message.subject, transport: transport.name },
+      "email sent",
+    );
   } catch (err) {
-    logger.error({ err, to, subject }, "email send failed");
+    logger.error(
+      { err, to: message.to, subject: message.subject, transport: transport.name },
+      "email send failed",
+    );
   }
 }
 

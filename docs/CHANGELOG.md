@@ -5,6 +5,30 @@ All notable changes, by date and type.
 ## 2026-09-30
 
 ### Added
+- **Provider-neutral email: `resend`, `smtp` or `log`.** `lib/email/` holds one
+  `EmailTransport` interface and three implementations. `EMAIL_TRANSPORT` picks
+  one; unset keeps the previous behaviour exactly (Resend when `RESEND_API_KEY`
+  is set, the log stub otherwise). SMTP takes a single `SMTP_URL`
+  (`smtps://user:pass@host:465`) and covers Postmark, SendGrid, Mailgun,
+  Fastmail and a local Postfix. Deployment validation now refuses to boot an
+  instance that has `ALLOW_REGISTRATION=true` in production without a transport
+  that actually delivers, or without `EMAIL_FROM` — the combination where
+  verification and reset mail silently never arrives. A solo instance with
+  registration closed may run the log stub forever.
+- **A hand-written SMTP client** (`lib/email/smtp.ts`): implicit TLS or
+  STARTTLS, AUTH PLAIN with an AUTH LOGIN fallback, dot-stuffing, CRLF
+  normalisation and RFC 2047 subject encoding — one message per connection.
+  Written rather than imported because `nodemailer` cannot be added without
+  regenerating the pinned lockfile in this environment; the transport interface
+  above it means swapping the client later changes nothing else. The wire
+  contract is pinned by a fake SMTP server in `tests/unit/smtp.test.ts`, which
+  caught a real defect: the body's LF endings were not normalised to CRLF, so a
+  line beginning with a dot was not stuffed and would have ended the DATA block
+  early.
+- **Twenty-one tests** across `tests/unit/email-transport.test.ts` (transport
+  resolution, the boot rules, the log transport's payload) and
+  `tests/unit/smtp.test.ts` (URL parsing, message framing, the full dialogue
+  against a fake server, a refused recipient).
 - **Deployment flags, and the owner bootstrap behind them.** `SHOW_LANDING` and
   `ALLOW_REGISTRATION` (both default to the hosted shape, so the live instance
   is unchanged), plus `GHOSTED_USER_EMAIL` / `_NAME` / `_PASSWORD`. With

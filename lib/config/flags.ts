@@ -1,4 +1,8 @@
 import { logger } from "@/lib/utils/logger";
+import { ConfigError } from "@/lib/config/error";
+import { readTransportChoice } from "@/lib/email/transport";
+
+export { ConfigError };
 
 /**
  * Runtime configuration for the self-hosted shapes of the app.
@@ -22,14 +26,6 @@ export interface RuntimeConfig {
   /** The boot-seeded owner account, when registration is closed. */
   ownerEmail: string | null;
   ownerName: string | null;
-}
-
-/** Thrown at boot rather than at first use, so a typo cannot look like a default. */
-export class ConfigError extends Error {
-  constructor(readonly problems: string[]) {
-    super(`Invalid configuration:\n  - ${problems.join("\n  - ")}`);
-    this.name = "ConfigError";
-  }
 }
 
 /** A plain env bag: `process.env` satisfies it, a literal object in a test does too. */
@@ -86,6 +82,26 @@ export function readConfig(env: EnvRecord = process.env): RuntimeConfig {
     );
   }
 
+  // Email: the transport itself must be coherent whenever it is configured, and
+  // an instance where strangers can register needs mail that actually arrives —
+  // verification and reset both go through it. A solo instance with closed
+  // registration may run the log stub forever, which is why this only bites in
+  // production with registration open.
+  const transport = readTransportChoice(env);
+  problems.push(...transport.problems);
+
+  if (config.allowRegistration && env.NODE_ENV === "production") {
+    if (!transport.delivers) {
+      problems.push(
+        "ALLOW_REGISTRATION=true needs a delivering email transport in production (RESEND_API_KEY, or EMAIL_TRANSPORT=smtp with SMTP_URL) — otherwise nobody can verify an address or reset a password. Set ALLOW_REGISTRATION=false for a solo instance.",
+      );
+    } else if (!readText(env, "EMAIL_FROM")) {
+      problems.push(
+        "EMAIL_FROM is not set — verification and reset mail would come from a provider test domain and land in spam",
+      );
+    }
+  }
+
   if (problems.length > 0) throw new ConfigError(problems);
   return config;
 }
@@ -99,10 +115,13 @@ let cached: RuntimeConfig | null = null;
 export function runtimeConfig(): RuntimeConfig {
   if (!cached) {
     cached = readConfig();
+    const transport = readTransportChoice();
     logger.info(
       {
         showLanding: cached.showLanding,
         allowRegistration: cached.allowRegistration,
+        emailTransport: transport.name,
+        emailDelivers: transport.delivers,
       },
       "runtime config",
     );
