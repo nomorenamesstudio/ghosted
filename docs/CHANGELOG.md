@@ -5,6 +5,49 @@ All notable changes, by date and type.
 ## 2026-09-30
 
 ### Added
+- **`lib/site.ts`: who runs this instance, and where the software came from.**
+  `OPERATOR_NAME` / `_EMAIL` / `_URL` publish the hoster's own details;
+  `POWERED_BY_URL`, `BRAND_TAG`, `SITE_INDEXABLE`, `UMAMI_*` cover the rest. The
+  defaults follow the deployment shape, so the hosted instance keeps its studio
+  credit while a self-hosted one — which set nothing — stops wearing somebody
+  else's name in the footer, the privacy policy, the terms and the imprint.
+  Those say "self-hosted, powered by Ghosted" instead, linked to the repo.
+- **`BRAND_TAG` replaces the `beta` superscript**, which is gone from the header
+  and the sign-in page. Empty on the hosted instance, `DIY` by default on a
+  self-hosted one, `none` (or any word) to override.
+- **A `robots.txt` route**, which the app did not have at all. Only the
+  operator's own instance is indexable (derived from `SHOW_LANDING`, overridable
+  with `SITE_INDEXABLE`); a self-hosted instance disallows everything by default
+  and adds a `noindex` metadata tag.
+- **Analytics is opt-in through `UMAMI_SRC` + `UMAMI_WEBSITE_ID`** (plus
+  optional `UMAMI_DOMAINS`) instead of a hard-coded tracker aimed at the hosted
+  instance's dashboard. Both unset renders no script at all.
+- **Nine tests**: `tests/unit/site-identity.test.ts` (the operator defaults, the
+  brand tag, the tracker gate, the indexable rule) and one in
+  `tests/integration/account.test.ts` for the new deletion guard.
+
+### Changed
+- **Deleting the only account is refused.** On an instance with registration
+  closed the account is the only way in, so `DELETE /api/auth/account` answers
+  403 `ACCOUNT_DELETION_DISABLED` and the settings page offers the export
+  instead of the destructive button. Password change is untouched.
+- **The root layout is dynamic on purpose** (`export const dynamic =
+  "force-dynamic"`): the analytics tags and robots metadata come from the
+  environment, and a statically optimised route would bake them in at build
+  time, which would end the "one published image, reconfigured by env" promise.
+  The cost is per-request rendering on the pages that used to be static.
+- **The sign-in wordmark is a link only when there is a landing page to lead
+  to**; on a landing-less instance it is a plain wordmark rather than a link to
+  the page the visitor is already on.
+- **The donate default stays the original creator's page**, now with a comment
+  in `lib/utils/donate-banner.ts` and `.env.example` asking self-hosters to keep
+  it there, and `NEXT_PUBLIC_DONATE_URL` to point elsewhere.
+
+### Removed
+- **The landing's local `REPO_URL` / `LICENSE_URL` constants** — the FAQ links
+  now read them from `lib/site.ts`, so the repo URL lives in one place. The
+  hard-coded Umami script tag and the `beta` superscripts went with them.
+
 - **Provider-neutral email: `resend`, `smtp` or `log`.** `lib/email/` holds one
   `EmailTransport` interface and three implementations. `EMAIL_TRANSPORT` picks
   one; unset keeps the previous behaviour exactly (Resend when `RESEND_API_KEY`

@@ -88,11 +88,19 @@ export function SettingsForm({
   email: initialEmail,
   emailVerified,
   patienceLevel: initialPatience,
+  canDeleteAccount,
 }: {
   name: string;
   email: string;
   emailVerified: boolean;
   patienceLevel: PatienceLevel;
+  /**
+   * False on an instance with registration closed: the account being deleted is
+   * the only account, so the instance would be locked out for good. The API
+   * route refuses it too — this only keeps the button from being an offer the
+   * server will not honour.
+   */
+  canDeleteAccount: boolean;
 }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -476,25 +484,33 @@ export function SettingsForm({
             </a>
           </Button>
 
-          <div className="border-t pt-4">
-            {deleteError && (
-              <p role="alert" className="mb-2 text-sm text-destructive">
-                {deleteError}
+          {canDeleteAccount ? (
+            <div className="border-t pt-4">
+              {deleteError && (
+                <p role="alert" className="mb-2 text-sm text-destructive">
+                  {deleteError}
+                </p>
+              )}
+              <Button
+                variant="destructive"
+                onClick={() => setConfirmDelete(true)}
+              >
+                <Trash2 />
+                Delete account
+              </Button>
+              <p className="mt-2 text-xs text-muted-foreground">
+                This permanently deletes your account and all applications,
+                milestones and notes - including archived ones. It cannot be
+                undone.
               </p>
-            )}
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmDelete(true)}
-            >
-              <Trash2 />
-              Delete account
-            </Button>
-            <p className="mt-2 text-xs text-muted-foreground">
-              This permanently deletes your account and all applications,
-              milestones and notes - including archived ones. It cannot be
-              undone.
+            </div>
+          ) : (
+            <p className="border-t pt-4 text-xs text-muted-foreground">
+              Deleting is switched off on this instance: it has one account, and
+              removing it would leave nobody able to sign in. Export a copy
+              above if you want your data out.
             </p>
-          </div>
+          )}
         </CardContent>
       </Card>
 

@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
+import { LICENSE_URL, REPO_URL } from "@/lib/site";
 // The card *shell*, not ApplicationCardView: the real card is a client component
 // (live relative timestamps, Radix avatar and progress), and rendering it here
 // pulled date-fns, Radix Progress and Radix Avatar onto the marketing page for
@@ -176,10 +177,6 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
 /** Body links in the FAQ: the app's inline-link color, underlined at rest. */
 const FAQ_LINK =
   "text-primary underline underline-offset-[3px] transition-colors hover:text-primary/80";
-
-/** The public repo and its license, linked from two of the answers. */
-const REPO_URL = "https://github.com/krisztianhadi/ghosted";
-const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 
 const FAQ: { q: string; a: ReactNode }[] = [
   {

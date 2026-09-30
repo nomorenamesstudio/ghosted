@@ -4,6 +4,17 @@ import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Footer } from "@/components/Footer";
+import { siteIdentity } from "@/lib/site";
+
+/**
+ * Rendered per request on purpose. The analytics tags and the robots metadata
+ * below come from the environment, and a statically optimised route bakes them
+ * in at build time — which would mean one published image could no longer be
+ * reconfigured by environment alone, the whole point of the deployment flags.
+ * The cost is a render per request on the handful of pages that would otherwise
+ * be static (the legal pages); everything else was already dynamic.
+ */
+export const dynamic = "force-dynamic";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -18,8 +29,13 @@ const geistMono = localFont({
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
 
+const identity = siteIdentity();
+
 export const metadata: Metadata = {
   title: "Ghosted",
+  // Only the operator's own instance should turn up in search results; a
+  // self-hosted one is private unless it says otherwise.
+  robots: identity.indexable ? undefined : { index: false, follow: false },
   description:
     "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
@@ -119,18 +135,22 @@ export default function RootLayout({
             __html: `try{var t=location.pathname==='/'?null:localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');var v=localStorage.getItem('ghosted-view');if(v!=='list'){document.documentElement.setAttribute('data-view','board');if(location.pathname==='/app')document.documentElement.setAttribute('data-board-content','')}}catch(e){}`,
           }}
         />
-        {/* Self-hosted umami analytics (tracker + beacon on
-            ramen.lostsignals.studio). Loaded after hydration rather than with a
-            bare `defer` in <head>: analytics is never worth competing with the
-            page's own JS and fonts for bandwidth on first load, and nothing on
-            the page waits on it. */}
-        <Script
-          src="https://ramen.lostsignals.studio/script.js"
-          strategy="afterInteractive"
-          data-website-id="c8f73665-dca1-464b-9427-a56f8b27c799"
-          data-cache="true"
-          data-domains="ghosted.lostsignals.studio"
-        />
+        {/* Analytics, only when this deployment configured it: `UMAMI_SRC` and
+            `UMAMI_WEBSITE_ID` both set, or nothing is rendered at all. The
+            hosted instance sets them; a self-hosted one inherits no tracker and
+            reports nowhere. Loaded after hydration rather than with a bare
+            `defer` in <head>: analytics is never worth competing with the page's
+            own JS and fonts for bandwidth on first load, and nothing on the page
+            waits on it. */}
+        {identity.umami && (
+          <Script
+            src={identity.umami.src}
+            strategy="afterInteractive"
+            data-website-id={identity.umami.websiteId}
+            data-cache="true"
+            data-domains={identity.umami.domains ?? undefined}
+          />
+        )}
       </head>
       <body className="antialiased">
         <Providers>

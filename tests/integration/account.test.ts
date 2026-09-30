@@ -182,6 +182,26 @@ describe("DELETE /api/auth/account", () => {
     expect(await db.select().from(applications)).toHaveLength(0);
     expect(await db.select().from(milestones)).toHaveLength(0);
   });
+
+  it("refuses to delete the only account on a closed-registration instance", async () => {
+    // The single-user shape: deleting it would leave nobody able to sign in,
+    // and there is no registration flow to create a replacement.
+    const user = await createUser();
+    const previous = process.env.ALLOW_REGISTRATION;
+    process.env.ALLOW_REGISTRATION = "false";
+    process.env.GHOSTED_USER_EMAIL = user.email;
+    try {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await DELETE_ACCOUNT();
+      expect(res.status).toBe(403);
+      expect((await readJson(res)).code).toBe("ACCOUNT_DELETION_DISABLED");
+      expect(await db.select().from(users)).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.ALLOW_REGISTRATION;
+      else process.env.ALLOW_REGISTRATION = previous;
+      delete process.env.GHOSTED_USER_EMAIL;
+    }
+  });
 });
 
 describe("GET /api/auth/export", () => {

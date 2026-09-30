@@ -12,7 +12,14 @@ export const DONATE_STORAGE_KEY = "ghosted-donate-banner";
 export const DONATE_MAX_DISMISSALS = 3;
 export const DONATE_HIDE_MS = 7 * 24 * 60 * 60 * 1000; // one week
 
-/** Where the donate button points (override via NEXT_PUBLIC_DONATE_URL). */
+/**
+ * Where the donate button points, overridable with `NEXT_PUBLIC_DONATE_URL`.
+ *
+ * Self-hosters: this defaults to the original creator's page, and that default
+ * is deliberate — Ghosted is free, un-funded and built in someone's evenings,
+ * so if the link costs you nothing, leaving it in place is the easiest way to
+ * say thanks. Point it at your own page (or at nothing) if you would rather.
+ */
 export const DONATE_URL =
   process.env.NEXT_PUBLIC_DONATE_URL ??
   "https://www.buymeacoffee.com/lostsignals";

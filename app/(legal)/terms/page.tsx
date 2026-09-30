@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { OperatorEmail } from "@/components/OperatorContact";
 
 export const metadata: Metadata = {
   title: "Terms of Service - Ghosted",
@@ -79,10 +80,7 @@ export default function TermsPage() {
           These terms are governed by the applicable law of your country of
           residence. If you are located in the EU/EEA, the General Data
           Protection Regulation and the laws of your member state apply. For
-          any dispute, contact us first at{" "}
-          <a href="mailto:hey@lostsignals.studio" className="underline">
-            hey@lostsignals.studio
-          </a>{" "}
+          any dispute, contact us first at <OperatorEmail fallback="the address this instance gave you" />{" "}
           and we will do our best to resolve it amicably.
         </p>
       </section>

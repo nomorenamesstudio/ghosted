@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
+import {
+  OperatorContact,
+  OperatorEmail,
+} from "@/components/OperatorContact";
+import { siteIdentity } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - Ghosted",
 };
 
 export default function PrivacyPage() {
+  const { operator } = siteIdentity();
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-12 text-sm leading-relaxed">
       <h1 className="text-3xl font-bold">Privacy Policy</h1>
@@ -15,16 +21,13 @@ export default function PrivacyPage() {
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">1. Controller</h2>
-        <p>
-          Ghosted is operated by <strong>Lost Signals Studio</strong> (legal
-          entity to be formalized — operator details are kept minimal to
-          protect the operator&rsquo;s privacy).
-          <br />
-          Contact for privacy matters:{" "}
-          <a href="mailto:hey@lostsignals.studio" className="underline">
-            hey@lostsignals.studio
-          </a>
-        </p>
+        <OperatorContact label="Contact for privacy matters" />
+        {operator && (
+          <p className="text-muted-foreground">
+            Operator details are kept minimal to protect the
+            operator&rsquo;s privacy.
+          </p>
+        )}
       </section>
 
       <section className="space-y-2">
@@ -100,9 +103,7 @@ export default function PrivacyPage() {
           (Art.&nbsp;16), erasure (Art.&nbsp;17), restriction (Art.&nbsp;18), data
           portability (Art.&nbsp;20) and objection (Art.&nbsp;21) with regard to
           your personal data. To exercise any of these rights, contact{" "}
-          <a href="mailto:hey@lostsignals.studio" className="underline">
-            hey@lostsignals.studio
-          </a>
+          <OperatorEmail />
           . You also have the right to lodge a complaint with your supervisory
           authority (in the EU/EEA, your local data-protection authority).
         </p>
