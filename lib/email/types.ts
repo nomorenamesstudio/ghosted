@@ -29,11 +29,3 @@ export interface EmailTransport {
   readonly delivers: boolean;
   send(message: EmailMessage, from: string): Promise<SentMessage | null>;
 }
-
-export type TransportName = "resend" | "smtp" | "log";
-
-export const TRANSPORT_NAMES: readonly TransportName[] = ["resend", "smtp", "log"];
-
-export function isTransportName(value: string): value is TransportName {
-  return (TRANSPORT_NAMES as readonly string[]).includes(value);
-}

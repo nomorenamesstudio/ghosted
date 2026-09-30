@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readConfig } from "@/lib/config/flags";
-import {
-  LICENSE_URL,
-  REPO_URL,
-  readIndexable,
-  readSiteIdentity,
-} from "@/lib/site";
+import { LICENSE_URL, REPO_URL, readSiteIdentity } from "@/lib/site";
 
 /**
  * The identity rules decide whose name appears in the footer and on the legal
@@ -80,16 +75,16 @@ describe("readSiteIdentity", () => {
   });
 });
 
-describe("readIndexable", () => {
+describe("indexability", () => {
   it("follows the deployment shape unless told otherwise", () => {
-    expect(readIndexable(hosted, {})).toBe(true);
-    expect(readIndexable(selfHosted, {})).toBe(false);
+    expect(readSiteIdentity(hosted, {}).indexable).toBe(true);
+    expect(readSiteIdentity(selfHosted, {}).indexable).toBe(false);
   });
 
   it("takes an explicit answer in both directions", () => {
-    expect(readIndexable(selfHosted, { SITE_INDEXABLE: "true" })).toBe(true);
-    expect(readIndexable(hosted, { SITE_INDEXABLE: "false" })).toBe(false);
+    expect(readSiteIdentity(selfHosted, { SITE_INDEXABLE: "true" }).indexable).toBe(true);
+    expect(readSiteIdentity(hosted, { SITE_INDEXABLE: "false" }).indexable).toBe(false);
     // A typo must not flip a privacy default; the derived answer stands.
-    expect(readIndexable(selfHosted, { SITE_INDEXABLE: "maybe" })).toBe(false);
+    expect(readSiteIdentity(selfHosted, { SITE_INDEXABLE: "maybe" }).indexable).toBe(false);
   });
 });

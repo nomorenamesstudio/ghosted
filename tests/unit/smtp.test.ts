@@ -169,15 +169,15 @@ describe("buildMessage", () => {
     expect(message).toContain("<p>hello</p>");
   });
 
-  it("encodes a non-ASCII subject rather than mangling it", () => {
-    const message = buildMessage({ ...base, subject: "Jelszó — visszaállítás" });
-    expect(message).toMatch(/^Subject: =\?UTF-8\?B\?/m);
-    expect(message).not.toContain("Jelszó");
-  });
-
-  it("keeps a plain ASCII subject readable", () => {
+  it("encodes a non-ASCII subject and leaves an ASCII one readable", () => {
+    // Both halves of one contract: `encodeHeaderValue` may only encode what it
+    // has to, and a subject that needs encoding must never reach the wire raw.
     expect(buildMessage(base)).toContain("Subject: Reset your password");
     expect(encodeHeaderValue("Reset your password")).toBe("Reset your password");
+
+    const encoded = buildMessage({ ...base, subject: "Jelszó — visszaállítás" });
+    expect(encoded).toMatch(/^Subject: =\?UTF-8\?B\?/m);
+    expect(encoded).not.toContain("Jelszó");
   });
 
   it("unwraps the display-name form for the envelope", () => {

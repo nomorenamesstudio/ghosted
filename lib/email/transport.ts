@@ -97,9 +97,4 @@ export function emailTransport(): EmailTransport {
   return cached;
 }
 
-/** Test seam: forget the memoized transport, optionally substituting one. */
-export function setEmailTransport(next: EmailTransport | null): void {
-  cached = next;
-}
-
 export type { EmailMessage, EmailTransport };

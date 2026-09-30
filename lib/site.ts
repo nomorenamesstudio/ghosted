@@ -100,7 +100,7 @@ export function readSiteIdentity(
  * self-hosted one is private by default, with `SITE_INDEXABLE` as the explicit
  * override in both directions.
  */
-export function readIndexable(
+function readIndexable(
   config: RuntimeConfig,
   env: Record<string, string | undefined> = process.env,
 ): boolean {

@@ -89,7 +89,8 @@ export interface ImportResult {
 export class ImportError extends Error {
   constructor(
     message: string,
-    readonly code: "UNSUPPORTED_VERSION" | "EMPTY" = "EMPTY",
+    /** Machine-readable so the route can answer without re-deriving it. */
+    readonly code: "UNSUPPORTED_VERSION",
   ) {
     super(message);
     this.name = "ImportError";
