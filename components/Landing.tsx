@@ -9,6 +9,7 @@ import {
   BotOff,
   Briefcase,
   Calendar,
+  ChevronDown,
   Clock,
   Coffee,
   ListChecks,
@@ -34,6 +35,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { DONATE_URL } from "@/lib/utils/donate-banner";
 // The card *shell*, not ApplicationCardView: the real card is a client component
 // (live relative timestamps, Radix avatar and progress), and rendering it here
 // pulled date-fns, Radix Progress and Radix Avatar onto the marketing page for
@@ -134,7 +136,7 @@ const FEATURES: {
 
 /**
  * The GitHub mark, inline. lucide dropped brand icons, and this is the one place
- * the page needs one; `currentColor` keeps it on the same muted grey as the rest
+ * the page needs one; `currentColor` keeps it on the same muted gray as the rest
  * of the tile footer.
  */
 function GithubMark({ className }: { className?: string }) {
@@ -161,6 +163,186 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
     icon: BotOff,
     title: "No auto-applying",
     body: "Applications are written and sent by you. This is a logbook, not a robot.",
+  },
+];
+
+/**
+ * FAQ. Native `<details>` rather than a Radix accordion: the answers open
+ * without JavaScript, stay keyboard-operable, and screen readers announce them
+ * as a disclosure. Panels deliberately do not close each other — weighing "why
+ * is it free" against "what's the catch" should not mean re-opening what you
+ * just read.
+ */
+/** Body links in the FAQ: the app's inline-link color, underlined at rest. */
+const FAQ_LINK =
+  "text-primary underline underline-offset-[3px] transition-colors hover:text-primary/80";
+
+/** The public repo and its license, linked from two of the answers. */
+const REPO_URL = "https://github.com/krisztianhadi/ghosted";
+const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
+
+const FAQ: { q: string; a: ReactNode }[] = [
+  {
+    q: "Why did you make it?",
+    a: (
+      <>
+        <p>
+          Because the worst part of a job hunt is not the rejection — it is the
+          silence. I was tracking applications in a spreadsheet and my inbox, and
+          the ones that went quiet were exactly the ones I lost track of: no
+          rejection, no reply, just nothing. After a while I didn&apos;t even
+          remember where I had already applied.
+        </p>
+        <p>
+          Today you need to apply for dozens or even hundreds of jobs. It&apos;s
+          humanly impossible to keep track of it. At least for me it was.
+        </p>
+        <p>
+          Ghosted does one job. It keeps every application and its timeline in one
+          place, with a simple user interface, and it gives the quiet ones their
+          own section — so a hunt that has stalled is something you can see rather
+          than something you slowly forget.
+        </p>
+        <p>
+          Additionally, building Ghosted really keeps me busy and sane while
+          submitting my n+1 application and waiting for a template rejection.
+        </p>
+      </>
+    ),
+  },
+  {
+    q: "Why is it free?",
+    a: (
+      <>
+        <p>
+          Job hunting is expensive and stressful enough already — portfolio and CV
+          crafting, take-homes, time off, and often no income while you do it.
+        </p>
+        <p>
+          Charging rent on the logbook felt like charging people for being
+          unemployed. I know many do this. I don&apos;t.
+        </p>
+        <p>
+          It is free for casual use and stays that way: no ads, no upsell, and
+          nothing about your hunt sold to anyone.
+        </p>
+        <p>
+          If you feel like it, you can support the cause with a small donation via{" "}
+          <a
+            href={DONATE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={FAQ_LINK}
+          >
+            buymeacoffee
+          </a>{" "}
+          (from the menu or linked here).
+        </p>
+        <p>
+          If you work for a company that would sponsor the project, or want to
+          talk about white-label options, drop an email to{" "}
+          <a href="mailto:ghosted@lostsignals.studio" className={FAQ_LINK}>
+            ghosted@lostsignals.studio
+          </a>
+          .
+        </p>
+      </>
+    ),
+  },
+  {
+    q: "What's the catch?",
+    a: (
+      <>
+        <p>
+          There is no catch. I wanted to build a simple and honest tool for myself
+          but it grew to a state where it could be helpful for others. This is a
+          one-man show, no funding, no scaling, no exit strategy and definitely no
+          data harvesting. Not on my watch.
+        </p>
+        <p>
+          If you don&apos;t trust me then feel free to self host it for yourself or
+          friends and family. It&apos;s all there on the{" "}
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={FAQ_LINK}
+          >
+            git repo
+          </a>{" "}
+          under the{" "}
+          <a
+            href={LICENSE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={FAQ_LINK}
+          >
+            MIT license
+          </a>
+          .
+        </p>
+        <p>That is the whole business model — there isn&apos;t one.</p>
+      </>
+    ),
+  },
+  {
+    q: "Why no AI?",
+    a: (
+      <>
+        <p>
+          Ghosted writes nothing for you, applies to nothing for you and reads no
+          mailbox — it only knows what you type into it.
+        </p>
+        <p>
+          The internet is already full of bloated software and nothing can avoid
+          the AI treatment.
+        </p>
+        <p>
+          Well. Ghosted was built with AI help but doesn&apos;t ship with built-in
+          AI on purpose.
+        </p>
+        <p>
+          If you do want an agent in the loop, it goes the other way round. An MCP
+          integration is coming, so your own agent, with your own key, can do the
+          filing.
+        </p>
+        <p>The log stays the tool; the agent stays yours.</p>
+      </>
+    ),
+  },
+  {
+    q: "Can I ask for features?",
+    a: (
+      <>
+        <p>
+          Yes and no. If your idea fits the vision and doesn&apos;t add bloat to
+          the platform I might consider adding it. But nothing is guaranteed as my
+          resources are limited.
+        </p>
+        <p>
+          Same goes for PRs: they will be approved only if they respect the scope
+          of the project.
+        </p>
+        <p>Ghosted is simple on purpose. Less is more.</p>
+      </>
+    ),
+  },
+  {
+    q: "How to contribute?",
+    a: (
+      <>
+        <p>
+          The code is public and MIT-licensed. File an issue for what breaks,
+          open a pull request for what you would rather fix yourself, or
+          self-host it and report how it went on your machine — that last one is
+          the most useful.
+        </p>
+        <p>
+          Ghosted is hand-written and AI-enhanced, so a pull request a model
+          drafted is welcome too — as long as you read it before you send it.
+        </p>
+      </>
+    ),
   },
 ];
 
@@ -245,7 +427,7 @@ const MOCK_APPS: ApplicationListItem[] = [
  * Communication/office icon pool and concentric orbit rings around the hero
  * — an "email tornado". Each ring spins at its own speed (faster near the
  * center, like a vortex) and fades the further it gets from the ghost. Icons
- * grow outward and are rotated so their bottoms face the centre.
+ * grow outward and are rotated so their bottoms face the center.
  */
 const CLOUD_POOL: LucideIcon[] = [
   Mail,
@@ -294,7 +476,7 @@ const CLOUD_RINGS: {
 
 /**
  * The rotating icon tornado, anchored at a point (`0×0` box) rather than filling
- * the hero: it spins behind the floating pile, so the rings are centred on the
+ * the hero: it spins behind the floating pile, so the rings are centerd on the
  * pile's middle, not the viewport.
  */
 function IconTornado({ className }: { className?: string }) {
@@ -330,7 +512,7 @@ function IconTornado({ className }: { className?: string }) {
                   top: `calc(50% + ${Math.sin(a) * placeR}px)`,
                 }}
               >
-                {/* Rotated so the icon's bottom faces the centre. */}
+                {/* Rotated so the icon's bottom faces the center. */}
                 <span
                   className="block"
                   style={{ transform: `rotate(${(a * 180) / Math.PI + 90}deg)` }}
@@ -397,7 +579,17 @@ function FloatingCard({
   );
 }
 
-/** One mascot, adrift: rotation on the wrapper, bob on the image. */
+/** One mascot, adrift: rotation on the wrapper, bob on the image.
+ *
+ *  The mascot is a flat vector painted at 90%, so the cards it sits on show
+ *  through it. A frost layer behind it — the ghost's own silhouette used as a
+ *  `mask-image` over a backdrop blur — makes what shows through read as frosted
+ *  glass instead of a sharp card seen through a haze. The mask is load-bearing:
+ *  an unmasked backdrop blur covers the element's whole box and smears a
+ *  rectangle of the card behind the ghost, which looks like a focus bug. The
+ *  frost carries the same `float-bob` and delay as the image so the two never
+ *  drift apart mid-animation, and it sits *behind* the image because masking
+ *  would otherwise clip the image's own drop shadow. */
 function FloatingGhost({
   src,
   className,
@@ -409,12 +601,28 @@ function FloatingGhost({
 }) {
   return (
     <div className={cn("absolute", className)}>
+      <div
+        aria-hidden
+        data-ghost-frost
+        className="float-bob absolute inset-0 backdrop-blur"
+        style={{
+          animationDelay: delay,
+          maskImage: `url(${src})`,
+          WebkitMaskImage: `url(${src})`,
+          maskSize: "contain",
+          WebkitMaskSize: "contain",
+          maskRepeat: "no-repeat",
+          WebkitMaskRepeat: "no-repeat",
+          maskPosition: "center",
+          WebkitMaskPosition: "center",
+        }}
+      />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}
         alt=""
         aria-hidden
-        className="float-bob h-full w-full opacity-95 drop-shadow-lg"
+        className="float-bob relative h-full w-full opacity-85 drop-shadow-lg"
         style={{ animationDelay: delay }}
       />
     </div>
@@ -445,7 +653,7 @@ export function Landing() {
         {/* Hero — inverted purple band, copy left and the pile right: the real
             dashboard cards adrift among the mascots, like the aftermath of a
             small explosion in zero gravity, with the icon tornado spinning behind
-            them. Left-aligned with the CTA in the hero: a centred hero is the
+            them. Left-aligned with the CTA in the hero: a centerd hero is the
             default shape, and the asymmetry is what makes this section lead. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
           <div className="mx-auto flex w-full max-w-[650px] flex-col px-5 pb-24 pt-12 sm:px-6 sm:pb-32 sm:pt-16 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-44 lg:pt-20">
@@ -662,6 +870,47 @@ export function Landing() {
           </div>
         </section>
 
+        {/* FAQ — the page has made its claims and its refusals; this is where
+            the reader gets to check them. Same two-column rhythm as the band
+            above (sticky heading, list on the right) so it reads as its
+            continuation rather than a new pitch. */}
+        <section aria-label="Questions, answered" className="bg-background">
+          <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:items-start lg:gap-16">
+              <div className="lg:sticky lg:top-24">
+                <h2 className="text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:text-left">
+                  Questions, answered
+                </h2>
+                <p className="mx-auto mt-6 max-w-md text-center text-base leading-relaxed text-muted-foreground sm:text-lg lg:mx-0 lg:text-left">
+                  The short answers to the ones I get asked most. The longer ones
+                  live in the repo.
+                </p>
+              </div>
+              <div className="mx-auto flex w-full max-w-[700px] flex-col gap-4 lg:mx-0 lg:max-w-none">
+                {FAQ.map(({ q, a }) => (
+                  <details
+                    key={q}
+                    className="group rounded-xl border bg-card shadow transition-colors hover:border-violet-500/40 open:border-violet-500/40"
+                  >
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-6 rounded-xl px-6 py-5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+                      <span className="text-base font-semibold tracking-[-0.02em] sm:text-lg">
+                        {q}
+                      </span>
+                      <ChevronDown
+                        aria-hidden
+                        className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
+                      />
+                    </summary>
+                    <div className="px-6 pb-6 pr-10 text-sm leading-relaxed text-muted-foreground [&>p+p]:mt-3">
+                      {a}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA band — one job, one button, and the payoff pose: the same ghost as
             the hero, this time holding a phone that answered. */}
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
@@ -671,7 +920,7 @@ export function Landing() {
               src={ART.happy}
               alt=""
               aria-hidden
-              className="ghost-float mx-auto h-28 w-28 opacity-95 drop-shadow-lg sm:h-36 sm:w-36"
+              className="ghost-float mx-auto h-28 w-28 opacity-85 drop-shadow-lg sm:h-36 sm:w-36"
             />
             <h2 className="mt-6 text-[2rem] font-bold leading-[1.1] tracking-[-0.02em] text-white sm:text-[2.5rem]">
               Keep hunting, stop the haunting

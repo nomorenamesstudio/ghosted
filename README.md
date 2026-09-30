@@ -71,29 +71,19 @@ Full environment variable reference: see `.env.example` and
 
 ## Features
 
-- Application CRUD with a 5-step default timeline (extendable)
+- Application CRUD with a 5-step default timeline (extendable, with reordering,
+  per-row menus and a progress bar)
 - Milestone progress auto-advances the status: `applied -> interviewing ->
   offer`; `rejected` / `archived` / `offer` are manual terminal states
 - Dashboard stats (total / active / interviewing / offers / rejected /
   ghosted)
 - Search, status filter, sort, pagination, infinite scroll, sticky section
-  headers, reversible archive, favourites pinned to the top
+  headers, reversible archive, favorites pinned to the top
 - Email/password auth (bcrypt) + optional Google/LinkedIn OAuth, email
   verification, password reset, GDPR export + account deletion
 - Unverified accounts are limited to 3 applications until their email is
   verified (env-configurable)
 - Night mode (system default + manual override), responsive UI
-
-## MVP Scope
-
-**Included:** full CRUD for applications, milestone timeline (add/update/delete
-with reordering + per-row menus), 5-step default + extra steps, progress bar,
-dashboard stats, search + filter + sort, reversible archive, OAuth +
-email/password auth, user menu with night mode, responsive UI.
-
-**Explicitly out (v2 candidates):** job-description auto-fetch from URL,
-email notifications, public profiles/sharing, calendar integrations,
-CSV import/export.
 
 ## License
 

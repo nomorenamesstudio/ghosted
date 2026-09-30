@@ -8,7 +8,15 @@ export function Footer() {
         <p className="flex items-center gap-1">
           Made with
           <Heart className="h-3.5 w-3.5 fill-red-500 text-red-500" aria-hidden />
-          by Lost Signals Studio
+          by{" "}
+          <a
+            href="https://lostsignals.studio"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-foreground hover:underline"
+          >
+            Lost Signals Studio
+          </a>
         </p>
         <nav aria-label="Legal" className="flex gap-4">
           <Link href="/privacy" className="transition-colors hover:text-foreground hover:underline">

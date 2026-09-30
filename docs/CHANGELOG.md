@@ -5,19 +5,35 @@ All notable changes, by date and type.
 ## 2026-09-28
 
 ### Added
-- **MIT licence.** `LICENSE` (MIT, Copyright (c) 2026 Krisztian Hadi) plus a
-  `"license": "MIT"` field in `package.json`, so the repo — previously public
-  with no licence at all, which means all rights reserved — is now genuinely
-  open source.
+- **MIT license.** `LICENSE` (MIT, Copyright (c) 2026 Krisztian Hadi) plus a
+  `"license"` field in `package.json`, so the repo — previously public with no
+  license at all, which means all rights reserved — is now genuinely open source.
+- **A FAQ on the landing, below "What we're not doing".** Six questions — why it
+  exists, why it is free, what the catch is, why there are no AI features, how to
+  request features, how to contribute — with a first-draft answer each. Built on
+  native `<details>`/`<summary>`, so the answers open without JavaScript, stay
+  keyboard-operable, are announced as a disclosure, and cost no new dependency;
+  panels do not close each other, and the two-column rhythm (sticky heading,
+  list on the right) continues the band above it. The copy is a placeholder
+  draft, to be rewritten by hand.
 
 ### Changed
-- **The landing's "Self-hostable" tile says "Open source".** The licence makes
+- **The landing's "Self-hostable" tile says "Open source".** The license makes
   the claim true, so the tile is retitled and its body now leads with MIT. Its
-  "coming soon" footer stays: the licence is live, the app is not release-ready.
+  "coming soon" footer stays: the license is live, the app is not release-ready.
 - **README states the AI disclosure.** A "Built with AI" section names the
   tooling (DeepSeek V4.1 Flash in DeepSeek Harness) and the split of work:
   human direction, architecture and review, AI-authored code. The stale
-  "See Imprint / legal templates notes" licence pointer is gone.
+  "See Imprint / legal templates notes" license pointer is gone.
+- **README's MVP Scope folded into Features.** The section went; its one detail
+  the feature list lacked — milestone reordering, per-row menus and the progress
+  bar — moved into the timeline bullet.
+
+### Removed
+- **The README's "Explicitly out (v2 candidates)" list.** Job-description
+  auto-fetch, email notifications, public profiles/sharing, calendar
+  integrations and CSV import/export were never planned; naming them as
+  candidates promised a roadmap that does not exist.
 
 ## 2026-09-25
 
@@ -59,7 +75,7 @@ All notable changes, by date and type.
   has dates spread across the last few days so no column or section is empty in
   the shots. The bento dropped the calendar and step-rail drawings for now (they
   read cramped at tile size) and "MCP" became "MCP integration" with "coming
-  soon" as a grey mono footnote. "What we're not doing" is now the heading and
+  soon" as a gray mono footnote. "What we're not doing" is now the heading and
   intro on the left with the three refusals stacked down the right.
 
 ### Fixed
@@ -80,7 +96,7 @@ All notable changes, by date and type.
   drawings read as a sticker sheet), shrank Ghosted detection from a 2×2 to a wide
   tile with its calendar beside the copy, and now runs two wide tiles over four
   squares: self-hostable (link reads "view on github"), MCP (its title lost
-  "coming soon", which is now a grey mono footnote), private by default without
+  "coming soon", which is now a gray mono footnote), private by default without
   the encryption line, and free forever. "What we're not doing" fills its band
   properly: a 4xl heading with the intro beside it, bigger boxes, 14-unit crossed
   badges and a faint dot grid behind them.
@@ -98,7 +114,7 @@ All notable changes, by date and type.
   name. Below the hero the two views appear as the app really looks: the board
   and the list stitched at a vertical seam (`public/landing-views/board-list-split.jpg`,
   generated from the running app at 1024px and halved to 720 each) inside the
-  same chrome bar. The bento lost "Favourites first" (not a feature worth a tile)
+  same chrome bar. The bento lost "Favorites first" (not a feature worth a tile)
   and "A board or a list" (the screenshot says it better), gained **Self-hostable**
   with the repo link and **MCP, coming soon**, and "Private by design" became
   **Private by default** — no public profile, JSON export, self-hosted analytics,
@@ -117,7 +133,7 @@ All notable changes, by date and type.
   section headings to the app's own `text-2xl sm:text-3xl`, tile bodies to
   `text-sm`, so the page uses five sizes instead of eight-and-a-bit. The ghost,
   its shadow and the icon tornado are now siblings inside one ghost-sized box,
-  which centres the rings on the character and puts the shadow at its hem by
+  which centers the rings on the character and puts the shadow at its hem by
   construction (both were anchored independently and drifted); the rings also
   sit behind the window now instead of over its chrome, and the ghost carries a
   drop shadow so pale lavender still reads on violet.
@@ -130,12 +146,12 @@ All notable changes, by date and type.
   `5 fixed steps` are all mono; every word of copy stays in Geist Sans.
 - **The four new mascot poses are in use**: `confused` (scratching its head)
   fronts Ghosted detection, `content` fronts the timeline, `finger-guns` fronts
-  favourites, and the happy phone ghost — the payoff to the hero's sad one —
+  favorites, and the happy phone ghost — the payoff to the hero's sad one —
   sits above the closing CTA. The two policy tiles keep plain glyphs: terms of
   service do not have a face. All five live in `public/`.
 
 ### Fixed The page
-  was a centred hero, a floating mock and then five sections of equal weight, so
+  was a centerd hero, a floating mock and then five sections of equal weight, so
   nothing led and nothing rested. Now: a left-aligned hero with the CTA in it and
   the product shot on the right — the real dashboard cards inside a fake app
   window (chrome bar, URL, two offset panels behind, cropped at the bottom) with
@@ -169,7 +185,7 @@ All notable changes, by date and type.
   note-only save, the card out of the Ghosted column that same second). The
   modal now sends a diff (`changedFields`), and sends nothing at all when the
   diff is empty; the service is also transition-aware, so no other client can
-  resurrect the old behaviour. Two pure helpers in `lib/utils/status.ts` carry
+  resurrect the old behavior. Two pure helpers in `lib/utils/status.ts` carry
   the rule: `signalEffect(from, to)` classifies a move as `advance` (forward
   progress, or back into the pipeline out of an outcome — un-ghosting by hand,
   reopening an archived application), `restore` (a step back) or `hold`
@@ -241,20 +257,20 @@ All notable changes, by date and type.
   an anchor still follows the href, which would have made every menu click
   navigate to the detail page. The list card passes `reserveActions`, so the
   progress bar stops short of the trigger instead of running underneath it: 9px
-  of clearance at every width. The kebab is centred on the bar rather than
+  of clearance at every width. The kebab is centerd on the bar rather than
   dropped in the corner like the board's — 11px above the card's bottom edge
-  against a 28px trigger, because the bar's centre sits 25px up (p-4, the 1px
+  against a 28px trigger, because the bar's center sits 25px up (p-4, the 1px
   card border, half a 16px row). Measured delta at 1280, 1024, 640 and 390px:
   0px, and the board's own kebab was brought to the same rule (it was 1px out).
   The card's "Last round" and "Updated" share one row on the list card — the
   same row carries the bar, and a stacked pair would make the bar the taller
-  block's centre, which `items-center` then floats off the card's last line, the
+  block's center, which `items-center` then floats off the card's last line, the
   line the kebab is aligned to. The pair wraps to two lines only when it does not
   fit (verified by measurement at ten widths from 1440 down to 390px, and by
   forcing the wrap on desktop, where the demo data never triggers it): the
   separator travels inside the date's own element, because as its own flex item
   it would be left dangling at the end of the first line. The bottom row is
-  bottom-aligned rather than centred, so the bar keeps the last line when the
+  bottom-aligned rather than centerd, so the bar keeps the last line when the
   pair does wrap. The board's card is much narrower and keeps the stack. The
   list's move is deliberately plain
   where the board's is optimistic: `components/use-application-move.ts` PATCHes
@@ -289,11 +305,11 @@ All notable changes, by date and type.
   and identical figures before and after a reload in every case. Covered by
   `tests/e2e/shell-width.spec.ts` for both views, which asserts the reload
   equality directly.
-- **The status colours were 2.3x apart in perceived intensity.** Every status
+- **The status colors were 2.3x apart in perceived intensity.** Every status
   used the same Tailwind step (`bg-amber-100`, `bg-emerald-100`, …), and that step
   is not perceptually even: measured in OKLCH, `interviewing` sat at chroma 0.058
   and `offer` at 0.051 while `rejected`, `ghosted` and `applied` sat at 0.031,
-  0.028 and 0.025. Same "100", twice the colour — so the interviewing and offer
+  0.028 and 0.025. Same "100", twice the color — so the interviewing and offer
   cards shouted next to a ghosted one, and the board read as a board of different
   designs. `lib/utils/card-styles.ts` now authors every status in `oklch()` with
   one lightness and one chroma per layer, only the hue changing: surface
@@ -351,10 +367,10 @@ All notable changes, by date and type.
 
 ### Fixed
 - **Icons beside text sat low, because a line box reserves space the text never
-  uses.** `items-center` centres an icon's *box* on the text's *line box*, and a
+  uses.** `items-center` centers an icon's *box* on the text's *line box*, and a
   line box keeps room below the baseline for descenders — which uppercase titles
-  and "Ghosted" have none of. So the box centres matched to the hundredth of a
-  pixel while the ink did not, which is what the eye reads as "not centred"
+  and "Ghosted" have none of. So the box centers matched to the hundredth of a
+  pixel while the ink did not, which is what the eye reads as "not centerd"
   (measured from the rendered pixels in a real window: the section icon's ink sat
   1.87px below the caps' ink on a 1.333 device-pixel ratio, the brand's ghost
   0.75px below the wordmark). Both now carry a one-line optical nudge —
@@ -365,7 +381,7 @@ All notable changes, by date and type.
   it is *independent of line-height*, so no leading tweak can fix it — only an
   explicit nudge can. (The count pill's digit is not affected: it shares the
   caps' baseline exactly, it is only shorter because it is set at 12px.)
-- **The archived pill had no fill, because it was painted the colour of its own
+- **The archived pill had no fill, because it was painted the color of its own
   card.** Archived was the one card with no hue — `bg-muted` — and the muted badge
   variant is filled with that same token, so the chip came out at exactly zero
   contrast: measured L 0.905 against L 0.905 in light mode, and L 0.274 against
@@ -378,7 +394,7 @@ All notable changes, by date and type.
   archived card against its pill is 0.046 light and 0.150 dark, against 0.046 and
   0.158 for offer — the same chip weight as every other status. The progress track
   and fill came along: neutrals at the family's own lightness now, rather than the
-  "couple of steps darker" they were tuned to when the card behind them was grey.
+  "couple of steps darker" they were tuned to when the card behind them was gray.
 
 ### Fixed
 - **A long job-posting URL pushed the whole detail page sideways on a phone.** The
@@ -402,7 +418,7 @@ All notable changes, by date and type.
   so no field can force a flex or grid track wider than its container. **This part
   is not regression-tested**: WebKit cannot be installed in this sandbox (its host
   requirements are unmet, and there is no root to satisfy them), so the fix rests
-  on the documented iOS behaviour rather than a local reproduction — the Chromium
+  on the documented iOS behavior rather than a local reproduction — the Chromium
   mobile tests cover the layout around it, not the iOS quirk itself.
 
 ## 2026-09-23
@@ -438,13 +454,13 @@ All notable changes, by date and type.
   the shadow off the ghost. iOS ignores transparency and composites it onto black,
   so every cut is flattened onto the icon's own background (`#582eab`, sampled
   from its corner). `app/manifest.ts` describes the install: name, standalone
-  display, `start_url: /app`, theme and background colour matching the icon, and
+  display, `start_url: /app`, theme and background color matching the icon, and
   the three icons with the maskable one declared. The root layout links them —
   `apple-touch-icon` for iOS, which ignores the manifest's icons, plus the two
   `icon` links — and sets `appleWebApp` so a saved shortcut opens without Safari's
   chrome and carries the name "Ghosted". Covered by
   `tests/e2e/app-icons.spec.ts`, which fetches every file, asserts its real PNG
-  dimensions and colour type (truecolour, no alpha — the one mistake that looks
+  dimensions and color type (truecolor, no alpha — the one mistake that looks
   correct everywhere except iOS), and asserts the manifest and the emitted tags.
 
 - **The icon is now the close-up ghost**, cut from
@@ -456,7 +472,7 @@ All notable changes, by date and type.
   surviving it. Padding the art to sit inside the maskable safe circle was tried
   first and looked worse: a blurred halo of the artwork around a shrunken face.
   The separate `icon-maskable-512.png` is gone with it — one file serves both
-  purposes now — and the manifest's theme and background colours moved from the old
+  purposes now — and the manifest's theme and background colors moved from the old
   purple to the art's own pale ground (`#ebedf9`, sampled from its corners), so a
   splash screen meets the icon rather than framing a lavender ghost in purple.
   **The previous set is kept for reverting**: its master is
@@ -613,7 +629,7 @@ All notable changes, by date and type.
   cannot tell which one filled it — `tests/integration/board-equivalence.test.ts`
   checks the two agree section by section. Failing is safe: the sections are only
   gated while the seed is in flight, so an error drops back to exactly the old
-  behaviour, six requests and all.
+  behavior, six requests and all.
 - **Milestone shifts and renumbering are one statement each.** Adding, deleting
   or re-marking a step used to move the following rows with one `UPDATE` per row
   inside the transaction — a five-step timeline meant up to five round-trips. The
@@ -697,33 +713,33 @@ All notable changes, by date and type.
   step rather than none. `tests/integration/reset-timeline.test.ts` pins it, and
   the API test that asserted the old full wipe was updated.
 - **The archived progress bar is readable.** Its track was `bg-zinc-200/60`,
-  which on the card's own muted grey was very nearly the same colour — the bar
+  which on the card's own muted gray was very nearly the same color — the bar
   looked broken rather than empty — and the segment separators were `bg-card`, a
   hard-coded white hairline that only looked like a gap while cards were white.
   The archived track is a couple of steps darker than its card (measured:
   card `rgb(223,223,226)`, track `rgb(161,161,170)`, fill `rgb(82,82,91)`), and
   the separators are a translucent hairline that reads as a divider on any tint.
-- **The archived card is the same colour in both views.** Its tint was
+- **The archived card is the same color in both views.** Its tint was
   `bg-muted/60`, the only translucent one in light mode — every other status is
-  opaque — and a translucent tint is only the same colour if the surface behind it
-  is. Over the board's white column it read white-ish, over the dashboard's grey
-  page it read grey, so the same application looked like two different cards.
+  opaque — and a translucent tint is only the same color if the surface behind it
+  is. Over the board's white column it read white-ish, over the dashboard's gray
+  page it read gray, so the same application looked like two different cards.
   Measured: card `rgba(223,223,226,0.6)` over `rgb(255,255,255)` versus over
   `rgb(233,233,236)`; now an opaque `rgb(223,223,226)` in both. (Dark mode's tints
   are all translucent by design, but there both surfaces are dark and close, so
   the effect is not visible.)
-- **The archived card's colours and progress bar were missing.** Not the card's
-  logic: its colours compiled to nothing. The per-status card colours live in
+- **The archived card's colors and progress bar were missing.** Not the card's
+  logic: its colors compiled to nothing. The per-status card colors live in
   `lib/utils/card-styles.ts`, and Tailwind's `content` globs listed `./pages`,
   `./components` and `./app` but not `./lib`, so any class named only there was
   absent from the stylesheet. The card tint survived by luck (`bg-muted/60` is
   used elsewhere), while the archived progress bar's own `bg-zinc-200/60` and
   `bg-zinc-400` existed nowhere else and rendered fully transparent; the archived
-  border fell back to the default grey, which is why the card also read
+  border fell back to the default gray, which is why the card also read
   differently in the two views. `./lib/**` is scanned now. Measured before and
   after on both views: track `rgba(0,0,0,0)` → `rgba(228,228,231,0.6)`, fill
-  transparent → `rgb(161,161,170)`, border default grey →
-  `rgba(212,212,216,0.7)`, and the list and board colours now match.
+  transparent → `rgb(161,161,170)`, border default gray →
+  `rgba(212,212,216,0.7)`, and the list and board colors now match.
 - **The dashboard no longer opens narrow and jumps to the board's width.** The
   shell is widened by a rule keyed on `data-view="board"` (six columns need the
   room), and that attribute was set in a `useEffect` — so the first paint was
@@ -754,7 +770,7 @@ All notable changes, by date and type.
   desktop browser reserves a full-height bar for it, drawn right under the cards,
   which is what looked wrong at narrower widths. It is now a slim themed
   hairline (`scrollbar-width: thin` plus a `::-webkit-scrollbar` thumb in the
-  app's border colour on a transparent track). Measured in the reporting browser:
+  app's border color on a transparent track). Measured in the reporting browser:
   **15 px reserved → 10 px**, still scrollable, columns unchanged. It stays
   visible deliberately: it is the only hint a mouse user gets that there are more
   columns to the right.
@@ -812,7 +828,7 @@ All notable changes, by date and type.
   posting, website, email and phone, "—" for anything unset) and editing happens
   in a modal, so the page no longer looks like a settings screen. The card sizes
   to its own content — it used to stretch down to match the timeline's height —
-  and carries one kebab menu (edit, favourite, archive/reopen) in its header,
+  and carries one kebab menu (edit, favorite, archive/reopen) in its header,
   replacing the star and menu that sat in the page header plus the duplicate
   Edit button that was on the card.
 - **The role field autocompletes from roles you have used before**, most
@@ -846,12 +862,12 @@ All notable changes, by date and type.
 - The **List / Board switch shows which view is active**. It was built from
   `Button variant="secondary"`, which sits within ~1.1:1 of its own background
   in both themes — the selected side looked unselected. It is now a segmented
-  control (`components/ViewToggle.tsx`): a raised card-coloured chip with a
+  control (`components/ViewToggle.tsx`): a raised card-colored chip with a
   shadow on a muted track.
 - The footer is as wide as the header in board view (it carries the same
   `app-shell` class now, so the full-width rule reaches it).
 - The empty kanban column's "Drop an application here" prompt sits directly
-  under the column header instead of vertically centred — in a long column it
+  under the column header instead of vertically centerd — in a long column it
   used to float in the middle of nothing.
 
 ### Added
@@ -869,7 +885,7 @@ All notable changes, by date and type.
   as the touch/keyboard route. Columns take a 300px floor and then share any
   spare width evenly, so a wide window is filled instead of leaving a gap after
   the last column (and six of them on a laptop scroll rather than squash).
-  Board-specific behaviour vs the list: the page
+  Board-specific behavior vs the list: the page
   and header widen to the full window, the stat cards and the status filter step
   aside (the columns *are* the statuses), every column stays visible when empty
   (so there is always a drop target), `archived` is always shown, and the
@@ -895,10 +911,10 @@ All notable changes, by date and type.
   `GET /logos/:applicationId` with `immutable` caching versioned by the
   application's `updatedAt`.
 - New optional **Company website** field on the add and edit forms (stored as a
-  normalised domain, `stripe.com`), which feeds the logo lookup and overrides
+  normalized domain, `stripe.com`), which feeds the logo lookup and overrides
   every guess - the fix for a pasted job-board link or an ambiguous company name
   like "Acme". Left empty, the resolution chain runs exactly as before.
-- Job-board links are recognised and stripped before a lookup
+- Job-board links are recognized and stripped before a lookup
   (`linkedin.com/jobs/...`, `boards.greenhouse.io/acme/...`,
   `acme.myworkdayjobs.com`), so the employer's logo is used rather than the
   posting board's. A company that yields no icon is cached as a miss, so a
@@ -906,7 +922,7 @@ All notable changes, by date and type.
 
 ### Changed
 - **Card layout rework** (list and board): one structure in both views — the
-  logo, company name and its favourite star on the first line, the role breaking
+  logo, company name and its favorite star on the first line, the role breaking
   onto a second line at the same left edge, the status badge pinned to the card's
   top-right corner, then a full-width hairline, and under it the "last round /
   updated" line with the progress bar to its right (stacked, with the board's

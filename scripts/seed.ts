@@ -36,6 +36,15 @@ interface Sample {
   company: string;
   role: string;
   url?: string | null;
+  /**
+   * The employer's own site. Only needed where the company name alone cannot
+   * yield a domain: `companySlug()` accepts a single alphabetic word, so
+   * "Cal.com", "Fly.io" and "The Browser Company" resolve to nothing and their
+   * cards fall back to monograms. The landing's product shots are captured from
+   * this seed, so those three are the difference between a board of logos and a
+   * board of letters.
+   */
+  companyWebsite?: string | null;
   contactName?: string | null;
   contactEmail?: string | null;
   contactPhone?: string | null;
@@ -166,6 +175,7 @@ const SAMPLES: Sample[] = [
     company: "The Browser Company",
     role: "Product Engineer",
     url: "https://browserco.example/jobs/product",
+    companyWebsite: "thebrowser.company",
     contactName: "Nora Fischer",
     contactEmail: "nora@browserco.example",
     contactPhone: "+1-646-555-0188",
@@ -199,6 +209,7 @@ const SAMPLES: Sample[] = [
     company: "Cal.com",
     role: "Frontend Engineer",
     url: "https://cal.example/jobs/frontend",
+    companyWebsite: "cal.com",
     doneSteps: 1,
     favorite: true,
     touchedDaysAgo: 3,
@@ -291,6 +302,7 @@ const SAMPLES: Sample[] = [
     company: "Fly.io",
     role: "Platform Engineer",
     url: "https://fly.example/jobs/platform",
+    companyWebsite: "fly.io",
     contactName: "Marcus Webb",
     doneSteps: 1,
     touchedDaysAgo: 20,
@@ -350,6 +362,7 @@ async function main() {
       company: sample.company,
       role: sample.role,
       url: sample.url ?? null,
+      companyWebsite: sample.companyWebsite ?? null,
       contactName: sample.contactName ?? null,
       contactEmail: sample.contactEmail ?? null,
       contactPhone: sample.contactPhone ?? null,
