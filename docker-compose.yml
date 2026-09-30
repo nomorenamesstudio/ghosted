@@ -2,27 +2,35 @@ name: ghosted
 
 # Two ways to run this file:
 #
-#   docker compose up -d                    # dev: Postgres only, run the app with pnpm dev
+#   docker compose --profile dev up -d      # dev: Postgres on localhost:5432, run the app with pnpm dev
 #   docker compose --profile selfhost up -d # self-host: Postgres + the app, migrations on start
 #
-# The app service lives behind a profile so the existing local workflow (a
-# Postgres in Docker, the Next.js dev server on the host) is unchanged. See
+# Both profiles exist so that neither gets the other's exposure: the database is
+# published to 127.0.0.1 only under `dev`, and the self-hosting shape — the one
+# a stranger follows the guide for — publishes the app and nothing else. See
 # docs/SELFHOST.md for the full walkthrough.
 
 services:
   db:
+    # `dev` publishes the port for the host's dev server; a self-hosted run does
+    # not need it published at all.
+    profiles: ["dev", "selfhost"]
     image: postgres:16-alpine
     container_name: ghosted-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ghosted
-      POSTGRES_PASSWORD: ghosted
+      # Override this before anyone else can reach the host: it is the database
+      # password, and the default is public knowledge.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ghosted}
       POSTGRES_DB: ghosted
     ports:
-      # Published for the dev workflow (the host's Next.js dev server connects
-      # here). The self-hosted app reaches the database over the compose network
-      # and does not need this; drop the line if the host should not expose it.
-      - "5432:5432"
+      # Only under `dev`, and only on the loopback interface: the host's Next.js
+      # dev server connects here. A self-hosted instance reaches the database
+      # over the compose network and must not publish it — an exposed Postgres
+      # with a password that is written in this file is a worse problem than
+      # anything the application layer guards against.
+      - "127.0.0.1:5432:5432"
     volumes:
       - ghosted_pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -46,8 +54,12 @@ services:
       - "8080:8080"
     environment:
       PORT: "8080"
-      # Inside the compose network this is the service name, not localhost.
-      DATABASE_URL: postgres://ghosted:ghosted@db:5432/ghosted
+      # Inside the compose network this is the service name, not localhost; the
+      # password has to match the db service above.
+      DATABASE_URL: postgres://ghosted:${POSTGRES_PASSWORD:-ghosted}@db:5432/ghosted
+      # Refuse to send mail unencrypted: see docs/SELFHOST.md. Set to 1 only for
+      # an unauthenticated relay on the same host.
+      SMTP_ALLOW_INSECURE: ${SMTP_ALLOW_INSECURE:-}
       # Required: sessions are signed with it, and a placeholder would be worse
       # than a failed start. `openssl rand -base64 32`.
       AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in your .env (openssl rand -base64 32)}

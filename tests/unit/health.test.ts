@@ -24,6 +24,22 @@ describe("GET /api/health", () => {
     });
   });
 
+  it("answers 503 when the deployment configuration is invalid", async () => {
+    // The config is validated at request time now, so a process can be running
+    // with a broken deployment: a probe that says "healthy" would be lying.
+    (db.execute as Mock).mockResolvedValueOnce([{ "?column?": 1 }]);
+    const previous = process.env.ALLOW_REGISTRATION;
+    process.env.ALLOW_REGISTRATION = "flase";
+    try {
+      const res = await GET();
+      expect(res.status).toBe(503);
+      expect(await res.json()).toMatchObject({ ok: false, config: "invalid" });
+    } finally {
+      if (previous === undefined) delete process.env.ALLOW_REGISTRATION;
+      else process.env.ALLOW_REGISTRATION = previous;
+    }
+  });
+
   it("answers 503 when the database is unreachable", async () => {
     (db.execute as Mock).mockRejectedValueOnce(new Error("ECONNREFUSED"));
 

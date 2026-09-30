@@ -24,6 +24,14 @@ export interface SmtpConfig {
   secure: boolean;
   user?: string;
   password?: string;
+  /**
+   * Permit an unencrypted conversation when the server does not offer STARTTLS.
+   * Off by default: `smtp://` means "upgrade me", not "send my password in the
+   * clear if you cannot", and base64 is not encryption. The escape hatch exists
+   * for an unauthenticated relay on the same host (a local Postfix), where the
+   * traffic never leaves the machine.
+   */
+  allowInsecure?: boolean;
 }
 
 const REPLY_TIMEOUT_MS = 20_000;
@@ -34,7 +42,9 @@ export function parseSmtpUrl(raw: string): SmtpConfig {
   try {
     url = new URL(raw);
   } catch {
-    throw new Error(`SMTP_URL="${raw}" is not a URL`);
+    // Never echo the value: an SMTP URL carries the password in clear text, and
+    // these messages end up in boot logs and deployment diagnostics.
+    throw new Error("SMTP_URL is not a URL");
   }
   if (url.protocol !== "smtp:" && url.protocol !== "smtps:") {
     throw new Error(
@@ -102,27 +112,29 @@ class SmtpSession {
     for (const waiter of this.waiters.splice(0)) waiter.reject(error);
   }
 
+  /** Continuation lines of one reply may arrive split across chunks. */
+  private replyCode = 0;
+  private replyLines: string[] = [];
+
   private onData_(chunk: string): void {
     this.buffer += chunk;
     let index = this.buffer.indexOf("\r\n");
-    let code = 0;
-    let lines: string[] = [];
     while (index !== -1) {
       const line = this.buffer.slice(0, index);
       this.buffer = this.buffer.slice(index + 2);
       const match = /^(\d{3})([- ])(.*)$/.exec(line);
       if (match) {
         const lineCode = Number(match[1]);
-        if (lines.length === 0 || lineCode === code) {
-          code = lineCode;
-          lines.push(match[3]);
+        if (this.replyLines.length === 0 || lineCode === this.replyCode) {
+          this.replyCode = lineCode;
+          this.replyLines.push(match[3]);
         }
         if (match[2] === " ") {
-          const reply = { code, lines };
+          const reply = { code: this.replyCode, lines: this.replyLines };
           const waiter = this.waiters.shift();
           if (waiter) waiter.resolve(reply);
           else this.queue.push(reply);
-          lines = [];
+          this.replyLines = [];
         }
       }
       index = this.buffer.indexOf("\r\n");
@@ -213,6 +225,11 @@ export function buildMessage({
 }: EmailMessage & { from: string; date?: Date }): string {
   assertSingleLine(from, "from");
   assertSingleLine(to, "to");
+  // `encodeHeaderValue` base64s anything non-printable, which incidentally
+  // covers CR/LF — but only while the subject has such a character. A subject
+  // that is entirely printable ASCII, a line break included, would pass
+  // through untouched, so it gets the same explicit guard.
+  assertSingleLine(subject, "subject");
 
   const headers = [
     `From: ${from}`,
@@ -276,6 +293,12 @@ export async function sendSmtpMessage(
     let ehlo = await session.readReply();
     expect(ehlo, [250], "EHLO");
     let capabilities = ehlo.lines.join(" ").toUpperCase();
+
+    if (!config.secure && !capabilities.includes("STARTTLS") && !config.allowInsecure) {
+      throw new Error(
+        `SMTP: ${config.host} does not offer STARTTLS — refusing to send credentials or mail in the clear. Use smtps:// (port 465), or set SMTP_ALLOW_INSECURE=1 for a relay on this machine.`,
+      );
+    }
 
     if (!config.secure && capabilities.includes("STARTTLS")) {
       session.write("STARTTLS");

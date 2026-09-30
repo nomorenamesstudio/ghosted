@@ -29,9 +29,17 @@ const geistMono = localFont({
 
 const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
 
-const identity = siteIdentity();
-
-export const metadata: Metadata = {
+/**
+ * Read at request time, never at module scope. `siteIdentity()` validates the
+ * deployment configuration — it refuses open registration in production without
+ * a delivering email transport — and a `next build` loads this module to collect
+ * routes. Evaluating it at import time therefore fails the *build* of an image
+ * whose runtime environment is perfectly valid, which is exactly the documented
+ * `docker compose up --build` path.
+ */
+export function generateMetadata(): Metadata {
+  const identity = siteIdentity();
+  return {
   title: "Ghosted",
   // Only the operator's own instance should turn up in search results; a
   // self-hosted one is private unless it says otherwise.
@@ -98,13 +106,16 @@ export const metadata: Metadata = {
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     images: ["/ghost-og.png?v=1"],
   },
-};
+  };
+}
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const identity = siteIdentity();
+
   return (
     // The font variables belong on <html>, not <body>: Tailwind's preflight sets
     // the base font-family on `html`, and a `var()` that is not defined on that

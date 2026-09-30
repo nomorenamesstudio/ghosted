@@ -53,9 +53,20 @@ describe("readSiteIdentity", () => {
     expect(readSiteIdentity(selfHosted, { BRAND_TAG: "none" }).brandTag).toBeNull();
   });
 
+  it("keeps the hosted instance's own tracker with no new configuration", () => {
+    // Upgrading an existing deployment must not silently stop its analytics.
+    expect(readSiteIdentity(hosted, {}).umami).toMatchObject({
+      src: "https://ramen.lostsignals.studio/script.js",
+      domains: "ghosted.lostsignals.studio",
+    });
+    // A self-hosted shape reports nowhere, which is the whole point.
+    expect(readSiteIdentity(selfHosted, {}).umami).toBeNull();
+  });
+
   it("renders no tracker unless a source and an id are both given", () => {
-    expect(readSiteIdentity(hosted, {}).umami).toBeNull();
+    // Half-configured is off, not a partial script tag.
     expect(readSiteIdentity(hosted, { UMAMI_SRC: "https://a.example/s.js" }).umami).toBeNull();
+    expect(readSiteIdentity(selfHosted, { UMAMI_WEBSITE_ID: "abc" }).umami).toBeNull();
     expect(
       readSiteIdentity(hosted, {
         UMAMI_SRC: "https://a.example/s.js",

@@ -136,8 +136,17 @@ export async function importUserData(
       })
       .from(applications)
       .where(eq(applications.userId, userId));
-    const seen = new Set(
+    const seenTimed = new Set(
       existing.map((row) => identityKey(row.company, row.role, row.createdAt)),
+    );
+    // A file row without a timestamp is matched on company + role alone, against
+    // every application the account already has — the rows inserted by a first
+    // import were stamped by the database, so a timestamp-keyed lookup would
+    // never recognise them and the second import would duplicate everything.
+    // Two such rows inside one file collapse, and that collapse is counted as a
+    // skip rather than passing silently.
+    const seenUntimed = new Set(
+      existing.map((row) => roleKey(row.company, row.role)),
     );
 
     let importedApplications = 0;
@@ -145,15 +154,16 @@ export async function importUserData(
     let skipped = 0;
 
     for (const app of file.applications) {
-      const key = identityKey(
-        app.company,
-        app.role,
-        app.createdAt ? new Date(app.createdAt) : null,
-      );
-      if (seen.has(key)) {
+      const createdAt = app.createdAt ? new Date(app.createdAt) : null;
+      const isDuplicate = createdAt
+        ? seenTimed.has(identityKey(app.company, app.role, createdAt))
+        : seenUntimed.has(roleKey(app.company, app.role));
+      if (isDuplicate) {
         skipped += 1;
         continue;
       }
+      if (createdAt) seenTimed.add(identityKey(app.company, app.role, createdAt));
+      seenUntimed.add(roleKey(app.company, app.role));
 
       const [inserted] = await tx
         .insert(applications)
@@ -176,7 +186,6 @@ export async function importUserData(
         })
         .returning({ id: applications.id });
       importedApplications += 1;
-      seen.add(key);
 
       if (app.milestones.length > 0) {
         // One statement per application rather than one per milestone: a file
@@ -214,12 +223,12 @@ export async function importUserData(
  * company are only "the same" when they really are the same row; a file with no
  * timestamp falls back to company + role.
  */
-function identityKey(
-  company: string,
-  role: string,
-  createdAt: Date | null | undefined,
-): string {
-  return `${company.toLowerCase()}\u0000${role.toLowerCase()}\u0000${
-    createdAt ? createdAt.toISOString() : ""
-  }`;
+/** What an application *is*, when the file states a creation time. */
+function identityKey(company: string, role: string, createdAt: Date): string {
+  return `${roleKey(company, role)}\u0000${createdAt.toISOString()}`;
+}
+
+/** The fallback for rows that carry no timestamp: the two stated facts. */
+function roleKey(company: string, role: string): string {
+  return `${company.toLowerCase()}\u0000${role.toLowerCase()}`;
 }

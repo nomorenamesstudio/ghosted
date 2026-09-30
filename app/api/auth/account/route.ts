@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deleteAccount } from "@/lib/services/account";
-import { readConfig } from "@/lib/config/flags";
+import { readBooleanFlag } from "@/lib/config/flags";
 import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,18 @@ export async function DELETE() {
     // stale "registration is open" is the direction that deletes somebody's
     // only account. The settings page only decides whether to *offer* the
     // button, so a cached answer there is harmless.
-    if (!readConfig().allowRegistration) {
+    //
+    // One flag, not `readConfig()`: that validates the whole deployment,
+    // including email, and a rotated Resend key should not turn a delete
+    // attempt into a 500. An unreadable flag counts as closed — the safe
+    // direction for a destructive endpoint.
+    let registrationOpen = true;
+    try {
+      registrationOpen = readBooleanFlag(process.env, "ALLOW_REGISTRATION", true);
+    } catch {
+      registrationOpen = false;
+    }
+    if (!registrationOpen) {
       return jsonError(
         403,
         "This instance has a single account — deleting it would lock everyone out. Export your data instead.",

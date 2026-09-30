@@ -193,6 +193,37 @@ describe("importUserData", () => {
 
     expect(result).toMatchObject({ applications: 1, milestones: 1 });
   });
+
+  it("is idempotent for an unversioned file whose rows carry no timestamp", async () => {
+    // Without a timestamp the key is company + role, which is what makes the
+    // second import a no-op — the first one's rows were stamped by the database.
+    const target = await createUser("target6@test.dev");
+    const legacy = {
+      exportedAt: new Date().toISOString(),
+      applications: [
+        {
+          company: "Legacy Co",
+          role: "Engineer",
+          status: "applied",
+          isFavorite: false,
+          totalSteps: 5,
+          milestones: [],
+        },
+      ],
+    } as ImportFile;
+
+    expect(await importUserData(target.id, legacy)).toMatchObject({ applications: 1 });
+    expect(await importUserData(target.id, legacy)).toMatchObject({
+      applications: 0,
+      skipped: 1,
+    });
+
+    const rows = await db
+      .select()
+      .from(applications)
+      .where(eq(applications.userId, target.id));
+    expect(rows).toHaveLength(1);
+  });
 });
 
 describe("POST /api/auth/import", () => {

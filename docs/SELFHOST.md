@@ -93,17 +93,32 @@ One URL covers every provider that speaks SMTP: implicit TLS (`smtps://`,
 usually port 465) or STARTTLS (`smtp://`, usually 587), with AUTH PLAIN or AUTH
 LOGIN.
 
-**Prefer `smtps://` when your provider offers it.** The STARTTLS path is
-implemented and now tested as far as it can be without a trusted certificate —
-the client asks for the upgrade and refuses to continue in the clear if it fails
-— but the TLS handshake itself has not been exercised end to end against a real
-certificate in this project. `smtps://` has no such caveat.
+**Encryption is required.** `smtp://` means "upgrade with STARTTLS"; if the
+server does not offer it, the connection is refused rather than sending your
+password and your mail in the clear. The one exception is an unauthenticated
+relay on the same machine: set `SMTP_ALLOW_INSECURE=1` for that, and only that.
+
+**Prefer `smtps://` when your provider offers it.** The STARTTLS path is tested
+as far as it can be without a trusted certificate — the client asks for the
+upgrade and refuses to continue in the clear if it fails — but the TLS handshake
+itself has not been exercised end to end against a real certificate in this
+project. `smtps://` has no such caveat.
 
 ### No email at all
 
 `EMAIL_TRANSPORT=log` writes each message to the container log instead of sending
 it. Perfect for a solo instance or for testing; unusable when other people need
 to verify an address.
+
+## 3b. The database port
+
+The compose file binds Postgres to `127.0.0.1:5432` — the loopback interface,
+never `0.0.0.0` — so it is not reachable from the network even though it is
+published for the `dev` shape's benefit. A self-hosted app instance reaches the
+database over the compose network and has no use for that port at all.
+
+Set `POSTGRES_PASSWORD` in `.env` before anything else: the default is written in
+the compose file and is public knowledge.
 
 ## 4. Environment
 
@@ -121,7 +136,7 @@ the file to copy. The ones that change what the instance *is*:
 | `OPERATOR_NAME` / `_EMAIL` / `_URL` | empty | who runs *this* instance; empty means the footer and legal pages say "self-hosted, powered by Ghosted" |
 | `SITE_INDEXABLE` | `SHOW_LANDING` | `false` adds `noindex` and a disallowing `robots.txt` |
 | `BRAND_TAG` | none, `DIY` when self-hosted | the word after the wordmark |
-| `UMAMI_SRC` + `UMAMI_WEBSITE_ID` | empty | analytics; empty means no tracker at all |
+| `UMAMI_SRC` + `UMAMI_WEBSITE_ID` | hosted: the operator's tracker; otherwise empty | analytics; without them a self-hosted copy renders no tracker at all |
 
 ## 5. Your data
 

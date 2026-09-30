@@ -27,7 +27,13 @@ interface FakeServer {
 }
 
 async function fakeSmtp(
-  options: { capabilities?: string[]; failRcpt?: boolean; greeting?: string } = {},
+  options: {
+    capabilities?: string[];
+    failRcpt?: boolean;
+    greeting?: string;
+    /** Write a reply's continuation lines separately, as TCP may. */
+    splitReplies?: boolean;
+  } = {},
 ): Promise<FakeServer> {
   const capabilities = options.capabilities ?? ["AUTH PLAIN LOGIN"];
   const dialogue: string[] = [];
@@ -65,9 +71,20 @@ async function fakeSmtp(
 
         dialogue.push(line);
         if (line.startsWith("EHLO")) {
-          socket.write(`250-fake greets you\r\n250-8BITMIME\r\n`);
-          for (const capability of capabilities) socket.write(`250-${capability}\r\n`);
-          socket.write("250 SMTPUTF8\r\n");
+          const reply = [
+            "250-fake greets you",
+            "250-8BITMIME",
+            ...capabilities.map((capability) => `250-${capability}`),
+            "250 SMTPUTF8",
+          ];
+          if (options.splitReplies) {
+            // One line now, the rest a tick later: two chunks, one reply.
+            socket.write(`${reply[0]}\r\n`);
+            const rest = reply.slice(1).join("\r\n") + "\r\n";
+            setTimeout(() => socket.write(rest), 15);
+          } else {
+            socket.write(reply.join("\r\n") + "\r\n");
+          }
         } else if (line.startsWith("AUTH PLAIN")) {
           socket.write("235 2.7.0 accepted\r\n");
         } else if (line === "AUTH LOGIN") {
@@ -202,6 +219,8 @@ describe("buildMessage", () => {
 
 describe("sendSmtpMessage", () => {
   it("authenticates, envelopes the message and sends the body", async () => {
+    // No STARTTLS advertised + the explicit opt-in: this test is about the
+    // dialogue, not about TLS (the TLS requirement has its own cases above).
     running = await fakeSmtp();
     await sendSmtpMessage(
       {
@@ -210,6 +229,7 @@ describe("sendSmtpMessage", () => {
         secure: false,
         user: "apikey",
         password: "hunter2",
+        allowInsecure: true,
       },
       {
         from: "Ghosted <hi@example.com>",
@@ -236,12 +256,70 @@ describe("sendSmtpMessage", () => {
   it("falls back to AUTH LOGIN when the server does not offer PLAIN", async () => {
     running = await fakeSmtp({ capabilities: ["AUTH LOGIN"] });
     await sendSmtpMessage(
-      { host: "127.0.0.1", port: running.port, secure: false, user: "apikey", password: "hunter2" },
+      {
+        host: "127.0.0.1",
+        port: running.port,
+        secure: false,
+        user: "apikey",
+        password: "hunter2",
+        allowInsecure: true,
+      },
       { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
     );
     expect(running.dialogue[1]).toBe("AUTH LOGIN");
     expect(running.dialogue[2]).toBe(Buffer.from("apikey").toString("base64"));
     expect(running.dialogue[3]).toBe(Buffer.from("hunter2").toString("base64"));
+  });
+
+  it("refuses to speak in the clear when the server cannot upgrade", async () => {
+    // base64 is not encryption: a misconfigured relay on port 587 must not
+    // receive AUTH PLAIN, and the mail must not go out unencrypted either.
+    running = await fakeSmtp({ capabilities: [] });
+    await expect(
+      sendSmtpMessage(
+        { host: "127.0.0.1", port: running.port, secure: false, user: "apikey", password: "hunter2" },
+        { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
+      ),
+    ).rejects.toThrow(/does not offer STARTTLS/);
+    expect(running.dialogue.some((line) => line.startsWith("AUTH"))).toBe(false);
+    expect(running.dialogue.some((line) => line.startsWith("MAIL FROM"))).toBe(false);
+    expect(running.body()).toBe("");
+  });
+
+  it("allows an unencrypted relay only when the operator opts in", async () => {
+    running = await fakeSmtp({ capabilities: [] });
+    await sendSmtpMessage(
+      {
+        host: "127.0.0.1",
+        port: running.port,
+        secure: false,
+        user: "apikey",
+        password: "hunter2",
+        allowInsecure: true,
+      },
+      { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
+    );
+    expect(running.dialogue.some((line) => line.startsWith("MAIL FROM"))).toBe(true);
+  });
+
+  it("keeps a multiline reply's earlier lines when the socket splits them", async () => {
+    // TCP is free to break the EHLO reply anywhere; if the continuation lines
+    // are dropped, the client never sees AUTH and silently sends unauthenticated
+    // mail (or misses STARTTLS).
+    running = await fakeSmtp({ capabilities: ["AUTH PLAIN"], splitReplies: true });
+    await sendSmtpMessage(
+      {
+        host: "127.0.0.1",
+        port: running.port,
+        secure: false,
+        user: "apikey",
+        password: "hunter2",
+        allowInsecure: true,
+      },
+      { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
+    );
+    const expectedAuth = Buffer.from("\0apikey\0hunter2", "utf8").toString("base64");
+    expect(running.dialogue[1]).toBe(`AUTH PLAIN ${expectedAuth}`);
   });
 
   it("asks for STARTTLS when the server offers it", async () => {
@@ -262,9 +340,9 @@ describe("sendSmtpMessage", () => {
   });
 
   it("sends unauthenticated when no credentials are configured", async () => {
-    running = await fakeSmtp();
+    running = await fakeSmtp({ capabilities: [] });
     await sendSmtpMessage(
-      { host: "127.0.0.1", port: running.port, secure: false },
+      { host: "127.0.0.1", port: running.port, secure: false, allowInsecure: true },
       { from: "hi@example.com", to: "you@example.com", subject: "Hi", text: "body" },
     );
     expect(running.dialogue.some((line) => line.startsWith("AUTH"))).toBe(false);
@@ -272,10 +350,10 @@ describe("sendSmtpMessage", () => {
   });
 
   it("throws with the server's own words when a recipient is refused", async () => {
-    running = await fakeSmtp({ failRcpt: true });
+    running = await fakeSmtp({ failRcpt: true, capabilities: [] });
     await expect(
       sendSmtpMessage(
-        { host: "127.0.0.1", port: running.port, secure: false },
+        { host: "127.0.0.1", port: running.port, secure: false, allowInsecure: true },
         { from: "hi@example.com", to: "nobody@example.com", subject: "Hi", text: "body" },
       ),
     ).rejects.toThrow(/RCPT TO failed: 550 5\.1\.1 no such user/);

@@ -26,6 +26,18 @@ const HOSTED_OPERATOR = {
   email: "hey@lostsignals.studio",
 };
 
+/**
+ * The hosted instance's own tracker. Kept as a default rather than a required
+ * variable so that upgrading an existing deployment does not silently stop its
+ * analytics; a self-hosted shape gets nothing, which is the point of the
+ * deployment flags.
+ */
+const HOSTED_UMAMI: UmamiConfig = {
+  src: "https://ramen.lostsignals.studio/script.js",
+  websiteId: "c8f73665-dca1-464b-9427-a56f8b27c799",
+  domains: "ghosted.lostsignals.studio",
+};
+
 export interface Operator {
   name: string;
   email: string | null;
@@ -94,7 +106,19 @@ export function readSiteIdentity(
     operator,
     brandTag,
     indexable,
-    umami: src && websiteId ? { src, websiteId, domains: text(env, "UMAMI_DOMAINS") } : null,
+    // Explicit configuration wins; otherwise the hosted instance keeps the
+    // tracker it always had, and any other shape renders none.
+    umami:
+      src || websiteId
+        ? src && websiteId
+          ? { src, websiteId, domains: text(env, "UMAMI_DOMAINS") }
+          : null
+        : hosted
+          ? {
+              ...HOSTED_UMAMI,
+              domains: text(env, "UMAMI_DOMAINS") ?? HOSTED_UMAMI.domains,
+            }
+          : null,
   };
 }
 

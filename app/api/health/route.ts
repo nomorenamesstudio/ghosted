@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { version as packageVersion } from "@/package.json";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
+import { readConfig } from "@/lib/config/flags";
 import { logger } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -21,16 +22,32 @@ export async function GET() {
   // any other way would answer "unknown" to the one question this field exists
   // for.
   const version = packageVersion;
+
+  // Configuration is part of readiness now that it is validated at request time
+  // rather than at build: a process with a broken deployment config would
+  // otherwise answer "healthy" while every page fails. The problem *list* goes
+  // to the log; the response says only that something is wrong, because a probe
+  // is not a place to publish configuration details.
+  let configOk = true;
+  try {
+    readConfig();
+  } catch (error) {
+    configOk = false;
+    logger.error({ err: error }, "health check: invalid deployment configuration");
+  }
+
   try {
     await db.execute(sql`select 1`);
+    const ok = configOk;
     return NextResponse.json(
       {
-        ok: true,
+        ok,
         version,
         database: "up",
+        config: configOk ? "ok" : "invalid",
         uptimeSeconds: Math.round(process.uptime()),
       },
-      { headers: { "Cache-Control": "no-store" } },
+      { status: ok ? 200 : 503, headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
     logger.error({ err: error }, "health check: database unreachable");
@@ -39,6 +56,7 @@ export async function GET() {
         ok: false,
         version,
         database: "down",
+        config: configOk ? "ok" : "invalid",
         uptimeSeconds: Math.round(process.uptime()),
       },
       { status: 503, headers: { "Cache-Control": "no-store" } },

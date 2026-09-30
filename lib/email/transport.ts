@@ -78,7 +78,13 @@ export function resolveEmailTransport(
     return createResendTransport(env.RESEND_API_KEY!.trim());
   }
   if (choice.name === "smtp") {
-    return createSmtpTransport(parseSmtpUrl(env.SMTP_URL!.trim()));
+    const config = parseSmtpUrl(env.SMTP_URL!.trim());
+    // Local, not imported from lib/config/flags: that module imports this one,
+    // and a shared parser is not worth a cycle.
+    config.allowInsecure = ["1", "true", "yes", "on"].includes(
+      env.SMTP_ALLOW_INSECURE?.trim().toLowerCase() ?? "",
+    );
+    return createSmtpTransport(config);
   }
   return createLogTransport();
 }
