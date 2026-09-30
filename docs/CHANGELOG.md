@@ -2,6 +2,36 @@
 
 All notable changes, by date and type.
 
+## 2026-09-30
+
+### Added
+- **Deployment flags, and the owner bootstrap behind them.** `SHOW_LANDING` and
+  `ALLOW_REGISTRATION` (both default to the hosted shape, so the live instance
+  is unchanged), plus `GHOSTED_USER_EMAIL` / `_NAME` / `_PASSWORD`. With
+  registration closed the container start creates one verified owner account —
+  name **Haunty**, avatar `/haunty.png` (the retired app icon), a random
+  password printed **once** in the boot log — and never touches an existing
+  account, so restarts cannot reset a password somebody already changed.
+  `lib/config/flags.ts` parses the booleans strictly (an empty value counts as
+  unset; a typo stops the boot listing every problem at once) and refuses a
+  closed instance with no owner address, because that instance has no way in.
+  New `scripts/ensure-owner.mjs`, called from `scripts/migrate-on-start.mjs`
+  after the migrations.
+- **Eleven tests for that surface**: `tests/unit/flags.test.ts` (defaults,
+  spellings, the empty-value rule, typo rejection, every-problem-at-once) and
+  `tests/integration/ensure-owner.test.ts` (creation against the real database,
+  idempotency including the password hash, registration open, missing address,
+  supplied password).
+
+### Changed
+- **One seam for the signed-in user.** `lib/auth/current-user.ts`
+  (`getCurrentUser()` / `requireUser()`) replaces the seven direct `auth()`
+  calls — the dashboard layout, dashboard and settings pages, both image routes
+  and the API guard — so when the session strategy moves it moves in one place.
+  `/` renders the landing only while `SHOW_LANDING` is on, and redirects to
+  `/login` (the starter screen on a self-hosted instance) when it is not;
+  a signed-in visitor still goes straight to `/app` either way.
+
 ## 2026-09-28
 
 ### Added

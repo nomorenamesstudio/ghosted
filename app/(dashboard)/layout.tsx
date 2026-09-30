@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/current-user";
 import { UserMenu } from "@/components/UserMenu";
 import { AppBrand } from "@/components/AppBrand";
 import { AppProviders } from "@/components/AppProviders";
@@ -9,8 +8,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requireUser();
 
   return (
     // The session and query-cache layer lives here rather than in the root
@@ -32,9 +30,9 @@ export default async function DashboardLayout({
               className="ml-auto hidden items-center gap-2 xl:flex"
             />
             <UserMenu
-              name={session.user.name ?? ""}
-              email={session.user.email ?? ""}
-              image={session.user.image ?? undefined}
+              name={user.name ?? ""}
+              email={user.email ?? ""}
+              image={user.image ?? undefined}
             />
           </div>
         </header>

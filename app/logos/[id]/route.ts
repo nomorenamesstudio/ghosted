@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import { resolveCompanyLogo } from "@/lib/services/company-logos";
@@ -42,9 +42,8 @@ export async function GET(
   try {
     if (!UUID_RE.test(params.id)) return notFound();
 
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return notFound();
+    const user = await getCurrentUser();
+    if (!user) return notFound();
 
     const [application] = await db
       .select({
@@ -54,7 +53,7 @@ export async function GET(
       })
       .from(applications)
       .where(
-        and(eq(applications.id, params.id), eq(applications.userId, userId)),
+        and(eq(applications.id, params.id), eq(applications.userId, user.id)),
       )
       .limit(1);
     if (!application) return notFound();

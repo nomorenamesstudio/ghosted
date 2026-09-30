@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { logger } from "@/lib/utils/logger";
 import {
   acceptGravatarResponse,
@@ -58,8 +58,7 @@ export async function GET(
     // Not a security boundary (a Gravatar is public by construction, and the
     // hash is derivable from any address), but it keeps this from being an
     // open image relay for anyone who finds the hostname.
-    const session = await auth();
-    if (!session?.user?.id) return miss();
+    if (!(await getCurrentUser())) return miss();
 
     const res = await fetch(gravatarUpstreamUrl(hash, GRAVATAR_SIZE), {
       cache: "no-store",

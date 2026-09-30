@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { rateLimitAccount } from "./rate-limit";
 import { logger } from "./logger";
 
@@ -77,12 +77,11 @@ export function handleRouteError(err: unknown): NextResponse {
 
 /** Guard: every API route must call this first. Returns the user id. */
 export async function requireSession(): Promise<string> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+  const user = await getCurrentUser();
+  if (!user) {
     throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
   }
-  return userId;
+  return user.id;
 }
 
 /**

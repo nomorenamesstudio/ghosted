@@ -1,5 +1,4 @@
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/current-user";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
@@ -11,8 +10,7 @@ import { ghostedAfterDays } from "@/lib/utils/status";
 import { Dashboard } from "@/components/Dashboard";
 
 export default async function DashboardPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requireUser();
 
   // Server-side authority for the FAB gate: emailVerified straight from the
   // DB (never stale), plus the current application count so the client can
@@ -27,9 +25,9 @@ export default async function DashboardPage() {
         patienceLevel: users.patienceLevel,
       })
       .from(users)
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, user.id))
       .limit(1),
-    countApplications(session.user.id),
+    countApplications(user.id),
   ]);
   const emailVerified = dbUser?.emailVerified ?? false;
   // The board's ghosted column names the actual threshold.
