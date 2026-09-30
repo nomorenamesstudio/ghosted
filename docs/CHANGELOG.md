@@ -4,6 +4,24 @@ All notable changes, by date and type.
 
 ## 2026-09-30
 
+### Fixed
+- **Three independent code reviews of the self-hosting branch, merged and acted
+  on.** Claude Sonnet 5, GPT-6 Sol and GLM latest each read the whole diff; every
+  claim was checked against the code before it entered the plan, and the findings
+  that survived are fixed: SMTP now refuses to send credentials or mail over an
+  unencrypted connection, `robots.txt` is generated per request instead of baked
+  at build time, the compose database binds to loopback only with an overridable
+  password, a production `next build` no longer validates runtime configuration
+  (verified by building with no email variables at all), the SMTP reply parser
+  survives split TCP chunks, imports without timestamps are idempotent, `Subject`
+  gets the same line-break guard as the other headers, the deletion guard reads
+  one flag instead of the whole deployment, a malformed `SMTP_URL` no longer
+  echoes itself, health reports configuration, and the hosted instance keeps its
+  analytics without new variables. One claim — "the import route has no rate
+  limiting" — was wrong in two of the three reviews and is recorded as rejected.
+  Merged report: [docs/reviews/code-review-selfhost-2026-09-30.md](reviews/code-review-selfhost-2026-09-30.md),
+  raw transcripts under `docs/reviews/raw/`. Cost: $0.55 for all three.
+
 ### Added
 - **`docs/SELFHOST.md`** — the self-hosting walkthrough: the two shapes the same
   image ships (solo and family), the three-command solo setup, the environment
