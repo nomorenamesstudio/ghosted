@@ -5,6 +5,33 @@ All notable changes, by date and type.
 ## 2026-09-30
 
 ### Added
+- **Import: an account can now move between instances.** `POST /api/auth/import`
+  takes the JSON the export produces (`?mode=merge`, the default, or
+  `?mode=replace` to empty the account first), validates it, and reports what
+  landed. Settings gained "Import my data" beside "Export my data" — a file, and
+  one checkbox asking whether it should replace what is there. Everything lands
+  in a single transaction, so a file that fails changes nothing.
+- **`version: 1` in the export**, and the export now leaves every timestamp as an
+  ISO string rather than a `Date`. The file and the in-process value agree, which
+  is what lets an importer validate what it actually receives; an unversioned
+  file from before this change still imports, and a file from a *newer* format is
+  refused with a sentence rather than guessed at.
+- **Eleven tests** in `tests/integration/import-export.test.ts` driving the real
+  service and the real database: the round trip into a second account, the source
+  account left untouched, a re-import that skips everything, `replace` that
+  empties only the importer's account, the version guard, a legacy unversioned
+  file, and the route's own answers for a valid file, invalid JSON, a JSON file
+  that is not an export, and no session.
+
+### Changed
+- **Duplicates are recognised by what an application *is* — company, role and
+  creation time — not by its row id.** Row ids are global, so a file imported
+  into a second account on the same instance could never reuse them; keying on
+  ids meant either a primary-key collision or silently skipping the copy. The
+  promise that actually matters is unchanged: importing the same file twice
+  changes nothing the second time. This deviates from the plan document's
+  "keep the row UUIDs", deliberately, for that reason.
+
 - **`lib/site.ts`: who runs this instance, and where the software came from.**
   `OPERATOR_NAME` / `_EMAIL` / `_URL` publish the hoster's own details;
   `POWERED_BY_URL`, `BRAND_TAG`, `SITE_INDEXABLE`, `UMAMI_*` cover the rest. The

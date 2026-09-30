@@ -18,6 +18,7 @@ import {
   Save,
   Sun,
   Trash2,
+  Upload,
   UserRound,
   X,
 } from "lucide-react";
@@ -123,6 +124,13 @@ export function SettingsForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwMsg, setPwMsg] = useState<Msg>(null);
   const [pwBusy, setPwBusy] = useState(false);
+
+  // Import modal: a file, and one honest question about what it replaces.
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importReplace, setImportReplace] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMsg, setImportMsg] = useState<Msg>(null);
   const [pwUpdated, setPwUpdated] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -260,6 +268,40 @@ export function SettingsForm({
       setPwMsg({ type: "error", text: (err as Error).message });
     } finally {
       setPwBusy(false);
+    }
+  }
+
+  async function submitImport(event: React.FormEvent) {
+    event.preventDefault();
+    if (!importFile) return;
+    setImportBusy(true);
+    setImportMsg(null);
+    try {
+      const text = await importFile.text();
+      const res = await fetch(
+        `/api/auth/import?mode=${importReplace ? "replace" : "merge"}`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: text },
+      );
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; applications?: number; milestones?: number; skipped?: number }
+        | null;
+      if (!res.ok) throw new Error(body?.error ?? "Import failed");
+      setImportMsg({
+        type: "ok",
+        text: `Imported ${body?.applications ?? 0} applications and ${
+          body?.milestones ?? 0
+        } milestones${body?.skipped ? `, skipped ${body.skipped} already here` : ""}.`,
+      });
+      setImportFile(null);
+      setImportOpen(false);
+      router.refresh();
+    } catch (error) {
+      setImportMsg({
+        type: "error",
+        text: error instanceof Error ? error.message : "Import failed",
+      });
+    } finally {
+      setImportBusy(false);
     }
   }
 
@@ -477,12 +519,26 @@ export function SettingsForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button variant="outline" asChild>
-            <a href="/api/auth/export">
-              <Download />
-              Export my data
-            </a>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button variant="outline" asChild>
+              <a href="/api/auth/export">
+                <Download />
+                Export my data
+              </a>
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => {
+                setImportMsg(null);
+                setImportOpen(true);
+              }}
+            >
+              <Upload />
+              Import my data
+            </Button>
+          </div>
+          <Message state={importMsg} />
 
           {canDeleteAccount ? (
             <div className="border-t pt-4">
@@ -513,6 +569,57 @@ export function SettingsForm({
           )}
         </CardContent>
       </Card>
+
+      {/* Import modal */}
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import a Ghosted export</DialogTitle>
+            <DialogDescription>
+              The JSON file from another instance&rsquo;s &ldquo;Export my data&rdquo;.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={submitImport} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="import-file">Export file</Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept="application/json,.json"
+                onChange={(e) => setImportFile(e.target.files?.[0] ?? null)}
+                required
+              />
+            </div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-violet-600"
+                checked={importReplace}
+                onChange={(e) => setImportReplace(e.target.checked)}
+              />
+              <span>
+                Replace everything I have instead of adding to it.
+                <span className="block text-xs text-muted-foreground">
+                  Your current applications are deleted in the same step, so a
+                  file that fails to import changes nothing.
+                </span>
+              </span>
+            </label>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setImportOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!importFile || importBusy}>
+                {importBusy ? "Importing…" : "Import"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Password change modal */}
       <Dialog open={pwOpen} onOpenChange={setPwOpen}>

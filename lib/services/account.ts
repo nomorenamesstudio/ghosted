@@ -2,6 +2,7 @@ import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
+import { EXPORT_VERSION } from "@/lib/services/import";
 import {
   applications,
   emailVerificationTokens,
@@ -181,16 +182,33 @@ export async function verifyEmail(
   return user ?? null;
 }
 
+/**
+ * The exported file, as it appears on the wire: every timestamp is an ISO
+ * string. Keeping `Date` objects here would have made the in-process value
+ * (what tests and any future importer see) disagree with the file the browser
+ * actually downloads, which is exactly the kind of gap that ships a bug.
+ */
 export interface UserExport {
+  /** Format version, so an importer can refuse a file from the future. */
+  version: number;
   exportedAt: string;
   user: {
     id: string;
     email: string;
     name: string;
     provider: string;
-    createdAt: Date;
+    createdAt: string;
   };
-  applications: Array<Record<string, unknown> & { milestones: Milestone[] }>;
+  applications: Array<Record<string, unknown> & { milestones: Array<Record<string, unknown>> }>;
+}
+
+/** Timestamps to ISO strings, one level deep per row. */
+function serialiseRow(row: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(row)) {
+    out[key] = value instanceof Date ? value.toISOString() : value;
+  }
+  return out;
 }
 
 /** GDPR portability (Art. 20): all of the user's data as structured JSON. */
@@ -227,17 +245,20 @@ export async function exportUserData(userId: string): Promise<UserExport | null>
   }
 
   return {
+    version: EXPORT_VERSION,
     exportedAt: new Date().toISOString(),
     user: {
       id: user.id,
       email: user.email,
       name: user.name,
       provider: user.provider,
-      createdAt: user.createdAt,
+      createdAt: user.createdAt.toISOString(),
     },
     applications: apps.map((app) => ({
-      ...app,
-      milestones: milestonesById.get(app.id) ?? [],
+      ...serialiseRow(app as unknown as Record<string, unknown>),
+      milestones: (milestonesById.get(app.id) ?? []).map((milestone) =>
+        serialiseRow(milestone as unknown as Record<string, unknown>),
+      ),
     })),
   };
 }
