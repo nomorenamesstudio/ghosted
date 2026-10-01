@@ -154,7 +154,7 @@ export function renderEmailShell({
           <tr>
             <td align="center" style="padding:24px 0 0;color:#a1a1aa;font-size:12px;line-height:1.7;">
               Ghosted · For the Job Hunters<br/>
-              Made with ❤ by Lost Signals Studio
+              Made with ❤ by No More Names Studio
             </td>
           </tr>
         </table>

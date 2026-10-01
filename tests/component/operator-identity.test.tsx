@@ -12,7 +12,7 @@ describe("OperatorContact", () => {
   it("names the person behind the trading name, and says it is not a company", () => {
     render(<OperatorContact label="Contact" />);
 
-    expect(screen.getAllByText(/Lost Signals Studio/)).toHaveLength(2);
+    expect(screen.getAllByText(/No More Names Studio/)).toHaveLength(2);
     expect(
       screen.getByText(/independent development alias of\s*Krisztian Hadi/),
     ).toBeInTheDocument();

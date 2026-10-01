@@ -8,7 +8,7 @@ import {
  * Who runs *this* instance, and where the software came from.
  *
  * The distinction the rest of the app cares about: the hosted instance is
- * operated by Lost Signals Studio, a self-hosted one is operated by whoever
+ * operated by No More Names Studio, a self-hosted one is operated by whoever
  * runs it — and when that person has not said who they are, the app must not
  * put someone else's company in their footer or their privacy policy. So the
  * defaults follow the deployment shape (`SHOW_LANDING`, the same flag that
@@ -35,7 +35,7 @@ export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
  * entry looks unfinished only until it says why.
  */
 const HOSTED_OPERATOR = {
-  name: "Lost Signals Studio",
+  name: "No More Names Studio",
   legalName: "Krisztian Hadi",
   soleTrader: true,
   register: null as string | null,

@@ -22,7 +22,7 @@ describe("readSiteIdentity", () => {
     // human behind the name is stated with it, and a sole trader says so.
     const identity = readSiteIdentity(hosted, {});
     expect(identity.operator).toEqual({
-      name: "Lost Signals Studio",
+      name: "No More Names Studio",
       legalName: "Krisztian Hadi",
       soleTrader: true,
       register: null,

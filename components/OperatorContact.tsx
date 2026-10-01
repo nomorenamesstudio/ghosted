@@ -4,7 +4,7 @@ import { siteIdentity } from "@/lib/site";
  * Who to contact about this instance, as rendered on the legal pages.
  *
  * The case worth caring about is the one with no operator details: a
- * self-hosted instance must not tell a visitor that Lost Signals Studio
+ * self-hosted instance must not tell a visitor that No More Names Studio
  * controls their data, because it does not. The fallback says what is true —
  * this is somebody's own copy of Ghosted, the software is open source, and the
  * hoster has published no contact of their own.
