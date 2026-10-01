@@ -86,8 +86,9 @@ export default function TermsPage() {
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        This page will be updated as the operator&rsquo;s legal details are
-        formalized. It is not legal advice.
+        The service is run by the operator named in the imprint, including where
+        that is a trading name with a named person behind it. It is not legal
+        advice.
       </p>
     </main>
   );

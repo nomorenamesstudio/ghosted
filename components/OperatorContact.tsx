@@ -15,24 +15,49 @@ export function OperatorContact({ label = "Contact" }: { label?: string }) {
   if (!operator) return <SelfHostedNotice />;
 
   return (
-    <p>
-      <strong>{operator.name}</strong>
-      {operator.url && (
-        <>
-          {" — "}
-          <a
-            href={operator.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline"
-          >
-            {operator.url.replace(/^https?:\/\//, "")}
-          </a>
-        </>
+    <>
+      <p>
+        <strong>{operator.name}</strong>
+        {operator.url && (
+          <>
+            {" — "}
+            <a
+              href={operator.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              {operator.url.replace(/^https?:\/\//, "")}
+            </a>
+          </>
+        )}
+        <br />
+        {label}: <OperatorEmail />
+      </p>
+
+      {/* The alias is a trading name, not a legal person, and several
+          jurisdictions require the identity behind it to be stated: the imprint
+          duty, the GDPR's identifiable-controller requirement, and consumer /
+          trader-information rules. Both names go together, and a sole trader
+          says so — otherwise "no register entry" reads as missing paperwork
+          rather than a deliberate structure. */}
+      {operator.legalName && (
+        <p className="text-muted-foreground">
+          <strong>{operator.name}</strong> is the independent development alias
+          of {operator.legalName}
+          {operator.soleTrader
+            ? " — a sole proprietorship, not a registered company, so there is no commercial-register entry."
+            : "."}
+        </p>
       )}
-      <br />
-      {label}: <OperatorEmail />
-    </p>
+      {(operator.register || operator.vat) && (
+        <p className="text-muted-foreground">
+          {operator.register && <>Commercial register: {operator.register}</>}
+          {operator.register && operator.vat && <br />}
+          {operator.vat && <>VAT ID: {operator.vat}</>}
+        </p>
+      )}
+    </>
   );
 }
 

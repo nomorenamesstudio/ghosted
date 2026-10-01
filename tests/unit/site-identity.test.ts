@@ -16,10 +16,17 @@ const selfHosted = readConfig({
 });
 
 describe("readSiteIdentity", () => {
-  it("credits the studio on the hosted instance, with no configuration at all", () => {
+  it("names the studio and the person behind it on the hosted instance, with no configuration", () => {
+    // An alias is enough to trade under, but not enough on its own for an
+    // imprint, a controller identity or consumer/trader-information rules: the
+    // human behind the name is stated with it, and a sole trader says so.
     const identity = readSiteIdentity(hosted, {});
     expect(identity.operator).toEqual({
       name: "Lost Signals Studio",
+      legalName: "Krisztian Hadi",
+      soleTrader: true,
+      register: null,
+      vat: null,
       email: "hey@lostsignals.studio",
       url: null,
     });
@@ -40,10 +47,32 @@ describe("readSiteIdentity", () => {
     });
     expect(identity.operator).toEqual({
       name: "Anna's Ghosted",
+      legalName: null,
+      // A hoster is not called a sole proprietorship unless they say so: the
+      // claim is theirs to make, not ours to infer from a missing register.
+      soleTrader: false,
+      register: null,
+      vat: null,
       email: "anna@example.com",
       url: "https://ghosted.example.com",
     });
     expect(identity.poweredByUrl).toBe("https://example.com/about");
+  });
+
+  it("takes a hoster's legal name and structure when they state them", () => {
+    const identity = readSiteIdentity(selfHosted, {
+      OPERATOR_NAME: "Anna's Ghosted",
+      OPERATOR_LEGAL_NAME: "Anna Kovács",
+      OPERATOR_SOLE_TRADER: "true",
+      OPERATOR_REGISTER: "HRB 12345",
+      OPERATOR_VAT: "DE123456789",
+    });
+    expect(identity.operator).toMatchObject({
+      legalName: "Anna Kovács",
+      soleTrader: true,
+      register: "HRB 12345",
+      vat: "DE123456789",
+    });
   });
 
   it("tags a self-hosted wordmark DIY, keeps the hosted one bare, and honours an override", () => {

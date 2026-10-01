@@ -4,6 +4,19 @@ All notable changes, by date and type.
 
 ## 2026-09-30
 
+### Changed
+- **The legal pages name the person behind the trading name.** "Lost Signals
+  Studio" is now identified as the independent development alias of Krisztian
+  Hadi — a sole proprietorship, with no commercial-register entry — in the
+  imprint, the privacy policy's controller section and the terms. A trading name
+  is enough to trade under, but not enough on its own for an imprint, the GDPR's
+  identifiable-controller requirement or consumer/trader-information rules, and
+  "no register entry" reads as missing paperwork unless the page says it is a
+  sole trader. Self-hosters get the same shape through `OPERATOR_NAME` +
+  `OPERATOR_LEGAL_NAME` (+ `OPERATOR_SOLE_TRADER`, `OPERATOR_REGISTER`,
+  `OPERATOR_VAT`), documented in `.env.example` and `docs/SELFHOST.md` as a
+  pointer rather than legal advice.
+
 ### Fixed
 - **Three independent code reviews of the self-hosting branch, merged and acted
   on.** Claude Sonnet 5, GPT-6 Sol and GLM latest each read the whole diff; every

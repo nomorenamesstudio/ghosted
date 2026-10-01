@@ -120,6 +120,15 @@ database over the compose network and has no use for that port at all.
 Set `POSTGRES_PASSWORD` in `.env` before anything else: the default is written in
 the compose file and is public knowledge.
 
+### Identifying yourself
+
+If you publish your own terms and privacy policy, name both the trading name and
+the person or entity behind it (`OPERATOR_NAME` and `OPERATOR_LEGAL_NAME`), plus
+`OPERATOR_EMAIL`. If you are a sole trader with no commercial-register entry,
+`OPERATOR_SOLE_TRADER=true` says so on the page — otherwise an absent register
+number reads as missing paperwork. Requirements differ by country; this is not
+legal advice.
+
 ## 4. Environment
 
 Everything is documented inline in [`.env.example`](../.env.example), which is
@@ -133,7 +142,7 @@ the file to copy. The ones that change what the instance *is*:
 | `GHOSTED_USER_NAME` | `Haunty` | display name for that account |
 | `GHOSTED_USER_PASSWORD` | random, logged once | set it for scripted setups |
 | `EMAIL_TRANSPORT` | `resend` with a key, else `log` | `resend` \| `smtp` \| `log` |
-| `OPERATOR_NAME` / `_EMAIL` / `_URL` | empty | who runs *this* instance; empty means the footer and legal pages say "self-hosted, powered by Ghosted" |
+| `OPERATOR_NAME` / `_LEGAL_NAME` / `_SOLE_TRADER` / `_REGISTER` / `_VAT` / `_EMAIL` / `_URL` | empty | who runs *this* instance. Set the trading name **and** the person or entity behind it: an alias is enough to trade under, but the imprint, the GDPR controller identity and consumer/trader-information rules all ask who is responsible. Empty means the footer and legal pages say "self-hosted, powered by Ghosted" |
 | `SITE_INDEXABLE` | `SHOW_LANDING` | `false` adds `noindex` and a disallowing `robots.txt` |
 | `BRAND_TAG` | none, `DIY` when self-hosted | the word after the wordmark |
 | `UMAMI_SRC` + `UMAMI_WEBSITE_ID` | hosted: the operator's tracker; otherwise empty | analytics; without them a self-hosted copy renders no tracker at all |

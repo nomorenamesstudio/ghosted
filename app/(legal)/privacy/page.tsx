@@ -3,14 +3,12 @@ import {
   OperatorContact,
   OperatorEmail,
 } from "@/components/OperatorContact";
-import { siteIdentity } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy - Ghosted",
 };
 
 export default function PrivacyPage() {
-  const { operator } = siteIdentity();
   return (
     <main className="mx-auto max-w-3xl space-y-6 px-4 py-12 text-sm leading-relaxed">
       <h1 className="text-3xl font-bold">Privacy Policy</h1>
@@ -22,12 +20,6 @@ export default function PrivacyPage() {
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">1. Controller</h2>
         <OperatorContact label="Contact for privacy matters" />
-        {operator && (
-          <p className="text-muted-foreground">
-            Operator details are kept minimal to protect the
-            operator&rsquo;s privacy.
-          </p>
-        )}
       </section>
 
       <section className="space-y-2">
@@ -110,8 +102,9 @@ export default function PrivacyPage() {
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        This page will be updated as the operator&rsquo;s legal details are
-        formalized. It is not legal advice.
+        The controller named above is the person or entity responsible for the
+        data described here; where a trading name is used, the identity behind it
+        is named with it. It is not legal advice.
       </p>
     </main>
   );

@@ -21,8 +21,25 @@ import {
 export const REPO_URL = "https://github.com/krisztianhadi/ghosted";
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 
+/**
+ * The hosted instance's operator, and the shape every other instance is asked
+ * to fill in.
+ *
+ * `name` is the trading name — an alias is enough to *trade* under, and plenty
+ * of solo developers use one — but it is not a separate legal person and, in
+ * several jurisdictions, it is not enough on its own: the imprint duty
+ * (Germany's DDG §5 and its equivalents), the GDPR's requirement that a
+ * controller be identifiable, and consumer/trader-information rules all want
+ * the human or entity behind the name. So the alias and the person are stated
+ * together, and a sole trader says so, because a business with no register
+ * entry looks unfinished only until it says why.
+ */
 const HOSTED_OPERATOR = {
   name: "Lost Signals Studio",
+  legalName: "Krisztian Hadi",
+  soleTrader: true,
+  register: null as string | null,
+  vat: null as string | null,
   email: "hey@lostsignals.studio",
 };
 
@@ -39,7 +56,15 @@ const HOSTED_UMAMI: UmamiConfig = {
 };
 
 export interface Operator {
+  /** The trading name — what the site is signed with. */
   name: string;
+  /** The person or entity behind the trading name, when one is stated. */
+  legalName: string | null;
+  /** True when there is deliberately no commercial-register entry. */
+  soleTrader: boolean;
+  /** e.g. "Commercial register: HRB 12345", when one exists. */
+  register: string | null;
+  vat: string | null;
   email: string | null;
   url: string | null;
 }
@@ -80,11 +105,24 @@ export function readSiteIdentity(
   const operator: Operator | null = statedName
     ? {
         name: statedName,
+        legalName: text(env, "OPERATOR_LEGAL_NAME"),
+        soleTrader: readBooleanFlag(env, "OPERATOR_SOLE_TRADER", false),
+        register: text(env, "OPERATOR_REGISTER"),
+        vat: text(env, "OPERATOR_VAT"),
         email: text(env, "OPERATOR_EMAIL"),
         url: text(env, "OPERATOR_URL"),
       }
     : hosted
-      ? { name: HOSTED_OPERATOR.name, email: HOSTED_OPERATOR.email, url: null }
+      ? {
+          ...HOSTED_OPERATOR,
+          // Still overridable, so the hosted instance needs no configuration to
+          // stay correct while anything else can replace it.
+          legalName: text(env, "OPERATOR_LEGAL_NAME") ?? HOSTED_OPERATOR.legalName,
+          register: text(env, "OPERATOR_REGISTER"),
+          vat: text(env, "OPERATOR_VAT"),
+          email: text(env, "OPERATOR_EMAIL") ?? HOSTED_OPERATOR.email,
+          url: text(env, "OPERATOR_URL"),
+        }
       : null;
 
   const statedTag = env.BRAND_TAG?.trim();
