@@ -5,6 +5,7 @@ import {
 } from "@/components/OperatorContact";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy Policy - Ghosted",
 };
 

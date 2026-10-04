@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readConfig } from "@/lib/config/flags";
-import { LICENSE_URL, REPO_URL, readSiteIdentity } from "@/lib/site";
+import { LICENSE_URL, REPO_URL, readSiteIdentity, siteOrigin } from "@/lib/site";
 
 /**
  * The identity rules decide whose name appears in the footer and on the legal
@@ -128,6 +128,26 @@ describe("indexability", () => {
     // that decides whether somebody's job hunt is crawlable.
     expect(() => readSiteIdentity(selfHosted, { SITE_INDEXABLE: "maybe" })).toThrow(
       /SITE_INDEXABLE="maybe" is not a boolean/,
+    );
+  });
+});
+
+describe("siteOrigin", () => {
+  it("prefers the deployment's own origin and never ends in a slash", () => {
+    expect(siteOrigin({ NEXT_PUBLIC_APP_URL: "https://ghosted.example.com/" })).toBe(
+      "https://ghosted.example.com",
+    );
+    // Four consumers concatenate paths onto this (canonical, og:url, sitemap,
+    // JSON-LD), so a doubled slash produces URLs that differ from the real ones.
+    expect(
+      siteOrigin({ NEXT_PUBLIC_APP_URL: "https://ghosted.example.com///" }),
+    ).toBe("https://ghosted.example.com");
+  });
+
+  it("falls back to the hosted origin rather than emitting relative URLs", () => {
+    expect(siteOrigin({})).toBe("https://ghosted.lostsignals.studio");
+    expect(siteOrigin({ NEXT_PUBLIC_APP_URL: "  " })).toBe(
+      "https://ghosted.lostsignals.studio",
     );
   });
 });

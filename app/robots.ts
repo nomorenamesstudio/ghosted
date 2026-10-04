@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { siteIdentity } from "@/lib/site";
+import { siteIdentity, siteOrigin } from "@/lib/site";
 
 /**
  * Rendered per request, for the same reason the root layout is: this reads the
@@ -32,5 +32,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       { userAgent: "*", allow: "/", disallow: ["/api/", "/logos/", "/avatars/"] },
     ],
+    // Pointing at the sitemap only when there is one: a private instance returns
+    // an empty list above, and telling a crawler to fetch an empty file is worse
+    // than saying nothing.
+    sitemap: `${siteOrigin()}/sitemap.xml`,
   };
 }

@@ -4,7 +4,7 @@ import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Footer } from "@/components/Footer";
-import { siteIdentity } from "@/lib/site";
+import { siteIdentity, siteOrigin } from "@/lib/site";
 
 /**
  * Rendered per request on purpose. The analytics tags and the robots metadata
@@ -27,7 +27,7 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
+const siteUrl = siteOrigin();
 
 /**
  * Read at request time, never at module scope. `siteIdentity()` validates the
@@ -40,7 +40,9 @@ const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.
 export function generateMetadata(): Metadata {
   const identity = siteIdentity();
   return {
-  title: "Ghosted",
+  // The brand alone ranks for nothing: the title carries the term a job seeker
+  // actually types. Kept under 60 characters so Google does not truncate it.
+  title: "Ghosted — the job application tracker that never goes quiet",
   // Only the operator's own instance should turn up in search results; a
   // self-hosted one is private unless it says otherwise.
   robots: identity.indexable ? undefined : { index: false, follow: false },
@@ -70,6 +72,8 @@ export function generateMetadata(): Metadata {
   // Android).
   appleWebApp: {
     capable: true,
+    // The short name, not the page title: iOS puts this under the icon and
+    // truncates it, and a home screen cannot hold a sentence.
     title: "Ghosted",
     statusBarStyle: "default",
   },
@@ -80,7 +84,10 @@ export function generateMetadata(): Metadata {
     "mobile-web-app-capable": "yes",
   },
   openGraph: {
-    title: "Ghosted",
+    // Absolute, because a share card with a relative URL tells a crawler that
+    // only has the HTML nothing about where this page lives.
+    url: siteUrl,
+    title: "Ghosted — the job application tracker that never goes quiet",
     description:
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     type: "website",
@@ -101,7 +108,7 @@ export function generateMetadata(): Metadata {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ghosted",
+    title: "Ghosted — the job application tracker that never goes quiet",
     description:
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     images: ["/ghost-og.png?v=1"],

@@ -177,6 +177,20 @@ function readIndexable(
 let cached: SiteIdentity | null = null;
 
 /** The identity for this process, read once. Server components only. */
+/**
+ * The deployment's public origin, without a trailing slash.
+ *
+ * `NEXT_PUBLIC_APP_URL` is the deployment's own answer; the fallback is the
+ * hosted instance, so a build with nothing set still emits absolute URLs rather
+ * than relative ones that a crawler resolves against whatever host it saw.
+ */
+export function siteOrigin(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const raw = env.NEXT_PUBLIC_APP_URL?.trim() || "https://ghosted.lostsignals.studio";
+  return raw.replace(/\/+$/, "");
+}
+
 export function siteIdentity(): SiteIdentity {
   if (!cached) cached = readSiteIdentity(runtimeConfig());
   return cached;

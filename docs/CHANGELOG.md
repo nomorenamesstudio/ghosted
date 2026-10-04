@@ -2,6 +2,37 @@
 
 All notable changes, by date and type.
 
+## 2026-10-04
+
+### Feature
+- **The landing's search surface.** The page now tells a crawler what it is and
+  stops downloading screenshots nobody is looking at:
+  - the title was the bare brand — it now reads "Ghosted — the job application
+    tracker that never goes quiet", which is the term a job seeker actually
+    types, and stays inside the ~60 characters a result will show. The
+    home-screen name stays short (`apple-mobile-web-app-title` is still
+    "Ghosted": iOS truncates it under the icon, and the icon test caught the
+    long title leaking there);
+  - `link rel=canonical` on the landing and all three legal pages, plus an
+    absolute `og:url`, because the same app answers on the hosted domain, on a
+    self-hoster's domain and on the Railway hostname, and those would otherwise
+    compete as duplicates;
+  - `app/sitemap.ts`, generated per request and advertised from `robots.txt`
+    only when the instance is indexable — a private instance returns an empty
+    sitemap rather than an invitation;
+  - JSON-LD (`SoftwareApplication`, with the instance's own operator as the
+    publisher) built by `lib/structured-data.ts`. Narrow on purpose: name,
+    category, platform, version, the MIT licence of the code, the repository and
+    a feature list — no price, rating or review claim the owner has not made;
+  - the captures ship as WebP beside the JPEGs
+    (`scripts/optimize-landing-views.sh`, 902 KB → 452 KB on disk) and every one
+    of them is `loading="lazy"`. The page keeps all eight variants in the DOM —
+    one per theme, one per device — so the hidden ones used to download too:
+    **measured in a browser, a desktop visit went from 8 files / 903 KB to 2
+    files / 79 KB**, a phone visit to one file / 47 KB. `tests/e2e/seo.spec.ts`
+    now pins that, because removing a single `loading` attribute brings the
+    whole payload back without changing a pixel.
+
 ## 2026-09-30
 
 ### Changed

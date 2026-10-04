@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { OperatorEmail } from "@/components/OperatorContact";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/terms" },
   title: "Terms of Service - Ghosted",
 };
 

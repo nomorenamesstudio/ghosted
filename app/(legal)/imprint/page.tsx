@@ -3,6 +3,7 @@ import { OperatorContact } from "@/components/OperatorContact";
 import { siteIdentity } from "@/lib/site";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/imprint" },
   title: "Imprint - Ghosted",
 };
 
