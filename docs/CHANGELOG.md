@@ -2,6 +2,18 @@
 
 All notable changes, by date and type.
 
+## 1.1.0 — 2026-10-04
+
+### Feature
+- **The footer says which build an instance is running** (`v1.1.0`), read from
+  `package.json` at build time — the first thing to ask for when somebody reports
+  a bug, and the reason this is a minor rather than a patch by the rules in
+  [RELEASING.md](RELEASING.md): new behaviour, no action required to upgrade. It
+  is deliberately absent from the marketing landing, which still says the product
+  is coming soon and is written for people looking for work rather than for
+  operators; the e2e test asserts both halves. Nothing checks for a newer release
+  — an instance that phones home is not the instance this project promises.
+
 ## 1.0.0 — 2026-10-04
 
 The first release: `staging` merged into `main` after the Railway staging
