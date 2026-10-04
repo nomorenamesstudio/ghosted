@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth/current-user";
+import { runtimeConfig } from "@/lib/config/flags";
 import { LoginForm } from "./login-form";
 
 // The OAuth button visibility depends on runtime env (AUTH_GOOGLE_ID etc.).
@@ -26,7 +27,10 @@ export default async function LoginPage() {
   };
   return (
     <Suspense>
-      <LoginForm providers={providers} />
+      <LoginForm
+        providers={providers}
+        allowRegistration={runtimeConfig().allowRegistration}
+      />
     </Suspense>
   );
 }

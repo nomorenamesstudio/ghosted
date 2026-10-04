@@ -1,4 +1,8 @@
 import { createServer, type Server, type Socket } from "node:net";
+import { TLSSocket, createSecureContext } from "node:tls";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   bareAddress,
@@ -24,6 +28,133 @@ interface FakeServer {
   /** The raw DATA payload, without the terminating dot. */
   body: () => string;
   sockets: Socket[];
+}
+
+/**
+ * The certificate the STARTTLS fake presents.
+ *
+ * Self-signed and generated here, because the point of the test below is the
+ * *protocol* — that the client upgrades, re-EHLOs, and only then sends
+ * credentials — not certificate validation, which is Node's default behaviour
+ * and is not something this client overrides. The test disables verification
+ * for its own duration rather than the client gaining a "trust anything" switch
+ * that production could accidentally inherit.
+ */
+function selfSignedCertificate(): { key: string; cert: string } {
+  const dir = join(process.cwd(), ".tmp-review", "tls");
+  mkdirSync(dir, { recursive: true });
+  const key = join(dir, "key.pem");
+  const cert = join(dir, "cert.pem");
+  if (!existsSync(cert)) {
+    // Generated rather than committed: a key in the repository is a key
+    // everybody has, and this one never leaves the test.
+    execFileSync(
+      "openssl",
+      [
+        "req", "-x509", "-newkey", "rsa:2048", "-nodes",
+        "-keyout", key, "-out", cert, "-days", "2", "-subj", "/CN=localhost",
+      ],
+      { stdio: "ignore" },
+    );
+  }
+  return { key: readFileSync(key, "utf8"), cert: readFileSync(cert, "utf8") };
+}
+
+/**
+ * A STARTTLS conversation that actually upgrades.
+ *
+ * The existing fake answers `STARTTLS` with a 220 and then garbage, which is
+ * enough to prove the client refuses to fall back to cleartext — and nothing
+ * about the path every real provider on port 587 uses. This one completes the
+ * handshake and then keeps talking SMTP over TLS, so the assertions can cover
+ * the whole sequence: EHLO, STARTTLS, a second EHLO *inside* the tunnel, AUTH,
+ * and DATA.
+ */
+async function startTlsSmtp(): Promise<FakeServer & { secured: () => boolean }> {
+  const { key, cert } = selfSignedCertificate();
+  const context = createSecureContext({ key, cert });
+  const dialogue: string[] = [];
+  let data = "";
+  let upgraded = false;
+  const sockets: Socket[] = [];
+
+  const server: Server = createServer((socket) => {
+    sockets.push(socket);
+    socket.setEncoding("utf8");
+    socket.write("220 fake ESMTP\r\n");
+
+    let buffer = "";
+    let inData = false;
+    let secure: TLSSocket | null = null;
+
+    const handle = (line: string, reply: (text: string) => void) => {
+      dialogue.push(line);
+      if (inData) {
+        if (line === ".") {
+          inData = false;
+          reply("250 2.0.0 queued");
+        } else {
+          data += line + "\r\n";
+        }
+        return;
+      }
+      if (line.startsWith("EHLO")) {
+        reply("250-fake greets you\r\n250-8BITMIME\r\n250-STARTTLS\r\n250 AUTH PLAIN LOGIN");
+        return;
+      }
+      if (line === "STARTTLS") {
+        reply("220 Ready to start TLS");
+        // Upgrading in place is what a real server does: same socket, now TLS.
+        secure = new TLSSocket(socket, { isServer: true, secureContext: context });
+        upgraded = true;
+        secure.setEncoding("utf8");
+        secure.on("data", (chunk: string) => {
+          buffer += chunk;
+          let index = buffer.indexOf("\r\n");
+          while (index !== -1) {
+            const next = buffer.slice(0, index);
+            buffer = buffer.slice(index + 2);
+            index = buffer.indexOf("\r\n");
+            handle(next, (text) => secure!.write(`${text}\r\n`));
+          }
+        });
+        return;
+      }
+      if (line.startsWith("AUTH PLAIN")) return reply("235 2.7.0 accepted");
+      if (line.startsWith("MAIL FROM")) return reply("250 2.1.0 ok");
+      if (line.startsWith("RCPT TO")) return reply("250 2.1.5 ok");
+      if (line === "DATA") {
+        inData = true;
+        return reply("354 End data with <CR><LF>.<CR><LF>");
+      }
+      if (line === "QUIT") return reply("221 2.0.0 bye");
+      reply("250 2.0.0 ok");
+    };
+
+    socket.on("data", (chunk: string) => {
+      buffer += chunk;
+      let index = buffer.indexOf("\r\n");
+      while (index !== -1) {
+        const line = buffer.slice(0, index);
+        buffer = buffer.slice(index + 2);
+        index = buffer.indexOf("\r\n");
+        handle(line, (text) => socket.write(`${text}\r\n`));
+      }
+    });
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("no port");
+
+  return {
+    port: address.port,
+    sockets,
+    dialogue,
+    body: () => data,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+    secured: () => upgraded,
+  };
 }
 
 async function fakeSmtp(
@@ -320,6 +451,50 @@ describe("sendSmtpMessage", () => {
     );
     const expectedAuth = Buffer.from("\0apikey\0hunter2", "utf8").toString("base64");
     expect(running.dialogue[1]).toBe(`AUTH PLAIN ${expectedAuth}`);
+  });
+
+  it("upgrades with a real handshake, and only then sends credentials", async () => {
+    // The whole path a port-587 provider uses: 220 greeting, EHLO, STARTTLS,
+    // handshake, a second EHLO inside the tunnel, AUTH, DATA. The earlier
+    // STARTTLS tests stop at "the client asked and refused to degrade"; this
+    // one proves the upgrade itself works and that nothing is sent in the clear
+    // before it.
+    const previous = process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // the fake's cert is self-signed
+    const server = await startTlsSmtp();
+    try {
+      await sendSmtpMessage(
+        {
+          host: "127.0.0.1",
+          port: server.port,
+          secure: false,
+          user: "apikey",
+          password: "hunter2",
+        },
+        {
+          from: "Ghosted <hi@example.com>",
+          to: "you@example.com",
+          subject: "Over TLS",
+          text: "hello over tls",
+        },
+      );
+
+      expect(server.secured(), "the server saw a TLS handshake").toBe(true);
+      expect(server.dialogue[0]).toMatch(/^EHLO /);
+      expect(server.dialogue[1]).toBe("STARTTLS");
+      // A second EHLO, inside the tunnel: capabilities change after the upgrade.
+      expect(server.dialogue[2]).toMatch(/^EHLO /);
+      // And the credentials only exist after it.
+      const auth = server.dialogue.findIndex((line) => line.startsWith("AUTH PLAIN"));
+      const startTls = server.dialogue.indexOf("STARTTLS");
+      expect(auth).toBeGreaterThan(startTls);
+      expect(server.body()).toContain("Subject: Over TLS");
+      expect(server.body()).toContain("hello over tls");
+    } finally {
+      if (previous === undefined) delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      else process.env.NODE_TLS_REJECT_UNAUTHORIZED = previous;
+      await server.close();
+    }
   });
 
   it("asks for STARTTLS when the server offers it", async () => {

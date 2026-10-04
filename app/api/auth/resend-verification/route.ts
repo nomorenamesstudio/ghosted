@@ -27,7 +27,19 @@ export async function POST(req: Request) {
     if (!acct.ok) return rateLimited(acct.retryAfterSeconds);
 
     const { raw, email } = await issueEmailVerification(userId);
-    await sendVerificationEmail(email, raw);
+    const delivered = await sendVerificationEmail(email, raw);
+
+    // The user is signed in and knows their own address, so reporting a send
+    // failure reveals nothing they do not already know — and saying "sent" when
+    // the provider refused it is how someone waits all afternoon for a mail
+    // that was never accepted. The reason itself stays in the server log.
+    if (!delivered) {
+      return NextResponse.json(
+        { error: "The email provider refused the message — check the server log, then try again." },
+        { status: 502 },
+      );
+    }
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleRouteError(err);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, readConfig } from "@/lib/config/flags";
+import { ConfigError, deploymentProblems, readConfig } from "@/lib/config/flags";
 
 /**
  * The flags decide what a deployment serves — the landing or the login screen,
@@ -39,11 +39,14 @@ describe("readConfig", () => {
     );
   });
 
-  it("refuses a closed-registration instance with no owner account", () => {
-    // No way in: nobody can register and no account exists to sign into.
-    expect(() => readConfig({ ALLOW_REGISTRATION: "false" })).toThrow(
-      /needs GHOSTED_USER_EMAIL/,
-    );
+  it("reports a closed-registration instance with no owner account", () => {
+    // No way in: nobody can register and no account exists to sign into. This is
+    // a rule about a *deployment*, so it is reported by `deploymentProblems`
+    // (which the health probe and the sign-up route read) rather than thrown
+    // while parsing — a build has no deployment to judge.
+    expect(deploymentProblems({ ALLOW_REGISTRATION: "false" })).toEqual([
+      expect.stringMatching(/needs GHOSTED_USER_EMAIL/),
+    ]);
 
     const config = readConfig({
       ALLOW_REGISTRATION: "false",
@@ -56,12 +59,24 @@ describe("readConfig", () => {
   });
 
   it("reports every problem at once", () => {
+    // A typo *and* a deployment rule, in one pass: an operator fixes one list,
+    // not one variable per restart.
+    const problems = deploymentProblems({
+      SHOW_LANDING: "maybe",
+      ALLOW_REGISTRATION: "false",
+    });
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toMatch(/SHOW_LANDING="maybe"/);
+    expect(problems[1]).toMatch(/needs GHOSTED_USER_EMAIL/);
+
+    // Parsing alone still refuses the typo, and says nothing about the rules it
+    // is not responsible for.
     try {
       readConfig({ SHOW_LANDING: "maybe", ALLOW_REGISTRATION: "false" });
       expect.unreachable("expected a ConfigError");
     } catch (error) {
       expect(error).toBeInstanceOf(ConfigError);
-      expect((error as ConfigError).problems).toHaveLength(2);
+      expect((error as ConfigError).problems).toHaveLength(1);
     }
   });
 });

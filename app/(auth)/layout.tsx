@@ -3,6 +3,13 @@ import { AppProviders } from "@/components/AppProviders";
 import { runtimeConfig } from "@/lib/config/flags";
 import { siteIdentity } from "@/lib/site";
 
+/**
+ * Per request: the wordmark links to a landing only on an instance that has one,
+ * and the brand tag is the hoster's own. Both are deployment facts, so this
+ * group of pages is not prerendered.
+ */
+export const dynamic = "force-dynamic";
+
 export default function AuthLayout({
   children,
 }: {

@@ -3,6 +3,7 @@ import { AuthError } from "next-auth";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { BCRYPT_ROUNDS, signIn } from "@/lib/auth";
+import { canDeliverMail, registrationOpen } from "@/lib/config/flags";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { registerSchema } from "@/lib/utils/validation";
@@ -25,6 +26,35 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    // The flag is a promise about who can get in, and the form being hidden is
+    // not enforcement: this route answers curl. A solo or private instance sets
+    // ALLOW_REGISTRATION=false and means it.
+    if (!registrationOpen()) {
+      return jsonError(
+        403,
+        "This instance is not accepting new accounts.",
+        "REGISTRATION_CLOSED",
+      );
+    }
+
+    // And an instance that cannot send mail cannot complete a sign-up it would
+    // only half-create: the account would exist and never be verifiable. This is
+    // where that deployment rule earns its keep — not at build time (a build has
+    // no deployment) and not at boot (a crash loop fixes nothing), but at the
+    // moment a real person would be affected. The health probe reports the same
+    // problem to the operator.
+    if (process.env.NODE_ENV === "production" && !canDeliverMail()) {
+      logAuthEvent("register", {
+        ip: getClientIp(req),
+        reason: "mail-not-deliverable",
+      });
+      return jsonError(
+        503,
+        "This instance cannot send verification email yet, so sign-ups are paused. The operator needs to configure an email transport.",
+        "MAIL_NOT_CONFIGURED",
+      );
+    }
+
     const ip = getClientIp(req);
     const rl = rateLimit(ip, "register");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);

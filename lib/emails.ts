@@ -14,7 +14,17 @@ export type { EmailMessage };
  * - Configuration failures throw, and the deployment validation in
  *   `lib/config/flags.ts` catches the important ones at boot instead.
  */
-export async function sendEmail(message: EmailMessage): Promise<void> {
+/**
+ * `true` when the transport accepted the message, `false` when it did not.
+ *
+ * It used to swallow every failure and return nothing, which meant a caller
+ * could only ever report "sent". A transient provider outage then looked exactly
+ * like success to the person waiting for the mail. Callers that can safely say
+ * so (the authenticated resend button) now do; the rest still just log, because
+ * telling an anonymous visitor "we could not send that" leaks whether an account
+ * exists.
+ */
+export async function sendEmail(message: EmailMessage): Promise<boolean> {
   const transport = emailTransport();
   const from = process.env.EMAIL_FROM;
 
@@ -32,11 +42,13 @@ export async function sendEmail(message: EmailMessage): Promise<void> {
       { to: message.to, subject: message.subject, transport: transport.name },
       "email sent",
     );
+    return true;
   } catch (err) {
     logger.error(
       { err, to: message.to, subject: message.subject, transport: transport.name },
       "email send failed",
     );
+    return false;
   }
 }
 
@@ -165,7 +177,7 @@ export function renderEmailShell({
 </html>`;
 }
 
-export function sendVerificationEmail(to: string, token: string) {
+export function sendVerificationEmail(to: string, token: string): Promise<boolean> {
   const url = `${appUrl()}/verify-email?token=${token}`;
   return sendEmail({
     to,
@@ -182,7 +194,7 @@ export function sendVerificationEmail(to: string, token: string) {
   });
 }
 
-export function sendPasswordResetEmail(to: string, token: string) {
+export function sendPasswordResetEmail(to: string, token: string): Promise<boolean> {
   const url = `${appUrl()}/reset-password?token=${token}`;
   return sendEmail({
     to,

@@ -77,18 +77,51 @@ function readText(env: EnvRecord, name: string): string | null {
 }
 
 /**
- * Pure reader: no caching, no logging, no side effects. Throws `ConfigError`
- * listing every problem at once, so a misconfigured deploy is fixed in one pass
- * instead of one variable per restart.
+ * The shape flags, collected rather than thrown: two callers want the same
+ * reading with different policies — `readConfig` stops the boot on a typo,
+ * `deploymentProblems` reports everything at once.
  */
-export function readConfig(env: EnvRecord = process.env): RuntimeConfig {
-  const problems: string[] = [];
-  const config: RuntimeConfig = {
+function readFlags(env: EnvRecord, problems: string[]): RuntimeConfig {
+  return {
     showLanding: readFlag(env, "SHOW_LANDING", true, problems),
     allowRegistration: readFlag(env, "ALLOW_REGISTRATION", true, problems),
     ownerEmail: readText(env, "GHOSTED_USER_EMAIL"),
     ownerName: readText(env, "GHOSTED_USER_NAME"),
   };
+}
+
+/**
+ * Pure reader: no caching, no logging, no side effects. Throws `ConfigError`
+ * listing every problem at once, so a misconfigured deploy is fixed in one pass
+ * instead of one variable per restart.
+ *
+ * It judges the *shape flags* only — not whether the resulting deployment makes
+ * sense. That second judgement lives in `deploymentProblems`, because a build
+ * has no deployment to judge: `next build` runs with no environment at all, and
+ * a rule like "open registration needs working mail" would fail the build of an
+ * image whose runtime configuration is perfectly valid. See that function.
+ */
+export function readConfig(env: EnvRecord = process.env): RuntimeConfig {
+  const problems: string[] = [];
+  const config = readFlags(env, problems);
+  if (problems.length > 0) throw new ConfigError(problems);
+  return config;
+}
+
+/**
+ * Everything wrong with this deployment as a *deployment*: the rules that
+ * cannot be decided from the flags alone, plus whatever the email transport
+ * reports about itself.
+ *
+ * Called where the answers are knowable and actionable — at boot
+ * (`instrumentation.ts`, so a misconfigured container exits with the list in its
+ * log) and by the health probe, which reports a problem rather than claiming to
+ * be ready. Deliberately *not* called while rendering: that would make the build
+ * environment decide for every instance that pulls the image.
+ */
+export function deploymentProblems(env: EnvRecord = process.env): string[] {
+  const problems: string[] = [];
+  const config = readFlags(env, problems);
 
   if (!config.allowRegistration && !config.ownerEmail) {
     problems.push(
@@ -106,9 +139,7 @@ export function readConfig(env: EnvRecord = process.env): RuntimeConfig {
 
   if (config.allowRegistration && env.NODE_ENV === "production") {
     if (!transport.delivers) {
-      problems.push(
-        "ALLOW_REGISTRATION=true needs a delivering email transport in production (RESEND_API_KEY, or EMAIL_TRANSPORT=smtp with SMTP_URL) — otherwise nobody can verify an address or reset a password. Set ALLOW_REGISTRATION=false for a solo instance.",
-      );
+      problems.push(MAIL_NOT_DELIVERED);
     } else if (!readText(env, "EMAIL_FROM")) {
       problems.push(
         "EMAIL_FROM is not set — verification and reset mail would come from a provider test domain and land in spam",
@@ -116,8 +147,32 @@ export function readConfig(env: EnvRecord = process.env): RuntimeConfig {
     }
   }
 
+  return problems;
+}
+
+const MAIL_NOT_DELIVERED =
+  "ALLOW_REGISTRATION=true needs a delivering email transport in production (RESEND_API_KEY, or EMAIL_TRANSPORT=smtp with SMTP_URL) — otherwise nobody can verify an address or reset a password. Set ALLOW_REGISTRATION=false for a solo instance.";
+
+/**
+ * Can this instance actually send? The same fact `deploymentProblems` reports,
+ * exposed as a predicate because one caller has to act on it rather than print
+ * it: `POST /api/auth/register` refuses to create an account it could never
+ * verify, which is the moment the misconfiguration stops being a line in the log
+ * and starts costing a real person their sign-up.
+ */
+export function canDeliverMail(env: EnvRecord = process.env): boolean {
+  const transport = readTransportChoice(env);
+  return transport.delivers && Boolean(readText(env, "EMAIL_FROM"));
+}
+
+/**
+ * The boot check: throws the whole list at once. Called once per server start
+ * (`instrumentation.ts`) so a misconfigured container fails loudly and
+ * immediately instead of at the first request that happens to need mail.
+ */
+export function assertDeployable(env: EnvRecord = process.env): void {
+  const problems = deploymentProblems(env);
   if (problems.length > 0) throw new ConfigError(problems);
-  return config;
 }
 
 let cached: RuntimeConfig | null = null;
@@ -141,4 +196,20 @@ export function runtimeConfig(): RuntimeConfig {
     );
   }
   return cached;
+}
+
+/**
+ * Is this instance accepting new accounts?
+ *
+ * The single reader for the flag the routes act on, so the "a typo means
+ * closed" policy cannot drift between them — the destructive endpoint and the
+ * sign-up endpoint fail in the same direction, and it is the safe one: an
+ * instance that cannot read its own configuration must not hand out accounts.
+ */
+export function registrationOpen(env: EnvRecord = process.env): boolean {
+  try {
+    return readBooleanFlag(env, "ALLOW_REGISTRATION", true);
+  } catch {
+    return false;
+  }
 }

@@ -155,10 +155,43 @@ class SmtpSession {
   }
 }
 
+/**
+ * The STARTTLS upgrade, with a deadline of its own.
+ *
+ * `detach()` clears the reply timeout so the handshake bytes are not read as a
+ * reply — which leaves this the one wait in the client that nothing else
+ * bounds. A server that answers `220 Ready to start TLS` and then stalls, or a
+ * middlebox that swallows the handshake, would otherwise leave the send pending
+ * forever, and every caller of `sendEmail` awaiting it.
+ */
 function upgradeToTls(socket: Socket, host: string): Promise<TLSSocket> {
   return new Promise((resolve, reject) => {
-    const tls = connectTls({ socket, servername: host }, () => resolve(tls));
-    tls.once("error", reject);
+    const tls = connectTls({ socket, servername: host }, () => {
+      tls.setTimeout(0);
+      resolve(tls);
+    });
+
+    const timer = setTimeout(() => {
+      tls.destroy();
+      reject(new Error(`SMTP: TLS handshake with ${host} timed out`));
+    }, REPLY_TIMEOUT_MS);
+    timer.unref?.();
+
+    tls.setTimeout(REPLY_TIMEOUT_MS, () => {
+      tls.destroy(new Error(`SMTP: TLS handshake with ${host} timed out`));
+    });
+
+    // A socket that closes before the handshake completes would otherwise leave
+    // the promise pending too: `error` is not guaranteed on a clean close.
+    tls.once("close", () => {
+      clearTimeout(timer);
+      reject(new Error(`SMTP: connection closed during the TLS handshake with ${host}`));
+    });
+    tls.once("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    tls.once("secureConnect", () => clearTimeout(timer));
   });
 }
 

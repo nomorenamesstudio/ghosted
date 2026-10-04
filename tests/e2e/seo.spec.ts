@@ -122,13 +122,22 @@ test("the landing does not download the captures it is not showing", async ({
   );
 });
 
-test("the served page carries no tracker of its own", async ({ request }) => {
-  // The tracker is attached after hydration from /api/config/analytics, because
-  // a tracker baked into the HTML would follow a published image into every
-  // instance that pulled it. On this (hosted) shape a baked tracker would show
-  // up here, which is why the assertion means something.
+test("the served page carries no deployment identity of its own", async ({
+  request,
+}) => {
+  // The tracker and the footer credit are attached after hydration, because
+  // anything baked into prerendered HTML follows the image: a self-hosted
+  // instance would load the hosted tracker, and wear the hosted studio's name in
+  // its footer. On this (hosted) shape both would appear in the HTML if they
+  // regressed, which is why the assertions mean something.
   const html = await (await request.get("/")).text();
   expect(html).not.toContain("ramen.lostsignals.studio");
+  expect(html).not.toContain("No More Names Studio");
+
+  // And the deployment still answers for itself, at runtime.
+  const site = await request.get("/api/config/site");
+  expect(site.status()).toBe(200);
+  expect((await site.json()).operator.name).toBe("No More Names Studio");
 
   const config = await request.get("/api/config/analytics");
   expect(config.status()).toBe(200);

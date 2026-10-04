@@ -42,8 +42,11 @@ function GoogleIcon() {
 
 export function LoginForm({
   providers,
+  allowRegistration,
 }: {
   providers: { google: boolean; linkedin: boolean };
+  /** False on an instance whose sign-ups are closed. */
+  allowRegistration: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -179,12 +182,14 @@ export function LoginForm({
           </div>
         ) : null}
 
-        <p className="text-center text-sm text-muted-foreground">
-          No account?{" "}
-          <Link href="/register" className="underline">
-            Register
-          </Link>
-        </p>
+        {allowRegistration && (
+          <p className="text-center text-sm text-muted-foreground">
+            No account?{" "}
+            <Link href="/register" className="underline">
+              Register
+            </Link>
+          </p>
+        )}
       </CardContent>
     </Card>
   );

@@ -120,6 +120,19 @@ database over the compose network and has no use for that port at all.
 Set `POSTGRES_PASSWORD` in `.env` before anything else: the default is written in
 the compose file and is public knowledge.
 
+Two things about that database which are easy to get wrong:
+
+- **The password is only read when the data directory is created.** Postgres
+  ignores `POSTGRES_PASSWORD` on an existing volume, so changing it later leaves
+  the app failing to authenticate in a restart loop. Change it *before* the first
+  `up`, or change it in SQL (`ALTER USER ghosted WITH PASSWORD ...`) and then in
+  `.env`.
+- **The volume has a global name** (`ghosted_pgdata`), on purpose: it is what
+  lets the `dev` and `selfhost` profiles share one database. If you run more than
+  one instance on a host, give each its own — `GHOSTED_PG_VOLUME=ghosted_staging_pgdata`
+  — otherwise the second instance mounts the first one's data and `down -v`
+  deletes it.
+
 ### Identifying yourself
 
 If you publish your own terms and privacy policy, name both the trading name and
@@ -206,22 +219,30 @@ container that "starts but does not work".
 
 ### Which settings need a rebuild
 
-Two kinds of configuration, and the difference matters if you run a container
-rather than building one:
+Two kinds of configuration, and the difference decides whether you can change a
+setting on a running container or have to build again:
 
-| Read per request (change and restart) | Read at build time (rebuild) |
+| Read per request (change and restart) | Read at build time (rebuild the image) |
 | --- | --- |
-| `SHOW_LANDING` — decides whether `/` serves the landing or redirects to `/login` | `NEXT_PUBLIC_APP_URL` — canonical URL, `og:url`, emailed links |
-| `ALLOW_REGISTRATION`, `GHOSTED_USER_EMAIL` | the icon and card files in `public/` |
+| `SHOW_LANDING` — whether `/` serves the landing or redirects to `/login` | `NEXT_PUBLIC_APP_URL` — the canonical URL, `og:url`, JSON-LD `url`, and emailed links |
+| `ALLOW_REGISTRATION`, `GHOSTED_USER_EMAIL` | the icons and the social card in `public/` |
 | `SITE_INDEXABLE` — the `X-Robots-Tag` header, `robots.txt` and the sitemap | |
-| `OPERATOR_*` — footer and legal pages | |
+| `OPERATOR_*` — the footer credit and the legal pages | |
 | `UMAMI_*` — the tracker, attached after hydration | |
 | `EMAIL_TRANSPORT` and its provider settings | |
+| `AUTH_SECRET`, `AUTH_URL` | |
 
-The landing, the legal pages and the register screen are prerendered, so they
-carry no deployment-specific HTML at all: the decisions that depend on who is
-running the instance are made by middleware (routing and the crawl header) and by
-a small config endpoint (the tracker) when a request arrives.
+`docker compose --profile selfhost up -d --build` passes `NEXT_PUBLIC_APP_URL`
+into the build, so the images you build yourself carry your own origin. If you
+ever pull a **prebuilt** image instead, that origin is the one it was built with
+— set `NEXT_PUBLIC_APP_URL` in `.env` and build your own if you want your domain
+in the canonical URL.
+
+The landing, the legal pages and the sign-in screen are the pages where this
+matters, and they are handled deliberately: the landing is prerendered but
+contains no deployment identity at all (the tracker and the footer credit are
+fetched at runtime, and the crawl rules come from middleware), the legal pages
+render per request so they always name *you*, and the auth screens do too.
 
 ## 8. What self-hosting does not give you
 

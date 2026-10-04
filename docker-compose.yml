@@ -43,6 +43,11 @@ services:
     profiles: ["selfhost"]
     build:
       context: .
+      # The origin is baked into the prerendered pages (canonical URL, og:url,
+      # JSON-LD), so it has to be present when the image is built — setting it
+      # only under `environment:` would leave the hosted default in the HTML.
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
     # Once published, pulling is faster than building:
     # image: ghcr.io/krisztianhadi/ghosted:latest
     container_name: ghosted-app
@@ -103,5 +108,11 @@ services:
       start_period: 90s
 
 volumes:
+  # Named rather than project-scoped so the `dev` and `selfhost` profiles share
+  # one database — that is what lets `pnpm dev` run against the containerised
+  # Postgres. The cost of an explicit name is that it is *global*: a second
+  # instance on the same host would silently mount the first one's data, and
+  # `down -v` in either project would delete it. Set GHOSTED_PG_VOLUME per
+  # instance (e.g. ghosted_staging_pgdata) to keep them apart.
   ghosted_pgdata:
-    name: ghosted_pgdata
+    name: ${GHOSTED_PG_VOLUME:-ghosted_pgdata}

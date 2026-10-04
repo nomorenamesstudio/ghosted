@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readTransportChoice } from "@/lib/email/transport";
 import { createLogTransport } from "@/lib/email/log";
-import { ConfigError, readConfig } from "@/lib/config/flags";
+import { ConfigError, deploymentProblems, readConfig } from "@/lib/config/flags";
 
 /**
  * Deployment validation, not implementation detail: which combinations of
@@ -51,7 +51,10 @@ describe("readTransportChoice", () => {
   });
 });
 
-describe("readConfig email rules", () => {
+describe("deployment email rules", () => {
+  // These rules judge a *deployment*, not a parse: they are reported by
+  // `deploymentProblems` (the health probe and the sign-up route read it) rather
+  // than thrown while reading flags, because a build has no deployment to judge.
   const production = { NODE_ENV: "production" };
 
   it("lets a solo instance run on the log stub", () => {
@@ -63,37 +66,32 @@ describe("readConfig email rules", () => {
     expect(config.allowRegistration).toBe(false);
   });
 
-  it("refuses an open-registration production instance that cannot deliver mail", () => {
-    expect(() => readConfig({ ...production, ALLOW_REGISTRATION: "true" })).toThrow(
-      ConfigError,
-    );
-    expect(() => readConfig({ ...production, ALLOW_REGISTRATION: "true" })).toThrow(
-      /needs a delivering email transport/,
-    );
+  it("reports an open-registration production instance that cannot deliver mail", () => {
+    const problems = deploymentProblems({ ...production, ALLOW_REGISTRATION: "true" });
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/needs a delivering email transport/);
   });
 
   it("accepts open registration once a transport and a From address are configured", () => {
-    const config = readConfig({
-      ...production,
-      ALLOW_REGISTRATION: "true",
-      RESEND_API_KEY: "re_test",
-      EMAIL_FROM: "Ghosted <hi@example.com>",
-    });
-    expect(config.allowRegistration).toBe(true);
+    expect(
+      deploymentProblems({
+        ...production,
+        ALLOW_REGISTRATION: "true",
+        RESEND_API_KEY: "re_test",
+        EMAIL_FROM: "Ghosted <hi@example.com>",
+      }),
+    ).toEqual([]);
   });
 
   it("still complains about a delivering transport with no From address", () => {
-    expect(() =>
-      readConfig({
-        ...production,
-        RESEND_API_KEY: "re_test",
-      }),
-    ).toThrow(/EMAIL_FROM is not set/);
+    expect(
+      deploymentProblems({ ...production, RESEND_API_KEY: "re_test" }),
+    ).toEqual([expect.stringMatching(/EMAIL_FROM is not set/)]);
   });
 
   it("leaves development alone — the log stub is the whole point there", () => {
-    const config = readConfig({ NODE_ENV: "development" });
-    expect(config.allowRegistration).toBe(true);
+    expect(deploymentProblems({ NODE_ENV: "development" })).toEqual([]);
+    expect(readConfig({ NODE_ENV: "development" }).allowRegistration).toBe(true);
   });
 });
 

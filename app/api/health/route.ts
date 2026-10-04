@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { version as packageVersion } from "@/package.json";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
-import { readConfig } from "@/lib/config/flags";
+import { deploymentProblems } from "@/lib/config/flags";
 import { logger } from "@/lib/utils/logger";
 
 export const dynamic = "force-dynamic";
@@ -23,17 +23,17 @@ export async function GET() {
   // for.
   const version = packageVersion;
 
-  // Configuration is part of readiness now that it is validated at request time
-  // rather than at build: a process with a broken deployment config would
-  // otherwise answer "healthy" while every page fails. The problem *list* goes
-  // to the log; the response says only that something is wrong, because a probe
-  // is not a place to publish configuration details.
-  let configOk = true;
-  try {
-    readConfig();
-  } catch (error) {
-    configOk = false;
-    logger.error({ err: error }, "health check: invalid deployment configuration");
+  // Configuration is part of readiness: a process with a broken deployment would
+  // otherwise answer "healthy" while the parts that need mail fail. The problem
+  // *list* goes to the log; the response says only that something is wrong,
+  // because a probe is not a place to publish configuration details.
+  const problems = deploymentProblems();
+  const configOk = problems.length === 0;
+  if (!configOk) {
+    logger.error(
+      { problems },
+      "health check: the deployment configuration is not coherent",
+    );
   }
 
   try {

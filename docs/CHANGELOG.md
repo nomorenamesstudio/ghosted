@@ -4,6 +4,50 @@ All notable changes, by date and type.
 
 ## 2026-10-04
 
+### Fix
+- **The Docker image builds again, and the deployment rules stopped being judged
+  by the build.** Prerendering the landing had made `next build` validate the
+  *deployment* — and a build has no environment, so `docker build` failed with
+  `ALLOW_REGISTRATION=true needs a delivering email transport in production`,
+  for an image whose runtime configuration was fine. The earlier "clean
+  production build, exit 0" note in this changelog was true when written and
+  stale by the time the branch was prerendered; it is corrected here rather than
+  quietly left standing. Now: `readConfig()` judges the shape flags only,
+  `deploymentProblems()` holds the rules about a deployment and is reported by
+  `/api/health`, and `POST /api/auth/register` refuses a sign-up it could never
+  verify (`MAIL_NOT_CONFIGURED`) — the one place the rule stops a real person
+  instead of a build.
+- **`ALLOW_REGISTRATION=false` was not enforced.** The flag hid a link and gated
+  account deletion; the sign-up API and the register page accepted anyone. A
+  solo or private instance therefore was not closed to strangers, which is what
+  the flag and the guide promise. Now the API answers `403 REGISTRATION_CLOSED`,
+  the register page redirects to `/login`, the login screen drops the link, and
+  one shared `registrationOpen()` reader (fails closed on a typo) serves both
+  routes that act on it. Found by running the documented path, not by reading
+  it.
+- **Prerendered pages no longer freeze deployment identity.** The three legal
+  pages and the auth group render per request again — baked, a self-hosted
+  instance published a privacy policy naming the hosted studio as the data
+  controller. The landing keeps its static HTML and carries no deployment
+  identity at all: the footer credit moved to `/api/config/site` +
+  `components/FooterCredit.tsx`, and the JSON-LD no longer names a publisher.
+  `docker compose` now passes `NEXT_PUBLIC_APP_URL` as a **build argument**, so
+  a self-hosted image bakes its own origin into the canonical URL (verified
+  inside the built image).
+- **The STARTTLS upgrade has a deadline.** `detach()` clears the reply timeout
+  before the handshake, which left the one wait in the SMTP client that nothing
+  bounded: a server answering `220 Ready to start TLS` and then stalling hung
+  the send — and every caller awaiting it — forever.
+- **A refused email is no longer reported as sent** on the resend path:
+  `sendEmail` reports whether the transport accepted the message, and the button
+  says so when it did not. Registration and password reset stay generic, because
+  a visible failure there would reveal whether an account exists.
+- **The database volume is per instance** (`GHOSTED_PG_VOLUME`, default
+  unchanged): the explicit global name meant a second instance on a host mounted
+  the first one's data, and `down -v` in either project deleted it. The guide
+  also documents that Postgres reads `POSTGRES_PASSWORD` only when the data
+  directory is created — the crash loop that follows changing it later.
+
 ### Feature
 - **The landing is prerendered, and signed-in visitors can read it.** `/` no
   longer bounces a signed-in visitor to `/app` — a marketing page you can only

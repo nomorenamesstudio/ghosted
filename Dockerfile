@@ -15,6 +15,11 @@ RUN pnpm install --frozen-lockfile
 
 # Build the production bundle.
 FROM base AS build
+# The public origin is inlined into prerendered pages (canonical, og:url,
+# JSON-LD), which is why it arrives as a build argument rather than only as a
+# runtime variable. Compose passes it from .env.
+ARG NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build

@@ -4,6 +4,14 @@ import {
   OperatorEmail,
 } from "@/components/OperatorContact";
 
+/**
+ * Per request, not prerendered: this page names the operator, and a build has no
+ * idea who will run the image. Baked, a self-hosted instance would publish a
+ * privacy policy naming somebody else as the data controller — which is exactly
+ * what this branch exists to prevent.
+ */
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   alternates: { canonical: "/privacy" },
   title: "Privacy Policy - Ghosted",

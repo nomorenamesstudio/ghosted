@@ -1,5 +1,5 @@
 import { version } from "@/package.json";
-import { LICENSE_URL, REPO_URL, siteIdentity, siteOrigin } from "@/lib/site";
+import { LICENSE_URL, REPO_URL, siteOrigin } from "@/lib/site";
 
 /**
  * What a search engine and an answer engine are told about this page.
@@ -10,13 +10,12 @@ import { LICENSE_URL, REPO_URL, siteIdentity, siteOrigin } from "@/lib/site";
  * the owner has not made. Structured data that overstates is a penalty risk, and
  * the parts above are the parts that actually earn a rich result.
  *
- * The publisher is the operator from the instance's own identity, so a
- * self-hosted copy advertises its own operator rather than the hosted studio.
+ * Deliberately says nothing about who runs the instance: see the note on
+ * `publisher` below.
  */
 export function softwareApplicationJsonLd(
   env: Record<string, string | undefined> = process.env,
 ) {
-  const identity = siteIdentity();
   const origin = siteOrigin(env);
 
   return {
@@ -37,17 +36,9 @@ export function softwareApplicationJsonLd(
       "A quiet-since signal for applications that stopped replying",
       "Self-hosted, with a JSON export of your own data",
     ],
-    ...(identity.operator
-      ? {
-          publisher: {
-            "@type": "Organization",
-            name: identity.operator.name,
-            ...(identity.operator.legalName
-              ? { legalName: identity.operator.legalName }
-              : {}),
-            ...(identity.operator.url ? { url: identity.operator.url } : {}),
-          },
-        }
-      : {}),
+    // No `publisher`: this block is rendered into a prerendered page, so naming
+    // the operator here would bake the build's answer into every instance that
+    // pulls the image. The origin is build-time by design (like the canonical
+    // URL), but a company name is not a property of the software.
   };
 }
