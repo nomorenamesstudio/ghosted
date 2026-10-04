@@ -4,6 +4,13 @@ All notable changes, by date and type.
 
 ## 2026-10-04
 
+### Changed
+- **The working branch is `staging` now** (renamed from `selfhost`, which the
+  earlier entries in this file and the review documents refer to by its old
+  name — those are dated records and were left as written). `staging` is what the
+  Railway staging environment auto-deploys from; `main` stays production, and the
+  branch flow is written down in [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
 ### Break
 - **Next 15.5 and React 19.** A major upgrade, and the reason the audits are
   clean: it closed 23 of the 28 dependency advisories, including both criticals

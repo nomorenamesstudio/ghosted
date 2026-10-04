@@ -7,8 +7,12 @@ short one.
 
 ## Cutting a release
 
-1. **Make sure `main` is green** — lint, typecheck, unit/integration, e2e, and
-   the container job (which builds the image and boots the compose stack).
+1. **Make sure `staging` is green and verified** — lint, typecheck,
+   unit/integration, e2e, and the container job (which builds the image and boots
+   the compose stack) — **and** that the Railway staging environment came up on
+   the commit you intend to ship: `/api/health` answering `{"ok":true,"config":"ok"}`,
+   a sign-in, and one application round-trip. `main` is production; the merge is
+   not the first time the code should ever run in the cloud.
 2. **Bump the version** in `package.json` (`1.0.0`, `1.0.1`, `1.1.0` …). No tag
    without a bump: `/api/health` reads the same field.
 3. **Add the changelog entry.** `docs/CHANGELOG.md`, newest first, under a dated

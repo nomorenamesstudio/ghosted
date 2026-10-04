@@ -30,6 +30,19 @@ All four run in CI, plus a job that builds the container image and boots the
 compose stack. A red build is not a stylistic problem — the image job exists
 because a broken Dockerfile once shipped unnoticed.
 
+## Branches
+
+| Branch | What it is |
+| --- | --- |
+| `main` | Production. Merged only after the change has been verified on staging and the release is being cut. |
+| `staging` | The integration branch, and what the Railway **staging** environment auto-deploys from. Everything lands here first. |
+| anything else | A feature or fix branch, which opens a pull request into `staging`. |
+
+In practice: push to `staging` when you want to *see* a change running, and to
+`main` only as part of a release ([docs/RELEASING.md](docs/RELEASING.md)). The
+`staging` instance is a real deployment with its own database — a change that
+only ever worked on localhost has not been tested until it has booted there.
+
 ## What gets merged
 
 - **Behaviour changes need a test that would fail without them.** The suite is
