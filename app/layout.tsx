@@ -1,20 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Footer } from "@/components/Footer";
-import { siteIdentity, siteOrigin } from "@/lib/site";
-
-/**
- * Rendered per request on purpose. The analytics tags and the robots metadata
- * below come from the environment, and a statically optimised route bakes them
- * in at build time — which would mean one published image could no longer be
- * reconfigured by environment alone, the whole point of the deployment flags.
- * The cost is a render per request on the handful of pages that would otherwise
- * be static (the legal pages); everything else was already dynamic.
- */
-export const dynamic = "force-dynamic";
+import { siteOrigin } from "@/lib/site";
+import { Analytics } from "@/components/Analytics";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -30,22 +20,23 @@ const geistMono = localFont({
 const siteUrl = siteOrigin();
 
 /**
- * Read at request time, never at module scope. `siteIdentity()` validates the
- * deployment configuration — it refuses open registration in production without
- * a delivering email transport — and a `next build` loads this module to collect
- * routes. Evaluating it at import time therefore fails the *build* of an image
- * whose runtime environment is perfectly valid, which is exactly the documented
- * `docker compose up --build` path.
+ * No environment reads, no session, no dynamic API: this layout is what lets
+ * the pages inside it be prerendered. The two things that used to need the
+ * environment here — the crawl metadata and the analytics tag — moved to the
+ * two places that can answer them per request: `middleware.ts` (the
+ * `X-Robots-Tag` header) and `/api/config/analytics` (the tracker).
+ *
+ * `siteOrigin()` is still a build-time value, and deliberately so: it is the
+ * hostname this deployment is *built for*, which is what a canonical URL and an
+ * `og:url` must state. A self-hoster who wants their own domain indexed sets
+ * `NEXT_PUBLIC_APP_URL` and builds their own image — the documented path.
  */
-export function generateMetadata(): Metadata {
-  const identity = siteIdentity();
-  return {
+export const metadata: Metadata = {
   // The brand alone ranks for nothing: the title carries the term a job seeker
   // actually types. Kept under 60 characters so Google does not truncate it.
   title: "Ghosted — the job application tracker that never goes quiet",
   // Only the operator's own instance should turn up in search results; a
   // self-hosted one is private unless it says otherwise.
-  robots: identity.indexable ? undefined : { index: false, follow: false },
   description:
     "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
@@ -113,16 +104,13 @@ export function generateMetadata(): Metadata {
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     images: ["/ghost-og.png?v=1"],
   },
-  };
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const identity = siteIdentity();
-
   return (
     // The font variables belong on <html>, not <body>: Tailwind's preflight sets
     // the base font-family on `html`, and a `var()` that is not defined on that
@@ -153,27 +141,17 @@ export default function RootLayout({
             __html: `try{var t=location.pathname==='/'?null:localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');var v=localStorage.getItem('ghosted-view');if(v!=='list'){document.documentElement.setAttribute('data-view','board');if(location.pathname==='/app')document.documentElement.setAttribute('data-board-content','')}}catch(e){}`,
           }}
         />
-        {/* Analytics, only when this deployment configured it: `UMAMI_SRC` and
-            `UMAMI_WEBSITE_ID` both set, or nothing is rendered at all. The
-            hosted instance sets them; a self-hosted one inherits no tracker and
-            reports nowhere. Loaded after hydration rather than with a bare
-            `defer` in <head>: analytics is never worth competing with the page's
-            own JS and fonts for bandwidth on first load, and nothing on the page
-            waits on it. */}
-        {identity.umami && (
-          <Script
-            src={identity.umami.src}
-            strategy="afterInteractive"
-            data-website-id={identity.umami.websiteId}
-            data-cache="true"
-            data-domains={identity.umami.domains ?? undefined}
-          />
-        )}
       </head>
       <body className="antialiased">
         <Providers>
           {children}
           <Footer />
+          {/* Analytics is attached after hydration, from the deployment's own
+              answer (`/api/config/analytics`), rather than rendered here: this
+              layout wraps prerendered pages, and a tracker baked into a build
+              would follow the image into every instance that pulled it. See the
+              component for why that matters. */}
+          <Analytics />
         </Providers>
       </body>
     </html>

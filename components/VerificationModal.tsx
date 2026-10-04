@@ -41,7 +41,9 @@ export function VerificationModal({
           <DialogTitle>Verify your email</DialogTitle>
           <DialogDescription className="text-base text-muted-foreground">
             Unverified accounts are limited to {limit} applications. We emailed
-            you a link, simply click it and get verified immediately.
+            you a link, simply click it and get verified immediately — and if it
+            is not in your inbox, check your spam folder and mark it as not spam
+            so the next one gets through.
           </DialogDescription>
           {message && (
             <p className="text-sm font-medium text-amber-600 dark:text-amber-400">

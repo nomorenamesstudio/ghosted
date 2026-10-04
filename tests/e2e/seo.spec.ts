@@ -121,3 +121,18 @@ test("the landing does not download the captures it is not showing", async ({
     250 * 1024,
   );
 });
+
+test("the served page carries no tracker of its own", async ({ request }) => {
+  // The tracker is attached after hydration from /api/config/analytics, because
+  // a tracker baked into the HTML would follow a published image into every
+  // instance that pulled it. On this (hosted) shape a baked tracker would show
+  // up here, which is why the assertion means something.
+  const html = await (await request.get("/")).text();
+  expect(html).not.toContain("ramen.lostsignals.studio");
+
+  const config = await request.get("/api/config/analytics");
+  expect(config.status()).toBe(200);
+  const body = await config.json();
+  expect(body.src).toContain("script.js");
+  expect(body.websiteId).toBeTruthy();
+});

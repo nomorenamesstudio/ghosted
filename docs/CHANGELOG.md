@@ -5,6 +5,33 @@ All notable changes, by date and type.
 ## 2026-10-04
 
 ### Feature
+- **The landing is prerendered, and signed-in visitors can read it.** `/` no
+  longer bounces a signed-in visitor to `/app` — a marketing page you can only
+  see while logged out is a page you cannot link to anyone — and the sign-in
+  screen is where "you are already signed in" is answered, by going to the app.
+  That also removed the cookie read that made the landing render per request, so
+  with the layout's `force-dynamic` gone the page is now built once (`○ /` in the
+  route table, along with the legal pages and the register screen).
+  The deployment decisions that used to need the environment at render time
+  moved to the two places that can answer them per request:
+  - `middleware.ts` owns `/` → `/login` when `SHOW_LANDING=false`, and sets
+    `X-Robots-Tag: noindex, nofollow` when the instance is not indexable — read
+    live, so one image behaves correctly on every instance that pulls it. Both
+    now share one flag parser with `lib/config/flags.ts` (`lib/config/flag-parse.ts`,
+    dependency-free because middleware runs in the Edge runtime); middleware is
+    lenient on a typo, the boot is strict.
+  - `/api/config/analytics` + `components/Analytics.tsx` attach the tracker after
+    hydration, so prerendered HTML carries no third-party tag. A tracker baked
+    into a build would follow a published image into every self-hosted copy.
+  Verified on a production build: `/` is `○ Static`; the hosted shape serves the
+  landing and returns its analytics config; `SHOW_LANDING=false` answers `307 →
+  /login` with the crawl header; `SITE_INDEXABLE=true` removes that header —
+  all from the same build.
+- **"Check your spam folder" wherever we tell someone to expect an email.** It
+  has already landed in spam with a few providers, so the hint is now in the
+  verification banner and modal, in the resend confirmation, in the verification
+  and password-reset emails themselves (HTML and plain text), and on the
+  forgot-password screen.
 - **The landing's search surface.** The page now tells a crawler what it is and
   stops downloading screenshots nobody is looking at:
   - the title was the bare brand — it now reads "Ghosted — the job application

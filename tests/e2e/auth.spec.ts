@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { loginViaUi, registerViaUi, uniqueEmail } from "./helpers";
+import { loginViaUi, registerUser, registerViaUi, uniqueEmail } from "./helpers";
 
 test("register, sign out, and log back in", async ({ page }) => {
   const email = uniqueEmail("auth");
@@ -23,4 +23,25 @@ test("register, sign out, and log back in", async ({ page }) => {
 test("unauthenticated users are redirected to login", async ({ page }) => {
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
+});
+
+/**
+ * The flow the owner asked for: the landing stays reachable for someone who is
+ * already signed in — a marketing page you can only see while logged out is a
+ * page you cannot link to anyone — and "Sign in" is what takes them into the
+ * app. Before this, `/` bounced them straight to `/app`.
+ */
+test("a signed-in visitor can read the landing, and Sign in takes them in", async ({
+  page,
+}) => {
+  const email = uniqueEmail("landing");
+  await registerUser(page, email);
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+  await page.getByRole("link", { name: "Sign in" }).click();
+  // /login answers "you are already signed in" by going to the app.
+  await expect(page).toHaveURL(/\/app$/);
 });

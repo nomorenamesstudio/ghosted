@@ -170,10 +170,10 @@ export function sendVerificationEmail(to: string, token: string) {
   return sendEmail({
     to,
     subject: "Confirm your email — Ghosted",
-    text: `Welcome to Ghosted!\n\nPlease confirm your email address by opening this link:\n${url}\n\nIf you didn't create an account, you can ignore this email.`,
+    text: `Welcome to Ghosted!\n\nPlease confirm your email address by opening this link:\n${url}\n\nNot seeing this in your inbox? Check your spam folder, and mark this message as not spam — that is what keeps the next one out of there.\n\nIf you didn't create an account, you can ignore this email.`,
     html: renderEmailShell({
       title: "Welcome to Ghosted!",
-      body: `<p style="margin:0 0 4px;">Thanks for signing up — one quick step left.</p><p style="margin:0;">Confirm your email address to activate your account.</p>`,
+      body: `<p style="margin:0 0 4px;">Thanks for signing up — one quick step left.</p><p style="margin:0;">Confirm your email address to activate your account.</p><p style="margin:10px 0 0;color:#71717a;">Not seeing this in your inbox? Check your spam folder, and mark this message as not spam — that is what keeps the next one out of there.</p>`,
       ctaLabel: "Confirm my email",
       ctaUrl: url,
       fallbackUrl: url,
@@ -187,10 +187,10 @@ export function sendPasswordResetEmail(to: string, token: string) {
   return sendEmail({
     to,
     subject: "Reset your password — Ghosted",
-    text: `We received a request to reset your Ghosted password.\n\nOpen this link to choose a new one (valid for 1 hour):\n${url}\n\nIf you didn't request this, you can ignore this email.`,
+    text: `We received a request to reset your Ghosted password.\n\nOpen this link to choose a new one (valid for 1 hour):\n${url}\n\nNot seeing this in your inbox? Check your spam folder, and mark this message as not spam — that is what keeps the next one out of there.\n\nIf you didn't request this, you can ignore this email.`,
     html: renderEmailShell({
       title: "Reset your password",
-      body: `<p style="margin:0 0 4px;">We received a request to reset your Ghosted password.</p><p style="margin:0;">This link is valid for <strong>1 hour</strong>. If you didn't request it, nothing will change.</p>`,
+      body: `<p style="margin:0 0 4px;">We received a request to reset your Ghosted password.</p><p style="margin:0;">This link is valid for <strong>1 hour</strong>. If you didn't request it, nothing will change.</p><p style="margin:10px 0 0;color:#71717a;">Not seeing this in your inbox? Check your spam folder, and mark this message as not spam — that is what keeps the next one out of there.</p>`,
       ctaLabel: "Choose a new password",
       ctaUrl: url,
       fallbackUrl: url,

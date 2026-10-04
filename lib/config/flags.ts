@@ -1,5 +1,6 @@
 import { logger } from "@/lib/utils/logger";
 import { ConfigError } from "@/lib/config/error";
+import { readBooleanFlagRaw, type EnvRecord } from "@/lib/config/flag-parse";
 import { readTransportChoice } from "@/lib/email/transport";
 
 export { ConfigError };
@@ -29,16 +30,13 @@ export interface RuntimeConfig {
 }
 
 /** A plain env bag: `process.env` satisfies it, a literal object in a test does too. */
-export type EnvRecord = Record<string, string | undefined>;
-
-const TRUTHY = new Set(["1", "true", "yes", "on"]);
-const FALSY = new Set(["0", "false", "no", "off"]);
+export type { EnvRecord };
 
 /**
- * Strict parsing, on purpose: `ALLOW_REGISTRATION=flase` must stop the boot
- * rather than quietly mean "the default". An empty value counts as unset —
- * `FLAG=` in a compose file is the commonest way to *not* set something, and
- * treating it as `false` is how a deployment silently changes shape.
+ * Strict policy on top of the shared parser: `ALLOW_REGISTRATION=flase` must
+ * stop the boot rather than quietly mean "the default". The parse itself lives
+ * in `lib/config/flag-parse.ts` because middleware needs the same rule without
+ * the dependencies this module drags in.
  */
 function readFlag(
   env: EnvRecord,
@@ -46,14 +44,13 @@ function readFlag(
   fallback: boolean,
   problems: string[],
 ): boolean {
-  const raw = env[name];
-  if (raw === undefined || raw.trim() === "") return fallback;
-  const value = raw.trim().toLowerCase();
-  if (TRUTHY.has(value)) return true;
-  if (FALSY.has(value)) return false;
-  problems.push(
-    `${name}="${raw}" is not a boolean — use true/false, 1/0, yes/no or on/off`,
-  );
+  const read = readBooleanFlagRaw(env[name]);
+  if (read.kind === "value") return read.value;
+  if (read.kind === "invalid") {
+    problems.push(
+      `${name}="${read.raw}" is not a boolean — use true/false, 1/0, yes/no or on/off`,
+    );
+  }
   return fallback;
 }
 

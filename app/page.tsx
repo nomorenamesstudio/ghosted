@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth/current-user";
-import { runtimeConfig } from "@/lib/config/flags";
 import { Landing } from "@/components/Landing";
 import { softwareApplicationJsonLd } from "@/lib/structured-data";
 
@@ -14,16 +11,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-export default async function HomePage() {
-  // Signed-in users go straight to the app — on every shape of the deployment,
-  // including one whose `/` is a redirect to the login screen.
-  const user = await getCurrentUser();
-  if (user) redirect("/app");
-
-  // The landing is the hosted instance's front door. A self-hosted instance
-  // turns it off and starts at the login screen instead.
-  if (!runtimeConfig().showLanding) redirect("/login");
-
+/**
+ * Deliberately session-free, and therefore prerenderable.
+ *
+ * It used to bounce signed-in visitors straight to `/app`, which meant reading
+ * the session here — and reading cookies is what made this page render per
+ * request. Two things were wrong with that: someone who wants to look at the
+ * landing again should be able to, and the redirect belongs to the sign-in
+ * screen, where "I am already signed in" is answered by going to the app.
+ *
+ * The other deployment decision — whether `/` serves the landing at all — moved
+ * to `middleware.ts`, which reads the environment per request. Nothing on this
+ * page depends on how the instance is configured, which is what lets one image
+ * be built once and deployed anywhere.
+ */
+export default function HomePage() {
   return (
     <>
       {/* Structured data, rendered on the server and never from user input.

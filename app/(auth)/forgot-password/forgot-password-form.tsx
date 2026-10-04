@@ -49,7 +49,8 @@ export function ForgotPasswordForm() {
           <CardTitle>Check your inbox</CardTitle>
           <CardDescription>
             If an account exists for that email, a password reset link has been
-            generated.{" "}
+            generated. If it is not in your inbox, check your spam folder — and
+            mark it as not spam so the next one gets through.{" "}
             {process.env.NODE_ENV !== "production" &&
               "(In this dev build the link is printed to the server log.)"}
           </CardDescription>

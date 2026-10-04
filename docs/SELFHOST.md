@@ -197,9 +197,31 @@ container that "starts but does not work".
 - **Mail never arrives** — check `EMAIL_TRANSPORT` and the container log for the
   active transport line, then the provider's own logs. For SMTP, SPF/DKIM.
 - **Emailed links point at localhost** — `NEXT_PUBLIC_APP_URL` (and `AUTH_URL`)
-  must be the address people actually visit.
+  must be the address people actually visit. `NEXT_PUBLIC_APP_URL` is read at
+  **build** time (it is the address this image was built for, and it is what the
+  canonical URL and the social card state), so changing it means rebuilding;
+  `AUTH_URL` is read at runtime.
 - **Behind a reverse proxy** — terminate TLS at the proxy and forward to port
   8080; set both URLs to the public `https://` origin.
+
+### Which settings need a rebuild
+
+Two kinds of configuration, and the difference matters if you run a container
+rather than building one:
+
+| Read per request (change and restart) | Read at build time (rebuild) |
+| --- | --- |
+| `SHOW_LANDING` — decides whether `/` serves the landing or redirects to `/login` | `NEXT_PUBLIC_APP_URL` — canonical URL, `og:url`, emailed links |
+| `ALLOW_REGISTRATION`, `GHOSTED_USER_EMAIL` | the icon and card files in `public/` |
+| `SITE_INDEXABLE` — the `X-Robots-Tag` header, `robots.txt` and the sitemap | |
+| `OPERATOR_*` — footer and legal pages | |
+| `UMAMI_*` — the tracker, attached after hydration | |
+| `EMAIL_TRANSPORT` and its provider settings | |
+
+The landing, the legal pages and the register screen are prerendered, so they
+carry no deployment-specific HTML at all: the decisions that depend on who is
+running the instance are made by middleware (routing and the crawl header) and by
+a small config endpoint (the tracker) when a request arrives.
 
 ## 8. What self-hosting does not give you
 
