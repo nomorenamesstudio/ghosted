@@ -2,6 +2,19 @@
 
 All notable changes, by date and type.
 
+## 1.0.0 — 2026-10-04
+
+The first release: `staging` merged into `main` after the Railway staging
+environment carried it end to end — the container built from this Dockerfile,
+migrations applied under the advisory lock to a database of its own, the
+boot-seeded owner signing in and being sent to the forced password change with
+writes refused until it was replaced, the landing served with its own canonical
+URL, `noindex` with a disallowing `robots.txt` and an empty sitemap, registration
+closed, and the image optimizer refusing remote URLs. It is also the day
+`selfhost` became `staging`, and the day the dependency audit went from 28
+advisories to one accepted, documented entry. What is in the release, and what it
+deliberately does not do, is written up in [releases/v1.0.0.md](releases/v1.0.0.md).
+
 ## 2026-10-04
 
 ### Changed
