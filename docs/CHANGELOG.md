@@ -5,6 +5,31 @@ All notable changes, by date and type.
 ## 2026-10-04
 
 ### Feature
+- **The container path is in CI, and every branch runs CI.** Three jobs existed
+  (lint/typecheck, unit/integration, e2e) and none of them built the image — which
+  is why a 2.43 GB image, then a build failure, then a crash loop on missing boot
+  dependencies all sat unnoticed. A fourth job now runs
+  `docker compose --profile selfhost up -d --wait` and asserts that the instance
+  is alive (`/api/health` with `config:"ok"`), that `/` answers `307 /login` when
+  the landing is switched off, that the crawl header and `robots.txt` refuse
+  crawlers, and that closed registration answers 403. The workflow also runs on
+  **every** branch now, not only on pushes to `main`: the branch that introduced
+  self-hosting had never been built by CI once.
+- **A project's public furniture, which was missing**: `SECURITY.md` (private
+  vulnerability reporting, the threat model, and a per-advisory triage of the 28
+  reported findings), `CONTRIBUTING.md` (getting it running, what gets merged, and
+  why a behaviour change needs a test), issue templates for bugs and feature
+  requests, and `docs/RELEASING.md` (version bumps, tags, what the version number
+  promises, and how the image is published). CI gained an informational
+  dependency audit, which reports without blocking while the Next 14 advisories
+  have no fix inside the 14.x line.
+- **The unused image optimizer is closed.** Next 14's `/_next/image` carries an
+  unauthenticated RCE advisory (AVIF path) fixed only in Next 15; this app uses
+  `next/image` zero times, so `middleware.ts` answers that path with a 404 and
+  the guard is documented for deletion with the upgrade. The other critical
+  advisory is Windows-hosted servers, and the image is Linux.
+
+### Fix
 - **The generated owner password must be replaced at first sign-in.** Both
   reviewers put this in their "would not ship without" list, and they were right:
   the bootstrap prints a password into the container log, and that log keeps it.

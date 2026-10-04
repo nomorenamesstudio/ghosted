@@ -20,6 +20,9 @@ that a machine wrote is still code a human is accountable for.
 - [API reference](docs/API.md) - all endpoints, parameters, examples
 - [Architecture](docs/ARCHITECTURE.md) - tech stack, data flow, key decisions
 - [Changelog](docs/CHANGELOG.md) - changes by date and type
+- [Releasing](docs/RELEASING.md) - versioning, tags, publishing an image
+- [Contributing](CONTRIBUTING.md) - getting it running, what gets merged
+- [Security](SECURITY.md) - reporting a vulnerability, dependency triage
 - [Security review](docs/SECURITY_REVIEW.md) - multi-model audit report
 
 ## Tech Stack

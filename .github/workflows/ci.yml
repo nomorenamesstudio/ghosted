@@ -3,8 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Every branch, not just main. A change is at its most dangerous before it is
+  # merged, and this workflow used to run only on pushes to main — which meant
+  # the branch that introduced self-hosting was never once built by CI.
   push:
-    branches: [main]
 
 env:
   DATABASE_URL: postgres://ghosted:ghosted@localhost:5432/ghosted
@@ -63,6 +65,87 @@ jobs:
       - run: pnpm db:migrate
       - run: DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
       - run: pnpm test
+
+  dependencies:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    # Informational on purpose: most findings are Next 14 advisories whose fix
+    # is Next 15, so failing here would block every pull request until that
+    # upgrade lands. The triage lives in SECURITY.md.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Production dependency audit
+        run: pnpm audit --prod
+
+  image:
+    name: Container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # `docker compose up --build` is the documented path, and it builds the
+      # shipped Dockerfile — which runs scripts/assert-build-shape.mjs (the
+      # landing must stay prerendered, and the environment-dependent routes must
+      # not be) and asserts the boot scripts' dependencies are present in the
+      # runtime image. A Dockerfile that cannot build fails the job here.
+      - name: Boot the documented compose stack
+        env:
+          AUTH_SECRET: ci-only-non-secret-please-override
+          POSTGRES_PASSWORD: ci-password
+          NEXT_PUBLIC_APP_URL: http://localhost:8080
+          AUTH_URL: http://localhost:8080
+          SHOW_LANDING: "false"
+          ALLOW_REGISTRATION: "false"
+          GHOSTED_USER_EMAIL: owner@example.com
+          EMAIL_TRANSPORT: log
+        run: docker compose --profile selfhost up -d --wait
+      - name: The instance is alive, closed and not indexable
+        run: |
+          set -euo pipefail
+          echo "waiting for the app to answer"
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/health || true)
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
+
+          health=$(curl -s http://localhost:8080/api/health)
+          echo "health: $health"
+          echo "$health" | grep -q '"ok":true' || { echo "health is not ok"; exit 1; }
+          echo "$health" | grep -q '"config":"ok"' || { echo "deployment config is not coherent"; exit 1; }
+
+          # The landing is switched off, so middleware must send `/` to the
+          # sign-in screen — read at request time, which is the whole point.
+          location=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' http://localhost:8080/)
+          echo "/ -> $location"
+          echo "$location" | grep -q '307 .*/login' || { echo "landing switch is not respected"; exit 1; }
+
+          # A private instance tells crawlers to stay away, in both places.
+          curl -s -D - -o /dev/null http://localhost:8080/login | grep -qi 'x-robots-tag: noindex' \
+            || { echo "missing noindex header"; exit 1; }
+          curl -s http://localhost:8080/robots.txt | grep -q 'Disallow: /' \
+            || { echo "robots.txt does not disallow"; exit 1; }
+
+          # Closed registration is enforced, not merely hidden.
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"stranger@example.com","password":"password123","name":"Stranger"}')
+          echo "register -> $code"
+          [ "$code" = "403" ] || { echo "closed registration is not enforced"; exit 1; }
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose --profile selfhost logs --tail=200
+      - name: Clean up
+        if: always()
+        run: docker compose --profile selfhost down -v
 
   e2e:
     name: End-to-end tests
