@@ -145,3 +145,29 @@ test("the served page carries no deployment identity of its own", async ({
   expect(body.src).toContain("script.js");
   expect(body.websiteId).toBeTruthy();
 });
+
+/**
+ * The footer's version line, and the one place it must not appear.
+ *
+ * `package.json` is baked into the image, so the footer identifies the build a
+ * self-hoster is running — the first question anybody answering a bug report
+ * asks. The landing is the exception: it still says the product is coming soon,
+ * and a public version badge underneath that sentence contradicts it, so this
+ * asserts both halves of the decision. Rendered text, not a selector, so
+ * reformatting the footer does not break it.
+ */
+test("the build version is in the app's footer and not on the landing", async ({
+  page,
+}) => {
+  await page.goto("/login");
+  const appFooter = await page.locator("footer").first().innerText();
+  // Matches the version in package.json without repeating the number here.
+  expect(appFooter, `footer reads: ${appFooter}`).toMatch(/v\d+\.\d+\.\d+/);
+
+  await page.goto("/");
+  const landingFooter = await page.locator("footer").first().innerText();
+  expect(
+    landingFooter,
+    `landing footer reads: ${landingFooter}`,
+  ).not.toMatch(/v\d+\.\d+\.\d+/);
+});
