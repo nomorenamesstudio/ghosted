@@ -290,6 +290,26 @@ describe("GET /api/applications", () => {
 });
 
 describe("POST /api/applications", () => {
+  it("refuses a write while the password must be changed", async () => {
+    // The boot-seeded owner signs in with a password that is sitting in the
+    // container log. Reads stay open so the app can render and offer the form;
+    // every mutation is refused until the password is replaced — that is the
+    // difference between "forced" and "suggested".
+    const user = await createUser("seeded@test.dev", "Seeded", "generated123");
+    authMock.mockResolvedValueOnce(
+      mockSession(user.id, { mustChangePassword: true }),
+    );
+
+    const res = await POST(
+      jsonRequest(`${base}`, "POST", { company: "Blocked Co", role: "Engineer" }),
+    );
+    expect(res.status).toBe(403);
+    expect((await readJson(res)).code).toBe("PASSWORD_CHANGE_REQUIRED");
+
+    const rows = await db.select().from(applications);
+    expect(rows).toHaveLength(0);
+  });
+
   it("creates an application with the default 5-step timeline", async () => {
     const user = await createUser();
     const { res, app } = await createApp(user.id);

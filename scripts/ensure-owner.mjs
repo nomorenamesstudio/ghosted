@@ -83,9 +83,12 @@ export async function ensureOwnerAccount({
   // otherwise both find the account missing and one would lose the race with a
   // unique-violation. `DO NOTHING` also makes "already there" and "just created"
   // distinguishable by whether a row came back.
+  // A password the operator did not choose is a password that lives in the
+  // container log, so the account must replace it at first sign-in. A supplied
+  // one is the operator's own choice and stays as it is.
   const [created] = await sql`
-    INSERT INTO users (email, password_hash, name, image, provider, email_verified, email_verified_at)
-    VALUES (${email}, ${passwordHash}, ${name}, ${DEFAULT_OWNER_AVATAR}, 'email', true, now())
+    INSERT INTO users (email, password_hash, name, image, provider, email_verified, email_verified_at, must_change_password)
+    VALUES (${email}, ${passwordHash}, ${name}, ${DEFAULT_OWNER_AVATAR}, 'email', true, now(), ${!supplied})
     ON CONFLICT (email) DO NOTHING
     RETURNING id
   `;
@@ -99,7 +102,7 @@ export async function ensureOwnerAccount({
   } else {
     log(
       `Created the owner account ${name} <${email}> — password: ${password}\n` +
-        "Change it in Settings after signing in. It is shown once and never stored in plain text.",
+        "You will be asked to choose your own password at first sign-in; this one is shown once and never stored in plain text.",
     );
   }
 

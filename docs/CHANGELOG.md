@@ -4,6 +4,33 @@ All notable changes, by date and type.
 
 ## 2026-10-04
 
+### Feature
+- **The generated owner password must be replaced at first sign-in.** Both
+  reviewers put this in their "would not ship without" list, and they were right:
+  the bootstrap prints a password into the container log, and that log keeps it.
+  `users.must_change_password` (migration 0010) is set when the bootstrap
+  generates the password — not when the operator supplies `GHOSTED_USER_PASSWORD`
+  — the flag rides the JWT, every page behind the dashboard layout redirects to
+  `/change-password` while it is set, and every write answers `403
+  PASSWORD_CHANGE_REQUIRED`. Changing it clears the flag and signs the user in
+  again with their own credential. Verified in a container: `/app` and
+  `/settings` → `307 /change-password`, a `POST /api/applications` → 403.
+  The mocked-session tests could not see this — the bug was in the token — so the
+  regression test is an e2e one that failed first.
+- **The image is 343 MB instead of 2.43 GB.** Measured cause: layer duplication,
+  not content. The runner copied the full `node_modules` (an 811 MB layer) and
+  then ran `chown -R node:node /app`, which rewrites the whole tree into a second
+  764 MB layer — while the actual filesystem was 729 MB. It now copies Next's
+  `standalone` output with `--chown` on every copy: the server plus the modules it
+  imports, and a small explicit set for the boot scripts (whose dependencies the
+  trace does not carry, checked at build time so a missing one cannot reach
+  production as a crash loop).
+- **The build asserts its own shape.** `scripts/assert-build-shape.mjs` runs
+  inside `docker build` after `next build` and refuses the image if `/` stopped
+  being prerendered, or if `robots.txt`, `sitemap.xml`, `/imprint`, `/privacy` or
+  `/terms` started being prerendered. That is the regression class this branch hit
+  twice, now impossible to merge quietly.
+
 ### Fix
 - **The Docker image builds again, and the deployment rules stopped being judged
   by the build.** Prerendering the landing had made `next build` validate the

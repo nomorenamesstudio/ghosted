@@ -118,6 +118,30 @@ describe("POST /api/auth/change-password", () => {
     expect(await bcrypt.compare("oldpassword1", row.passwordHash!)).toBe(false);
   });
 
+  it("clears the forced-change flag, which is the only way out of it", async () => {
+    const user = await createUser("pw-seeded@test.dev", "User", "generated123");
+    await db
+      .update(users)
+      .set({ mustChangePassword: true })
+      .where(eq(users.id, user.id));
+    authMock.mockResolvedValueOnce(mockSession(user.id, { mustChangePassword: true }));
+
+    const res = await CHANGE_PASSWORD(
+      req(`${base}/change-password`, "POST", {
+        currentPassword: "generated123",
+        newPassword: "my-own-password1",
+        confirmPassword: "my-own-password1",
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select({ mustChangePassword: users.mustChangePassword })
+      .from(users)
+      .where(eq(users.id, user.id));
+    expect(row.mustChangePassword).toBe(false);
+  });
+
   it("rejects a wrong current password", async () => {
     const user = await createUser("pw2@test.dev", "User", "oldpassword1");
     authMock.mockResolvedValueOnce(mockSession(user.id));

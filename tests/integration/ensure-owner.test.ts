@@ -84,6 +84,30 @@ describe("ensureOwnerAccount", () => {
     );
   });
 
+  it("marks a generated password as needing a change, and a supplied one as final", async () => {
+    // The generated password is in the container log; the supplied one is the
+    // operator's own choice. Only the first must be replaced at first sign-in.
+    await run({
+      ALLOW_REGISTRATION: "false",
+      GHOSTED_USER_EMAIL: OWNER_EMAIL,
+    });
+    const [generated] = await sql`
+      SELECT must_change_password FROM users WHERE email = ${OWNER_EMAIL}
+    `;
+    expect(generated.must_change_password).toBe(true);
+
+    await sql`DELETE FROM users WHERE email = ${OWNER_EMAIL}`;
+    await run({
+      ALLOW_REGISTRATION: "false",
+      GHOSTED_USER_EMAIL: OWNER_EMAIL,
+      GHOSTED_USER_PASSWORD: "chosen-by-the-operator",
+    });
+    const [supplied] = await sql`
+      SELECT must_change_password FROM users WHERE email = ${OWNER_EMAIL}
+    `;
+    expect(supplied.must_change_password).toBe(false);
+  });
+
   it("takes the password from the environment when one is supplied", async () => {
     const result = await run({
       ALLOW_REGISTRATION: "false",

@@ -142,6 +142,21 @@ the person or entity behind it (`OPERATOR_NAME` and `OPERATOR_LEGAL_NAME`), plus
 number reads as missing paperwork. Requirements differ by country; this is not
 legal advice.
 
+### About the image
+
+The runtime image is built from Next's `standalone` output: the server plus the
+modules it actually imports, not the whole dependency tree. That is the
+difference between ~340 MB and ~2.4 GB, most of which was layer duplication
+(a full `node_modules` copy plus a recursive `chown` of it). The build also runs
+`scripts/assert-build-shape.mjs` after `next build`, which fails the image if a
+page that reads the environment was prerendered — the class of bug that once
+shipped a self-hosted instance the hosted instance's `robots.txt`.
+
+`/api/health` answers `{"ok":true,"database":"up","config":"ok"}` when the
+database is reachable and the deployment configuration is coherent. A `config`
+of `"invalid"` with a 503 means the container is running but misconfigured
+(the problem list is in the log, never in the response).
+
 ## 4. Environment
 
 Everything is documented inline in [`.env.example`](../.env.example), which is
@@ -204,9 +219,12 @@ container that "starts but does not work".
   once. A closed instance without `GHOSTED_USER_EMAIL`, an unknown
   `EMAIL_TRANSPORT`, or a transport named but not configured.
 - **Nobody can sign in** — with registration closed the account comes from
-  `GHOSTED_USER_EMAIL`, and its password is printed **once**, at creation. It is
-  never regenerated, so an existing account keeps the password you set. Reset it
-  through *Forgot password* if email is configured.
+  `GHOSTED_USER_EMAIL`, and a generated password is printed **once**, at creation.
+  The first sign-in with it goes straight to a "choose your own password" screen:
+  until you replace it, that account can read pages but not write anything. A
+  password you supply yourself (`GHOSTED_USER_PASSWORD`) is final and skips that
+  screen. It is never regenerated, so an existing account keeps the password you
+  set — reset it through *Forgot password* if email is configured.
 - **Mail never arrives** — check `EMAIL_TRANSPORT` and the container log for the
   active transport line, then the provider's own logs. For SMTP, SPF/DKIM.
 - **Emailed links point at localhost** — `NEXT_PUBLIC_APP_URL` (and `AUTH_URL`)

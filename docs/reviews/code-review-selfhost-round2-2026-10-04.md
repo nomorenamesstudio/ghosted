@@ -115,13 +115,29 @@ disallowing everything → an empty sitemap → `/api/config/site` answering
 API refusing a sign-up on a closed instance → the container running as
 `uid=1000(node)` with no `.env` in the image.
 
+## Closed after this report
+
+1. **Forced password change on first sign-in** — done. `users.must_change_password`
+   is set when the bootstrap generates a password (and not when the operator
+   supplies one), the flag rides the JWT, `requireUser` sends every page to
+   `/change-password` while it is set, `requireSessionForWrite` answers
+   `403 PASSWORD_CHANGE_REQUIRED`, and the change clears it and signs the user
+   back in. Verified in a container: `/app` and `/settings` answer `307 →
+   /change-password` and a write answers 403. A mocked session cannot reach the
+   part that carried the bug — the token — which is why the regression test is an
+   e2e one, written after the container showed the flow broken while every unit
+   test passed.
+2. **The build-shape assertion** Claude asked for — done, and in the strongest
+   place available: `scripts/assert-build-shape.mjs` runs *inside* `docker build`
+   and fails the image if `/` stopped being prerendered or if `robots.txt`,
+   `sitemap.xml` or the legal pages started being prerendered.
+3. **The image size** — 2.43 GB → **343 MB**. The measured cause was layer
+   duplication, not content: an 811 MB `node_modules` copy plus a 764 MB
+   `chown -R` of the same tree, against a 729 MB filesystem. Now the runner takes
+   Next's `standalone` output with `--chown` on every copy.
+
 ## Still open
 
-1. **Forced password change on first sign-in** for the seeded owner — both
-   reviewers raised it, Claude in its "would not ship without" list. Deferred as
-   its own change: schema column, login check, UI.
-2. **A prebuilt image would still bake the build-time origin** into canonical and
-   `og:url`. Documented in the guide; the compose path passes the origin at
-   build, so this affects only someone publishing an image for others.
-3. **The image is 2.4 GB**, which is heavy for a self-hosted tool: the multi-stage
-   build keeps the full dependency layer. Worth a squash/prune pass.
+1. **A prebuilt image would still bake the build-time origin** into canonical and
+   `og:url`. The compose path passes the origin as a build argument, so this
+   affects only someone publishing an image for others.

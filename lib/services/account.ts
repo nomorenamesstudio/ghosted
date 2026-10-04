@@ -100,7 +100,10 @@ export async function changePassword(
   }
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-  await db.update(users).set({ passwordHash }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ passwordHash, mustChangePassword: false })
+    .where(eq(users.id, userId));
 }
 
 /** GDPR erasure: delete the account (cascades to applications, milestones, tokens). */
