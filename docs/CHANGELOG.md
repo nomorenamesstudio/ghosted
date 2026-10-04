@@ -29,9 +29,10 @@ All notable changes, by date and type.
   all from the same build.
 - **"Check your spam folder" wherever we tell someone to expect an email.** It
   has already landed in spam with a few providers, so the hint is now in the
-  verification banner and modal, in the resend confirmation, in the verification
-  and password-reset emails themselves (HTML and plain text), and on the
-  forgot-password screen.
+  verification banner and modal, in the resend confirmation, and on the
+  forgot-password screen. Deliberately **not** inside the emails themselves: a
+  reader has already found the message, so "check your spam folder" there answers
+  a question they no longer have.
 - **The landing's search surface.** The page now tells a crawler what it is and
   stops downloading screenshots nobody is looking at:
   - the title was the bare brand — it now reads "Ghosted — the job application
