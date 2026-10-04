@@ -39,6 +39,12 @@ short one.
    those places builds their own image — that is what `docker compose up --build`
    does, and it is the documented path.
 
+7. **Sync the release back into `staging`** (`git merge --ff-only main`). The
+   version bump makes the two branches differ the moment a release is cut, and
+   the staging environment deploys from `staging` — without the merge it keeps
+   serving the pre-bump code, which is the quiet drift a staging environment
+   exists to prevent.
+
 ## What the version number promises
 
 - **`1.0.0`** — the data model is stable: migrations are additive, the JSON
