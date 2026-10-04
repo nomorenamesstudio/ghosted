@@ -49,10 +49,13 @@ function miss(): NextResponse {
 
 export async function GET(
   _req: Request,
-  { params }: { params: { hash: string } },
+  ctx: { params: Promise<{ hash: string }> },
 ) {
+  // Resolved before the try: the catch below logs the hash, and a binding scoped
+  // to the try would not be visible there.
+  const { hash: rawHash } = await ctx.params;
+  const hash = rawHash.toLowerCase();
   try {
-    const hash = params.hash.toLowerCase();
     if (!GRAVATAR_HASH_RE.test(hash)) return miss();
 
     // Not a security boundary (a Gravatar is public by construction, and the
@@ -85,7 +88,7 @@ export async function GET(
     });
   } catch (err) {
     // An avatar is decoration: never turn a lookup failure into a broken page.
-    logger.warn({ err, hash: params.hash }, "gravatar fetch failed");
+    logger.warn({ err, hash: hash }, "gravatar fetch failed");
     return miss();
   }
 }

@@ -69,10 +69,9 @@ jobs:
   dependencies:
     name: Dependency audit
     runs-on: ubuntu-latest
-    # Informational on purpose: most findings are Next 14 advisories whose fix
-    # is Next 15, so failing here would block every pull request until that
-    # upgrade lands. The triage lives in SECURITY.md.
-    continue-on-error: true
+    # Blocking, now that the production tree is clean: one `braces` advisory is
+    # accepted in package.json (`pnpm.auditConfig.ignoreGhsas`) and explained in
+    # SECURITY.md. Anything new fails here.
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4

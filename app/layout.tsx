@@ -68,11 +68,14 @@ export const metadata: Metadata = {
     title: "Ghosted",
     statusBarStyle: "default",
   },
-  // Chrome warns that `apple-mobile-web-app-capable` alone is deprecated and
-  // wants the standard name alongside it; iOS still needs the apple one, so
-  // both are emitted.
+  // Next 15 emits the standard `mobile-web-app-capable` itself from
+  // `appleWebApp.capable` above, so adding it here would duplicate the tag
+  // (which is exactly what the upgrade caught). What it no longer emits is the
+  // Apple-prefixed name, deprecated in favour of the standard one but still the
+  // only signal that iOS older than 16.4 reads for a standalone home-screen app.
+  // So: one from Next, one from here.
   other: {
-    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
   },
   openGraph: {
     // Absolute, because a share card with a relative URL tells a crawler that

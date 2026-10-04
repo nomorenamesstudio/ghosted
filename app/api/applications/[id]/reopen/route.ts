@@ -10,14 +10,15 @@ const UUID_RE =
 /** Restore an archived application to its pre-archive status. */
 export async function POST(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSessionForWrite("applications");
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
-    const application = await reopenApplication(userId, params.id);
+    const application = await reopenApplication(userId, id);
     if (!application) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }

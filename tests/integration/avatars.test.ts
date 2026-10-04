@@ -18,7 +18,7 @@ const base = "http://localhost/avatars";
 
 function get(hash = HASH, init?: RequestInit) {
   return GET(new Request(`${base}/${hash}`, init), {
-    params: { hash },
+    params: Promise.resolve({ hash }),
   });
 }
 

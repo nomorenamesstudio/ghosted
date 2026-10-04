@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { version as packageVersion } from "@/package.json";
+import packageJson from "@/package.json";
 import { sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { deploymentProblems } from "@/lib/config/flags";
@@ -21,7 +21,7 @@ export async function GET() {
   // when the process was started through a package script, so a container run
   // any other way would answer "unknown" to the one question this field exists
   // for.
-  const version = packageVersion;
+  const version = packageJson.version;
 
   // Configuration is part of readiness: a process with a broken deployment would
   // otherwise answer "healthy" while the parts that need mail fail. The problem

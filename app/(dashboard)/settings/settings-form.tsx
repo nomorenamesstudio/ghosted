@@ -521,7 +521,11 @@ export function SettingsForm({
         <CardContent className="space-y-4">
           <div className="flex flex-wrap gap-3">
             <Button variant="outline" asChild>
-              <a href="/api/auth/export">
+              {/* A download, not a navigation: the response is a JSON file from
+                  an API route, and `<Link>` would try to route to it in the
+                  client. The rule exists to catch in-app navigation. */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a href="/api/auth/export" download>
                 <Download />
                 Export my data
               </a>
