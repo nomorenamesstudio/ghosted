@@ -37,10 +37,13 @@ function notFound(): NextResponse {
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
+  // Resolved before the try: the catch below logs the id, and a binding scoped
+  // to the try would not be visible there.
+  const { id } = await ctx.params;
   try {
-    if (!UUID_RE.test(params.id)) return notFound();
+    if (!UUID_RE.test(id)) return notFound();
 
     const user = await getCurrentUser();
     if (!user) return notFound();
@@ -53,7 +56,7 @@ export async function GET(
       })
       .from(applications)
       .where(
-        and(eq(applications.id, params.id), eq(applications.userId, user.id)),
+        and(eq(applications.id, id), eq(applications.userId, user.id)),
       )
       .limit(1);
     if (!application) return notFound();
@@ -77,7 +80,7 @@ export async function GET(
     });
   } catch (err) {
     // A logo is decoration: never turn a lookup failure into a broken page.
-    logger.warn({ err, applicationId: params.id }, "company logo lookup failed");
+    logger.warn({ err, applicationId: id }, "company logo lookup failed");
     return notFound();
   }
 }

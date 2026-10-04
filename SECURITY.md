@@ -32,35 +32,34 @@ timelines, per account. That shapes the threat model:
 - **The operator sees everything on their own instance** — it is their database.
   Encryption at rest is the host's job, not the app's.
 
-## Known dependency advisories (audited 2026-10-04)
+## Dependency advisories
 
-`pnpm audit --prod` reports 28 advisories: 2 critical, 11 high, 13 moderate,
-2 low. Almost all of them are in **Next.js 14.2.35**, and their fixes are in
-**Next 15.x** — a major upgrade, not a patch. Here is the triage, so the numbers
-are not mistaken for a wall of exploitable holes:
+`pnpm audit --prod` reports **one** finding, and it is explicitly accepted in
+`package.json` (`pnpm.auditConfig.ignoreGhsas`):
 
-| Advisory | Applies here? | Why |
+| Advisory | Applies here? | Why it is accepted |
 | --- | --- | --- |
-| Next.js: unauthenticated RCE on **Windows-hosted** servers (critical) | **No** | The image is Linux (`node:22-alpine`); the advisory is Windows-specific |
-| Next.js: unauthenticated RCE in the **Image Optimization API** when **AVIF** files are optimized (critical) | **No** — and pinned shut | The flaw is in `sharp`'s libheif handling of AVIF *input*, fixed only in Next 15. Here: `next/image` is used **0 times**, `public/` ships **0 AVIF files**, `images.formats` is explicitly `["image/webp"]` (no AVIF output), and with no `remotePatterns` the optimizer refuses non-local URLs — verified: a remote request answers `400 "url parameter is not allowed"`. The config comment explains what must not change before the upgrade |
-| Middleware / proxy bypass in **Pages Router** apps with i18n (high) | **No** | App Router only; there is no `pages/` directory and no i18n config |
-| SSRF via **rewrites** with an attacker-controlled destination (high) | **No** | `next.config.mjs` defines no rewrites |
-| SSRF in **Server Actions on custom servers** (high) | **No** | The app runs Next's own server (`next start` / standalone `server.js`), not a custom one |
-| SSRF via **WebSocket upgrades** (high) | **No** | No WebSocket upgrade handling; no custom server |
-| PostCSS arbitrary file read / path traversal via `sourceMappingURL` (2 high, 3 moderate) | **No** | PostCSS runs at build time over CSS written in this repository; no attacker-controlled stylesheet reaches it |
-| `braces` stack exhaustion via nested patterns (high) | **No** | Build-time glob matching on the repository's own paths |
-| Next.js **DoS** with Server Components, request deserialization, and Server Actions (3 high + moderates) | **Partly** — availability only | Reachable unauthenticated, but the impact is a hung or slow response on the operator's own instance. `lib/actions/auth.ts` is the one Server Action (sign-out) |
+| `braces` stack exhaustion through deeply nested patterns (high, GHSA-vfj7-8cjw-p6xm) | Build time only | It arrives through `micromatch` in the tooling path, matching the repository's own paths, and **no released version fixes it** (the advisory lists no patched version). The alternative is dropping the toolchain that depends on it. |
 
-The practical consequence: **there is no known exploitable vulnerability in this
-deployment today**, and the remaining risk is availability, not data. That is
-still a real reason to do the Next 15 upgrade rather than sit on 14; it is
-planned, and the upgrade resolves the whole table at once.
+That is a different picture from the one this file described before the Next 15
+upgrade, and it is worth recording how it changed, because the numbers were
+alarming and mostly inapplicable:
 
-To reproduce the numbers: `pnpm audit --prod`. CI runs the same command
-informational-only (it does not fail the build, because a fix for most of these
-does not exist inside the 14.x line). The image job in CI also asserts the
-optimizer still refuses a remote URL, so the AVIF mitigation above cannot be
-removed by accident.
+- Before: **28 advisories — 2 critical, 11 high, 13 moderate, 2 low**, nearly all
+  in Next.js 14.2.35, whose fixes existed only in Next 15. The two criticals were
+  a Windows-only RCE (this image is Linux) and an RCE in the image optimizer when
+  **AVIF** files are optimized — the second was pinned shut by configuration:
+  `next/image` is used nowhere, `public/` ships no AVIF, `images.formats` is
+  `["image/webp"]`, and with no `remotePatterns` the optimizer refuses non-local
+  URLs (`400 "url parameter is not allowed"`, asserted in CI).
+- After the upgrade to Next 15.5.x and React 19: **5**, of which three `postcss`
+  advisories were closed by pinning `postcss` to the patched line in
+  `pnpm.overrides` (it sits in the production graph, because Next processes CSS
+  with it), leaving the one row above.
+
+CI runs `pnpm audit --prod` **as a blocking check** now: a new advisory in the
+production tree fails the build, and anything accepted has to be written down
+here first.
 
 ## Secrets
 

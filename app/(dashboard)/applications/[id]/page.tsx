@@ -1,9 +1,15 @@
 import { ApplicationDetail } from "@/components/ApplicationDetail";
 
-export default function ApplicationDetailPage({
+/**
+ * Next 15 hands `params` in as a promise: a page can now start rendering before
+ * the route's segments are resolved, which is what makes streaming a slow child
+ * possible. The await is the whole change.
+ */
+export default async function ApplicationDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  return <ApplicationDetail id={params.id} />;
+  const { id } = await params;
+  return <ApplicationDetail id={id} />;
 }

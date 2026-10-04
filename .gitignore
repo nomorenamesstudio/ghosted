@@ -60,3 +60,9 @@ next-env.d.ts
 
 # Local review scratch files
 .tmp-review/
+
+# Local pnpm store (the sandbox store is read-only, so the repo carries its own)
+.pnpm-store/
+
+# npm cache for the sandbox
+.npm-cache/

@@ -4,6 +4,35 @@ All notable changes, by date and type.
 
 ## 2026-10-04
 
+### Break
+- **Next 15.5 and React 19.** A major upgrade, and the reason the audits are
+  clean: it closed 23 of the 28 dependency advisories, including both criticals
+  and every high one. What actually had to change in this codebase:
+  - **Route and page `params` are promises.** Eight route handlers and the
+    application detail page now `await` them; the integration tests that call
+    handlers directly hand in `Promise.resolve(...)`. Two catch blocks were
+    logging a parameter that had become scoped to the `try`, so those bindings
+    were hoisted deliberately rather than left to fail at the wrong moment.
+  - **Next stopped emitting `apple-mobile-web-app-capable`** in favour of the
+    standard `mobile-web-app-capable`. The layout's `other` block had the
+    standard one — which silently became a *duplicate* — so it now carries the
+    Apple-prefixed name instead, which is the only signal iOS older than 16.4
+    reads for a standalone home-screen app. The e2e test asserts both, once each.
+  - **A new lint rule** (`@next/next/no-html-link-for-pages`) flagged the export
+    download link. It is disabled at that line with the reason: it is a file
+    download, not in-app navigation.
+  - The `package.json` named-export warnings are gone (default import).
+  - `pnpm` is pinned in `package.json` (`packageManager: pnpm@10.12.1`) to match
+    the Dockerfile and CI instead of whatever corepack resolves.
+- `postcss` is pinned to the patched line through `pnpm.overrides`, and the
+  dependency audit became a **blocking** CI check with one accepted advisory
+  (`braces`, build time only, no released fix) recorded in `SECURITY.md`.
+- The production image grew from 343 MB to **428 MB** (Next 15 and React 19 are
+  simply bigger); the build, the boot sequence and every behavioural assertion
+  were re-verified in a container afterwards.
+- **Known deprecation:** `next lint` warns that it will be removed in Next.js 16.
+  The ESLint CLI migration is scheduled, not done.
+
 ### Feature
 - **The container path is in CI, and every branch runs CI.** Three jobs existed
   (lint/typecheck, unit/integration, e2e) and none of them built the image — which

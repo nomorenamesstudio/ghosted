@@ -1,4 +1,4 @@
-import { version } from "@/package.json";
+import packageJson from "@/package.json";
 import { LICENSE_URL, REPO_URL, siteOrigin } from "@/lib/site";
 
 /**
@@ -25,7 +25,7 @@ export function softwareApplicationJsonLd(
     url: origin,
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
-    softwareVersion: version,
+    softwareVersion: packageJson.version,
     license: LICENSE_URL,
     codeRepository: REPO_URL,
     description:
