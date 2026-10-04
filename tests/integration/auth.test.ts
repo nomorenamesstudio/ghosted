@@ -78,6 +78,34 @@ describe("POST /api/auth/register", () => {
     });
   });
 
+  it("refuses to create an account when the instance has sign-ups closed", async () => {
+    // The flag is a promise about who can get in: a solo or private instance
+    // sets ALLOW_REGISTRATION=false and expects no strangers. Hiding the form
+    // is not enforcement — this route is reachable with curl.
+    const previous = process.env.ALLOW_REGISTRATION;
+    process.env.ALLOW_REGISTRATION = "false";
+    try {
+      const res = await REGISTER(
+        authRequest(`${base}/register`, "POST", {
+          email: "stranger@test.dev",
+          password: "password123",
+          name: "Stranger",
+        }),
+      );
+      expect(res.status).toBe(403);
+      expect(await res.json()).toMatchObject({ code: "REGISTRATION_CLOSED" });
+
+      const rows = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, "stranger@test.dev"));
+      expect(rows).toHaveLength(0);
+    } finally {
+      if (previous === undefined) delete process.env.ALLOW_REGISTRATION;
+      else process.env.ALLOW_REGISTRATION = previous;
+    }
+  });
+
   it("rejects duplicate emails with 409", async () => {
     await createUser("dup@test.dev");
     const res = await REGISTER(

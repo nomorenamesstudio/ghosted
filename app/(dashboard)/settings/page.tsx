@@ -1,30 +1,31 @@
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { requireUser } from "@/lib/auth/current-user";
+import { runtimeConfig } from "@/lib/config/flags";
 import { db } from "@/lib/db/client";
 import { users } from "@/lib/db/schema";
 import { DEFAULT_PATIENCE_LEVEL } from "@/lib/utils/status";
 import { SettingsForm } from "./settings-form";
 
 export default async function SettingsPage() {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
+  const user = await requireUser();
+  const { allowRegistration } = runtimeConfig();
 
-  const [user] = await db
+  const [dbUser] = await db
     .select({
       emailVerified: users.emailVerified,
       patienceLevel: users.patienceLevel,
     })
     .from(users)
-    .where(eq(users.id, session.user.id))
+    .where(eq(users.id, user.id))
     .limit(1);
 
   return (
     <SettingsForm
-      name={session.user.name ?? ""}
-      email={session.user.email ?? ""}
-      emailVerified={user?.emailVerified ?? false}
-      patienceLevel={user?.patienceLevel ?? DEFAULT_PATIENCE_LEVEL}
+      name={user.name ?? ""}
+      email={user.email ?? ""}
+      emailVerified={dbUser?.emailVerified ?? false}
+      patienceLevel={dbUser?.patienceLevel ?? DEFAULT_PATIENCE_LEVEL}
+      canDeleteAccount={allowRegistration}
     />
   );
 }

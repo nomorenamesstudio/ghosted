@@ -91,6 +91,15 @@ test("the pages link the icons and the standalone meta tags", async ({ page }) =
     "href",
     "/apple-touch-icon.png?v=2",
   );
+  // Both names, deliberately: the standard tag is what modern iOS and Chrome
+  // read, and the Apple-prefixed one is still the only signal iOS older than
+  // 16.4 understands for a standalone home-screen app. Next 15 emits the
+  // standard one from `appleWebApp.capable` and stopped emitting the legacy
+  // name, which is why the layout adds it explicitly.
+  await expect(page.locator('meta[name="mobile-web-app-capable"]')).toHaveAttribute(
+    "content",
+    "yes",
+  );
   await expect(page.locator('meta[name="apple-mobile-web-app-capable"]')).toHaveAttribute(
     "content",
     "yes",

@@ -14,14 +14,15 @@ const UUID_RE =
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSession();
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
-    const application = await getApplication(userId, params.id);
+    const application = await getApplication(userId, id);
     if (!application) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
@@ -33,11 +34,12 @@ export async function GET(
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSessionForWrite("applications");
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
     const body = await req.json().catch(() => null);
@@ -50,7 +52,7 @@ export async function PATCH(
         parsed.error.flatten(),
       );
     }
-    const application = await updateApplication(userId, params.id, parsed.data);
+    const application = await updateApplication(userId, id, parsed.data);
     if (!application) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
@@ -63,14 +65,15 @@ export async function PATCH(
 /** Soft delete: marks the application as archived (row is preserved). */
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSessionForWrite("applications");
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
-    const application = await softDeleteApplication(userId, params.id);
+    const application = await softDeleteApplication(userId, id);
     if (!application) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }

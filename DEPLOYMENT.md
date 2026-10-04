@@ -77,6 +77,45 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
    `railway run pnpm db:seed` (dev-only convenience; the demo account has
    316 apps).
 
+## 4b. A staging environment on Railway (and the traps)
+
+The staging environment deploys from the **`staging`** branch, runs the same
+Dockerfile, and is where a change is verified before `main` carries it. The
+checks that count are in [docs/RELEASING.md](docs/RELEASING.md).
+
+Five things about Railway environments that cost real time to learn:
+
+1. **Services are project-wide, volumes are not.** A service appears in every
+   environment, and each environment has its own *instance* of it — but a volume
+   can end up attached to instances in two environments. That is how staging
+   briefly ran against the **production database** here: same
+   `RAILWAY_VOLUME_ID` in both. Before trusting a new environment, compare the
+   volume ids:
+   `RAILWAY_VOLUME_ID` on the database service in each environment must differ.
+   Two Postgres instances on one data directory is a corruption risk, not a
+   curiosity.
+2. **A Railway Postgres volume must not be the data directory itself.** The
+   volume mounts at `/var/lib/postgresql/data`, which contains `lost+found`, and
+   `initdb` refuses a non-empty directory — set
+   `PGDATA=/var/lib/postgresql/data/pgdata` and let the cluster live one level
+   down, the same layout the Postgres template uses.
+3. **Stopping an instance is not deleting it.** To keep an instance from ever
+   starting again — a staging instance of the production database, say — give it
+   a `startCommand` that explains itself and exits (`echo '…'; exit 1`) rather
+   than relying on it staying stopped through the next "redeploy all".
+4. **A stopped deployment makes the next deploys `SKIPPED`.** After stopping a
+   service's deployment, a variable change queues deployments that get skipped;
+   an explicit `serviceInstanceDeploy(latestCommit: true)` is what actually
+   builds.
+5. **Project tokens travel in their own header.** The Railway API wants
+   `Project-Access-Token: <token>` (not `Authorization: Bearer`) for a project
+   token, and the `projectToken { projectId environmentId }` query is how you
+   find out which project and environment a token belongs to.
+
+`NEXT_PUBLIC_APP_URL` is baked into prerendered pages, so it must be set **before**
+the build: Railway does pass service variables to the Dockerfile build, verified
+by the staging canonical URL matching the staging domain rather than production's.
+
 ## 5. Post-launch checklist
 
 - [ ] Legal pages (`/privacy`, `/terms`, `/imprint`) still contain bracketed

@@ -20,6 +20,20 @@ export async function markUserVerified(email: string): Promise<void> {
 }
 
 /**
+ * Mark a user as still holding a generated password, so the forced-change flow
+ * can be exercised end to end. This is the flag the boot-seeded owner gets; a
+ * test account only reaches the same state from the database.
+ */
+export async function markMustChangePassword(email: string): Promise<void> {
+  const sql = postgres(testDbUrl, { max: 1 });
+  try {
+    await sql`UPDATE users SET must_change_password = true WHERE email = ${email}`;
+  } finally {
+    await sql.end();
+  }
+}
+
+/**
  * The dashboard opens on the Kanban board now. Specs that assert list behavior
  * (sections, infinite scroll over the sections) switch to List
  * first - the choice is remembered per browser, so once is enough.

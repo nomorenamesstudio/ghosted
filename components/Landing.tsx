@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
+import { LICENSE_URL, REPO_URL } from "@/lib/site";
 // The card *shell*, not ApplicationCardView: the real card is a client component
 // (live relative timestamps, Radix avatar and progress), and rendering it here
 // pulled date-fns, Radix Progress and Radix Avatar onto the marketing page for
@@ -177,21 +178,18 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
 const FAQ_LINK =
   "text-primary underline underline-offset-[3px] transition-colors hover:text-primary/80";
 
-/** The public repo and its license, linked from two of the answers. */
-const REPO_URL = "https://github.com/krisztianhadi/ghosted";
-const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
-
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Why did you make it?",
     a: (
       <>
         <p>
-          Because the worst part of a job hunt is not the rejection — it is the
-          silence. I was tracking applications in a spreadsheet and my inbox, and
-          the ones that went quiet were exactly the ones I lost track of: no
-          rejection, no reply, just nothing. After a while I didn&apos;t even
-          remember where I had already applied.
+          I built Ghosted because every existing job tracker was either
+          expensive, bloated, or lost track of the applications that went quiet.
+          I was tracking mine in a spreadsheet and an inbox, and the ones that
+          went silent were exactly the ones I forgot: no rejection, no reply,
+          just nothing. After a while I didn&apos;t even remember where I had
+          already applied.
         </p>
         <p>
           Today you need to apply for dozens or even hundreds of jobs. It&apos;s
@@ -204,8 +202,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
           than something you slowly forget.
         </p>
         <p>
-          Additionally, building Ghosted really keeps me busy and sane while
-          submitting my n+1 application and waiting for a template rejection.
+          Additionally, building Ghosted really keeps me busy and sane while I
+          keep applying into the void and wait for a template rejection.
         </p>
       </>
     ),
@@ -298,7 +296,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
           the AI treatment.
         </p>
         <p>
-          Well. Ghosted was built with AI help but doesn&apos;t ship with built-in
+          Well. Ghosted was built with AI assistance, but ships with no built-in
           AI on purpose.
         </p>
         <p>
@@ -315,9 +313,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: (
       <>
         <p>
-          Yes and no. If your idea fits the vision and doesn&apos;t add bloat to
-          the platform I might consider adding it. But nothing is guaranteed as my
-          resources are limited.
+          Maybe. If your idea fits the vision and doesn&apos;t add bloat, I&apos;ll
+          consider it — but nothing is guaranteed, as my resources are limited.
         </p>
         <p>
           Same goes for PRs: they will be approved only if they respect the scope

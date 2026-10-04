@@ -71,6 +71,13 @@
       "when": 1790318664359,
       "tag": "0009_young_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791094551810,
+      "tag": "0010_naive_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

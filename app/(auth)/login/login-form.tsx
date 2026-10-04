@@ -42,8 +42,11 @@ function GoogleIcon() {
 
 export function LoginForm({
   providers,
+  allowRegistration,
 }: {
   providers: { google: boolean; linkedin: boolean };
+  /** False on an instance whose sign-ups are closed. */
+  allowRegistration: boolean;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -54,6 +57,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
 
   const registered = params.get("registered") === "1";
+  const passwordChanged = params.get("passwordChanged") === "1";
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +101,12 @@ export function LoginForm({
         <CardDescription>Welcome back to Ghosted.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {passwordChanged && (
+          <p className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground">
+            Password saved — sign in with your new one.
+          </p>
+        )}
+
         {registered && (
           <p className="rounded-md bg-emerald-50 p-2 text-sm text-emerald-800">
             Account created - sign in below.
@@ -179,12 +189,14 @@ export function LoginForm({
           </div>
         ) : null}
 
-        <p className="text-center text-sm text-muted-foreground">
-          No account?{" "}
-          <Link href="/register" className="underline">
-            Register
-          </Link>
-        </p>
+        {allowRegistration && (
+          <p className="text-center text-sm text-muted-foreground">
+            No account?{" "}
+            <Link href="/register" className="underline">
+              Register
+            </Link>
+          </p>
+        )}
       </CardContent>
     </Card>
   );

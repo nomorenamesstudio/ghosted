@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { rateLimitAccount } from "./rate-limit";
 import { logger } from "./logger";
 
@@ -77,12 +77,11 @@ export function handleRouteError(err: unknown): NextResponse {
 
 /** Guard: every API route must call this first. Returns the user id. */
 export async function requireSession(): Promise<string> {
-  const session = await auth();
-  const userId = session?.user?.id;
-  if (!userId) {
+  const user = await getCurrentUser();
+  if (!user) {
     throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
   }
-  return userId;
+  return user.id;
 }
 
 /**
@@ -94,7 +93,22 @@ export async function requireSession(): Promise<string> {
  * RATE_LIMIT_WRITES_WINDOW_MINUTES.
  */
 export async function requireSessionForWrite(scope: string): Promise<string> {
-  const userId = await requireSession();
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new ApiError(401, "Unauthorized", "UNAUTHORIZED");
+  }
+  // A credential the operator did not choose buys exactly one thing: the chance
+  // to replace it. Reads still work — the dashboard has to render for the user to
+  // find the form — but every mutation is refused until then, which is what
+  // makes "forced" true rather than advisory.
+  if (user.mustChangePassword) {
+    throw new ApiError(
+      403,
+      "Choose your own password before continuing.",
+      "PASSWORD_CHANGE_REQUIRED",
+    );
+  }
+  const userId = user.id;
   const max = Number(process.env.RATE_LIMIT_WRITES_MAX ?? 300);
   const windowMinutes = Number(process.env.RATE_LIMIT_WRITES_WINDOW_MINUTES ?? 60);
   const rl = rateLimitAccount(userId, `write:${scope}`, {

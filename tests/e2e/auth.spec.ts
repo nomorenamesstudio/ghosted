@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { loginViaUi, registerViaUi, uniqueEmail } from "./helpers";
+import {
+  loginViaUi,
+  markMustChangePassword,
+  registerUser,
+  registerViaUi,
+  uniqueEmail,
+} from "./helpers";
 
 test("register, sign out, and log back in", async ({ page }) => {
   const email = uniqueEmail("auth");
@@ -23,4 +29,61 @@ test("register, sign out, and log back in", async ({ page }) => {
 test("unauthenticated users are redirected to login", async ({ page }) => {
   await page.goto("/app");
   await expect(page).toHaveURL(/\/login/);
+});
+
+/**
+ * The flow the owner asked for: the landing stays reachable for someone who is
+ * already signed in — a marketing page you can only see while logged out is a
+ * page you cannot link to anyone — and "Sign in" is what takes them into the
+ * app. Before this, `/` bounced them straight to `/app`.
+ */
+test("a signed-in visitor can read the landing, and Sign in takes them in", async ({
+  page,
+}) => {
+  const email = uniqueEmail("landing");
+  await registerUser(page, email);
+
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+
+  await page.getByRole("link", { name: "Sign in" }).click();
+  // /login answers "you are already signed in" by going to the app.
+  await expect(page).toHaveURL(/\/app$/);
+});
+
+/**
+ * The forced password change, in a browser, because the mocked-session tests
+ * cannot reach the part that actually carries the flag: the JWT. This test was
+ * written after a container run showed the flow was broken while every unit test
+ * passed — the token never received the claim at sign-in.
+ */
+test("a generated password must be replaced before the app opens", async ({ page }) => {
+  const email = uniqueEmail("seeded");
+  await registerUser(page, email);
+  await markMustChangePassword(email);
+
+  // Sign out, then in again with the credential the instance generated.
+  await page.goto("/app");
+  await page.getByRole("button", { name: "User menu" }).click();
+  await page.getByRole("menuitem", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await loginViaUi(page, email, "password123");
+
+  // Not the dashboard: the only page this account can reach is the one that
+  // replaces the password.
+  await expect(page).toHaveURL(/\/change-password$/);
+  await expect(page.getByText("Choose your own password")).toBeVisible();
+
+  await page.getByLabel("Current password").fill("password123");
+  await page.getByLabel("New password", { exact: true }).fill("my-own-password1");
+  await page.getByLabel("Confirm new password").fill("my-own-password1");
+  await page.getByRole("button", { name: /Save password/ }).click();
+
+  // Signed out, told why, and the new password works.
+  await expect(page).toHaveURL(/\/login\?passwordChanged=1/);
+  await expect(page.getByText("Password saved")).toBeVisible();
+  await loginViaUi(page, email, "my-own-password1");
+  await expect(page).toHaveURL(/\/app$/);
 });

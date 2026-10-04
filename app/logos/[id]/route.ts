@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { db } from "@/lib/db/client";
 import { applications } from "@/lib/db/schema";
 import { resolveCompanyLogo } from "@/lib/services/company-logos";
@@ -37,14 +37,16 @@ function notFound(): NextResponse {
 
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
+  // Resolved before the try: the catch below logs the id, and a binding scoped
+  // to the try would not be visible there.
+  const { id } = await ctx.params;
   try {
-    if (!UUID_RE.test(params.id)) return notFound();
+    if (!UUID_RE.test(id)) return notFound();
 
-    const session = await auth();
-    const userId = session?.user?.id;
-    if (!userId) return notFound();
+    const user = await getCurrentUser();
+    if (!user) return notFound();
 
     const [application] = await db
       .select({
@@ -54,7 +56,7 @@ export async function GET(
       })
       .from(applications)
       .where(
-        and(eq(applications.id, params.id), eq(applications.userId, userId)),
+        and(eq(applications.id, id), eq(applications.userId, user.id)),
       )
       .limit(1);
     if (!application) return notFound();
@@ -78,7 +80,7 @@ export async function GET(
     });
   } catch (err) {
     // A logo is decoration: never turn a lookup failure into a broken page.
-    logger.warn({ err, applicationId: params.id }, "company logo lookup failed");
+    logger.warn({ err, applicationId: id }, "company logo lookup failed");
     return notFound();
   }
 }

@@ -59,7 +59,9 @@ export function useVerification() {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? "Failed to send verification email");
       }
-      setMessage("Verification email sent - check your inbox.");
+      setMessage(
+        "Verification email sent — check your inbox, and your spam folder.",
+      );
     } catch (err) {
       setMessage((err as Error).message);
     } finally {

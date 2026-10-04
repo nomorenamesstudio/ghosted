@@ -16,9 +16,13 @@ that a machine wrote is still code a human is accountable for.
 ## Documentation
 
 - [Setup & run](docs/SETUP.md) - install, env vars, commands, testing, CI/CD
+- [Self-hosting](docs/SELFHOST.md) - run your own copy with Docker
 - [API reference](docs/API.md) - all endpoints, parameters, examples
 - [Architecture](docs/ARCHITECTURE.md) - tech stack, data flow, key decisions
 - [Changelog](docs/CHANGELOG.md) - changes by date and type
+- [Releasing](docs/RELEASING.md) - versioning, tags, publishing an image
+- [Contributing](CONTRIBUTING.md) - getting it running, what gets merged
+- [Security](SECURITY.md) - reporting a vulnerability, dependency triage
 - [Security review](docs/SECURITY_REVIEW.md) - multi-model audit report
 
 ## Tech Stack
@@ -84,6 +88,21 @@ Full environment variable reference: see `.env.example` and
 - Unverified accounts are limited to 3 applications until their email is
   verified (env-configurable)
 - Night mode (system default + manual override), responsive UI
+
+## Self-hosting
+
+Ghosted runs as a container plus Postgres. Two shapes ship in the same image: a
+solo instance (the landing page off, sign-ups closed, one account created at
+boot with a generated password) and a family instance (sign-ups open, email
+required). Everything is environment configuration — no fork, no build flags.
+
+```bash
+cp .env.example .env   # set AUTH_SECRET, then SHOW_LANDING / ALLOW_REGISTRATION
+docker compose --profile selfhost up -d
+```
+
+Full walkthrough, environment reference, email options, backups and upgrades:
+[docs/SELFHOST.md](docs/SELFHOST.md).
 
 ## License
 

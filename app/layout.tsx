@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import Script from "next/script";
 import "./globals.css";
 import { Providers } from "./providers";
 import { Footer } from "@/components/Footer";
+import { siteOrigin } from "@/lib/site";
+import { Analytics } from "@/components/Analytics";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -16,10 +17,26 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://ghosted.lostsignals.studio";
+const siteUrl = siteOrigin();
 
+/**
+ * No environment reads, no session, no dynamic API: this layout is what lets
+ * the pages inside it be prerendered. The two things that used to need the
+ * environment here — the crawl metadata and the analytics tag — moved to the
+ * two places that can answer them per request: `middleware.ts` (the
+ * `X-Robots-Tag` header) and `/api/config/analytics` (the tracker).
+ *
+ * `siteOrigin()` is still a build-time value, and deliberately so: it is the
+ * hostname this deployment is *built for*, which is what a canonical URL and an
+ * `og:url` must state. A self-hoster who wants their own domain indexed sets
+ * `NEXT_PUBLIC_APP_URL` and builds their own image — the documented path.
+ */
 export const metadata: Metadata = {
-  title: "Ghosted",
+  // The brand alone ranks for nothing: the title carries the term a job seeker
+  // actually types. Kept under 60 characters so Google does not truncate it.
+  title: "Ghosted — the job application tracker that never goes quiet",
+  // Only the operator's own instance should turn up in search results; a
+  // self-hosted one is private unless it says otherwise.
   description:
     "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
   applicationName: "Ghosted",
@@ -46,17 +63,25 @@ export const metadata: Metadata = {
   // Android).
   appleWebApp: {
     capable: true,
+    // The short name, not the page title: iOS puts this under the icon and
+    // truncates it, and a home screen cannot hold a sentence.
     title: "Ghosted",
     statusBarStyle: "default",
   },
-  // Chrome warns that `apple-mobile-web-app-capable` alone is deprecated and
-  // wants the standard name alongside it; iOS still needs the apple one, so
-  // both are emitted.
+  // Next 15 emits the standard `mobile-web-app-capable` itself from
+  // `appleWebApp.capable` above, so adding it here would duplicate the tag
+  // (which is exactly what the upgrade caught). What it no longer emits is the
+  // Apple-prefixed name, deprecated in favour of the standard one but still the
+  // only signal that iOS older than 16.4 reads for a standalone home-screen app.
+  // So: one from Next, one from here.
   other: {
-    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
   },
   openGraph: {
-    title: "Ghosted",
+    // Absolute, because a share card with a relative URL tells a crawler that
+    // only has the HTML nothing about where this page lives.
+    url: siteUrl,
+    title: "Ghosted — the job application tracker that never goes quiet",
     description:
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     type: "website",
@@ -77,7 +102,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Ghosted",
+    title: "Ghosted — the job application tracker that never goes quiet",
     description:
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
     images: ["/ghost-og.png?v=1"],
@@ -119,23 +144,17 @@ export default function RootLayout({
             __html: `try{var t=location.pathname==='/'?null:localStorage.getItem('ghosted-theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark');var v=localStorage.getItem('ghosted-view');if(v!=='list'){document.documentElement.setAttribute('data-view','board');if(location.pathname==='/app')document.documentElement.setAttribute('data-board-content','')}}catch(e){}`,
           }}
         />
-        {/* Self-hosted umami analytics (tracker + beacon on
-            ramen.lostsignals.studio). Loaded after hydration rather than with a
-            bare `defer` in <head>: analytics is never worth competing with the
-            page's own JS and fonts for bandwidth on first load, and nothing on
-            the page waits on it. */}
-        <Script
-          src="https://ramen.lostsignals.studio/script.js"
-          strategy="afterInteractive"
-          data-website-id="c8f73665-dca1-464b-9427-a56f8b27c799"
-          data-cache="true"
-          data-domains="ghosted.lostsignals.studio"
-        />
       </head>
       <body className="antialiased">
         <Providers>
           {children}
           <Footer />
+          {/* Analytics is attached after hydration, from the deployment's own
+              answer (`/api/config/analytics`), rather than rendered here: this
+              layout wraps prerendered pages, and a tracker baked into a build
+              would follow the image into every instance that pulled it. See the
+              component for why that matters. */}
+          <Analytics />
         </Providers>
       </body>
     </html>

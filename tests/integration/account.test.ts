@@ -118,6 +118,30 @@ describe("POST /api/auth/change-password", () => {
     expect(await bcrypt.compare("oldpassword1", row.passwordHash!)).toBe(false);
   });
 
+  it("clears the forced-change flag, which is the only way out of it", async () => {
+    const user = await createUser("pw-seeded@test.dev", "User", "generated123");
+    await db
+      .update(users)
+      .set({ mustChangePassword: true })
+      .where(eq(users.id, user.id));
+    authMock.mockResolvedValueOnce(mockSession(user.id, { mustChangePassword: true }));
+
+    const res = await CHANGE_PASSWORD(
+      req(`${base}/change-password`, "POST", {
+        currentPassword: "generated123",
+        newPassword: "my-own-password1",
+        confirmPassword: "my-own-password1",
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select({ mustChangePassword: users.mustChangePassword })
+      .from(users)
+      .where(eq(users.id, user.id));
+    expect(row.mustChangePassword).toBe(false);
+  });
+
   it("rejects a wrong current password", async () => {
     const user = await createUser("pw2@test.dev", "User", "oldpassword1");
     authMock.mockResolvedValueOnce(mockSession(user.id));
@@ -181,6 +205,26 @@ describe("DELETE /api/auth/account", () => {
     expect(await db.select().from(users)).toHaveLength(0);
     expect(await db.select().from(applications)).toHaveLength(0);
     expect(await db.select().from(milestones)).toHaveLength(0);
+  });
+
+  it("refuses to delete the only account on a closed-registration instance", async () => {
+    // The single-user shape: deleting it would leave nobody able to sign in,
+    // and there is no registration flow to create a replacement.
+    const user = await createUser();
+    const previous = process.env.ALLOW_REGISTRATION;
+    process.env.ALLOW_REGISTRATION = "false";
+    process.env.GHOSTED_USER_EMAIL = user.email;
+    try {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await DELETE_ACCOUNT();
+      expect(res.status).toBe(403);
+      expect((await readJson(res)).code).toBe("ACCOUNT_DELETION_DISABLED");
+      expect(await db.select().from(users)).toHaveLength(1);
+    } finally {
+      if (previous === undefined) delete process.env.ALLOW_REGISTRATION;
+      else process.env.ALLOW_REGISTRATION = previous;
+      delete process.env.GHOSTED_USER_EMAIL;
+    }
   });
 });
 

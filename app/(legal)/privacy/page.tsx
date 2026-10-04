@@ -1,6 +1,19 @@
 import type { Metadata } from "next";
+import {
+  OperatorContact,
+  OperatorEmail,
+} from "@/components/OperatorContact";
+
+/**
+ * Per request, not prerendered: this page names the operator, and a build has no
+ * idea who will run the image. Baked, a self-hosted instance would publish a
+ * privacy policy naming somebody else as the data controller — which is exactly
+ * what this branch exists to prevent.
+ */
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy Policy - Ghosted",
 };
 
@@ -15,16 +28,7 @@ export default function PrivacyPage() {
 
       <section className="space-y-2">
         <h2 className="text-xl font-semibold">1. Controller</h2>
-        <p>
-          Ghosted is operated by <strong>Lost Signals Studio</strong> (legal
-          entity to be formalized — operator details are kept minimal to
-          protect the operator&rsquo;s privacy).
-          <br />
-          Contact for privacy matters:{" "}
-          <a href="mailto:hey@lostsignals.studio" className="underline">
-            hey@lostsignals.studio
-          </a>
-        </p>
+        <OperatorContact label="Contact for privacy matters" />
       </section>
 
       <section className="space-y-2">
@@ -100,17 +104,16 @@ export default function PrivacyPage() {
           (Art.&nbsp;16), erasure (Art.&nbsp;17), restriction (Art.&nbsp;18), data
           portability (Art.&nbsp;20) and objection (Art.&nbsp;21) with regard to
           your personal data. To exercise any of these rights, contact{" "}
-          <a href="mailto:hey@lostsignals.studio" className="underline">
-            hey@lostsignals.studio
-          </a>
+          <OperatorEmail />
           . You also have the right to lodge a complaint with your supervisory
           authority (in the EU/EEA, your local data-protection authority).
         </p>
       </section>
 
       <p className="border-t pt-4 text-xs text-muted-foreground">
-        This page will be updated as the operator&rsquo;s legal details are
-        formalized. It is not legal advice.
+        The controller named above is the person or entity responsible for the
+        data described here; where a trading name is used, the identity behind it
+        is named with it. It is not legal advice.
       </p>
     </main>
   );

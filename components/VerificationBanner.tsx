@@ -40,6 +40,13 @@ export function VerificationBanner({
             Unverified accounts are limited to {limit ?? 3} applications. We
             emailed you a link, simply click it and get verified immediately.
           </p>
+          {/* Delivery is the one step we cannot observe from here: providers
+              file transactional mail under spam often enough that the hint
+              belongs next to the instruction, not only in the email itself. */}
+          <p className="text-sm text-amber-900 dark:text-amber-100">
+            Not seeing it? Check your spam folder — and mark it as not spam, so
+            the next one gets through.
+          </p>
           {message && (
             <p className="text-sm font-medium text-amber-950 dark:text-amber-50">
               {message}

@@ -62,7 +62,7 @@ async function patchMilestone(userId: string, milestoneId: string, status: strin
   authMock.mockResolvedValueOnce(mockSession(userId));
   return PATCH_MILESTONE(
     jsonRequest(`${base}/milestones/${milestoneId}`, "PATCH", { status }),
-    { params: { id: milestoneId } },
+    { params: Promise.resolve({ id: milestoneId }) },
   );
 }
 
@@ -109,14 +109,14 @@ describe("GET /api/dashboard/stats", () => {
       jsonRequest(`${base}/applications/${rejected.id}`, "PATCH", {
         status: "rejected",
       }),
-      { params: { id: rejected.id } },
+      { params: Promise.resolve({ id: rejected.id }) },
     );
 
     // 5. Archived → excluded from every stat.
     const archived = await createApp(user.id, "Hooli");
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await DELETE_APP(new Request(`${base}/applications/${archived.id}`), {
-      params: { id: archived.id },
+      params: Promise.resolve({ id: archived.id }),
     });
 
     const stats = await getStats(user.id);

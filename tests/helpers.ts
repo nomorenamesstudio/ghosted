@@ -13,7 +13,13 @@ export const TEST_BCRYPT_ROUNDS = 4;
  * middleware-oriented typing of `auth`.
  */
 export type SessionLike = {
-  user: { id: string; name: string; email: string };
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    /** Set on a boot-seeded owner whose generated password must be replaced. */
+    mustChangePassword?: boolean;
+  };
   expires: string;
 };
 
@@ -54,9 +60,17 @@ export async function createUser(
 }
 
 /** Shape of a mocked Auth.js session. */
-export function mockSession(userId: string): SessionLike {
+export function mockSession(
+  userId: string,
+  options: { mustChangePassword?: boolean } = {},
+): SessionLike {
   return {
-    user: { id: userId, name: "Test User", email: "test@test.dev" },
+    user: {
+      id: userId,
+      name: "Test User",
+      email: "test@test.dev",
+      mustChangePassword: options.mustChangePassword ?? false,
+    },
     expires: new Date(Date.now() + 60_000).toISOString(),
   };
 }

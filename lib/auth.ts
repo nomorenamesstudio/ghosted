@@ -80,6 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name,
           image: user.image ?? undefined,
           emailVerified: user.emailVerified,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
@@ -128,12 +129,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // without requiring a fresh sign-in.
         if (typeof token.sub === "string") {
           const [dbUser] = await db
-            .select({ emailVerified: users.emailVerified })
+            .select({
+              emailVerified: users.emailVerified,
+              mustChangePassword: users.mustChangePassword,
+            })
             .from(users)
             .where(eq(users.id, token.sub))
             .limit(1);
           if (dbUser) {
             token.emailVerified = dbUser.emailVerified;
+            // Mirrored for the same reason: the forced change is cleared in the
+            // DB by the change-password endpoint, and a token that kept saying
+            // otherwise would keep locking a user out of their own account.
+            token.mustChangePassword = dbUser.mustChangePassword;
           }
         }
       }
@@ -220,6 +228,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .emailVerified;
         token.emailVerified = userEmailVerified === true;
 
+        // Carried at sign-in so the very first request after the boot-seeded
+        // password arrives already flagged; the refresh block above keeps it
+        // honest afterwards.
+        token.mustChangePassword =
+          (user as { mustChangePassword?: unknown }).mustChangePassword === true;
+
         // A stored avatar — the demo account's app icon, or anything a user
         // sets later — beats the anonymous Gravatar probe below.
         if (!token.picture && typeof user.image === "string") {
@@ -265,6 +279,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (typeof token.emailVerified === "boolean") {
           (session.user as { emailVerified?: boolean }).emailVerified =
             token.emailVerified;
+        }
+        if (typeof token.mustChangePassword === "boolean") {
+          (session.user as { mustChangePassword?: boolean }).mustChangePassword =
+            token.mustChangePassword;
         }
       }
       return session;

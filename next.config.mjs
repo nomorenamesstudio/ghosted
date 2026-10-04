@@ -38,6 +38,26 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  images: {
+    /**
+     * WebP only, and no remote patterns, on purpose.
+     *
+     * Next 14's image optimizer inherits a critical advisory from `sharp`'s
+     * libheif: **AVIF** optimization can lead to remote code execution
+     * (GHSA-2xp9-vwfh-vxw4), with no fix inside the 14.x line. AVIF is therefore
+     * never offered as an output, and with no `remotePatterns` the optimizer
+     * refuses any URL that is not a local file — verified: a remote request
+     * answers `400 "url parameter is not allowed"`. This app uses `next/image`
+     * nowhere and ships no AVIF, so the vulnerable path has no input to reach it.
+     * Do not add AVIF here (or a remote pattern) before the Next 15 upgrade.
+     */
+    formats: ["image/webp"],
+  },
+  // The runtime image copies `.next/standalone` (the server plus the modules the
+  // tracer found) instead of the whole node_modules tree. Without it the image
+  // carries every dev dependency: measured at 2.4 GB, of which the actual
+  // application was 729 MB and the rest was layer duplication.
+  output: "standalone",
   async headers() {
     return [
       {

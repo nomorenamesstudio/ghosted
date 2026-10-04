@@ -114,7 +114,7 @@ describe("GET /api/applications", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", { status: "rejected" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
@@ -145,7 +145,7 @@ describe("GET /api/applications", () => {
     const milestonesOf = async (id: string) => {
       authMock.mockResolvedValueOnce(mockSession(user.id));
       const res = await GET_APP(new Request(`${base}/${id}`), {
-        params: { id },
+        params: Promise.resolve({ id }),
       });
       const json = await readJson(res);
       return (json.data as { milestones: Array<{ id: string }> }).milestones;
@@ -159,7 +159,7 @@ describe("GET /api/applications", () => {
         jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
           status: "done",
         }),
-        { params: { id: m.id } },
+        { params: Promise.resolve({ id: m.id }) },
       );
     }
     // …and all remaining on "High" (5/5 = 100%).
@@ -170,7 +170,7 @@ describe("GET /api/applications", () => {
         jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
           status: "done",
         }),
-        { params: { id: m.id } },
+        { params: Promise.resolve({ id: m.id }) },
       );
     }
 
@@ -189,7 +189,7 @@ describe("GET /api/applications", () => {
     // Favorite "Apple" (created after Zebra, so it sorts last by default).
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await TOGGLE_FAVORITE(new Request(`${base}/${apple.app.id}/favorite`), {
-      params: { id: apple.app.id },
+      params: Promise.resolve({ id: apple.app.id }),
     });
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
@@ -265,7 +265,7 @@ describe("GET /api/applications", () => {
         notes: "note to self",
         companyWebsite: "staleco.com",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const untouched = await GET(new Request(`${base}?page=1`));
@@ -278,7 +278,7 @@ describe("GET /api/applications", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", { status: "interviewing" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const after = await GET(new Request(`${base}?page=1`));
@@ -290,6 +290,26 @@ describe("GET /api/applications", () => {
 });
 
 describe("POST /api/applications", () => {
+  it("refuses a write while the password must be changed", async () => {
+    // The boot-seeded owner signs in with a password that is sitting in the
+    // container log. Reads stay open so the app can render and offer the form;
+    // every mutation is refused until the password is replaced — that is the
+    // difference between "forced" and "suggested".
+    const user = await createUser("seeded@test.dev", "Seeded", "generated123");
+    authMock.mockResolvedValueOnce(
+      mockSession(user.id, { mustChangePassword: true }),
+    );
+
+    const res = await POST(
+      jsonRequest(`${base}`, "POST", { company: "Blocked Co", role: "Engineer" }),
+    );
+    expect(res.status).toBe(403);
+    expect((await readJson(res)).code).toBe("PASSWORD_CHANGE_REQUIRED");
+
+    const rows = await db.select().from(applications);
+    expect(rows).toHaveLength(0);
+  });
+
   it("creates an application with the default 5-step timeline", async () => {
     const user = await createUser();
     const { res, app } = await createApp(user.id);
@@ -383,13 +403,13 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
 
     authMock.mockResolvedValueOnce(mockSession(bob.id));
     const res = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(res.status).toBe(404);
 
     authMock.mockResolvedValueOnce(mockSession(alice.id));
     const res2 = await GET_APP(new Request(`${base}/00000000-0000-4000-8000-000000000000`), {
-      params: { id: "00000000-0000-4000-8000-000000000000" },
+      params: Promise.resolve({ id: "00000000-0000-4000-8000-000000000000" }),
     });
     expect(res2.status).toBe(404);
   });
@@ -398,7 +418,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     const user = await createUser();
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await GET_APP(new Request(`${base}/not-a-uuid`), {
-      params: { id: "not-a-uuid" },
+      params: Promise.resolve({ id: "not-a-uuid" }),
     });
     expect(res.status).toBe(404);
   });
@@ -408,7 +428,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     const { app } = await createApp(user.id);
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(res.status).toBe(200);
     const json = await readJson(res);
@@ -429,7 +449,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
         contactPhone: "+1-555-0100",
         status: "rejected",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(200);
     const json = await readJson(res);
@@ -452,7 +472,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
       jsonRequest(`${base}/${app.id}`, "PATCH", {
         contactEmail: "not-an-email",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(400);
   });
@@ -463,7 +483,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", { status: "banana" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(400);
   });
@@ -474,7 +494,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const del = await DELETE_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(del.status).toBe(204);
 
@@ -503,11 +523,11 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", { status: "interviewing" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await DELETE_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
 
     // Hidden after archiving…
@@ -518,7 +538,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     // …reopen restores 'interviewing', not a generic 'applied'.
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(res.status).toBe(200);
     expect(
@@ -599,7 +619,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
         companyWebsite: "stripe.com",
         notes: "Referral from Sam",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(patched.status).toBe(200);
     const edited = (await readJson(patched)).data as {
@@ -623,7 +643,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
       jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
         status: "interviewing",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     const afterMove = (await readJson(moved)).data as { updatedAt: string };
     expect(new Date(afterMove.updatedAt).getTime()).toBeGreaterThan(
@@ -657,7 +677,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
         status: "applied",
         notes: "Referred by Sam",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(patched.status).toBe(200);
     const edited = (await readJson(patched)).data as {
@@ -703,7 +723,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
       jsonRequest(`http://localhost/api/applications/${app.id}`, "PATCH", {
         status: "applied",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(moved.status).toBe(200);
     const after = (await readJson(moved)).data as { updatedAt: string };
@@ -737,7 +757,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const detail = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     const steps = (
       (await readJson(detail)).data as { milestones: Array<{ id: string }> }
@@ -756,7 +776,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
       authMock.mockResolvedValueOnce(mockSession(user.id));
       const res = await PATCH_MILESTONE(
         jsonRequest(`http://localhost/api/milestones/${steps[1].id}`, "PATCH", body),
-        { params: { id: steps[1].id } },
+        { params: Promise.resolve({ id: steps[1].id }) },
       );
       expect(res.status).toBe(200);
       return clock();
@@ -782,7 +802,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     // Advance it: two more steps done (3/5), status interviewing.
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const detail = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     const milestones = (
       (await readJson(detail)).data as {
@@ -795,14 +815,14 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
         jsonRequest(`http://localhost/api/milestones/${m.id}`, "PATCH", {
           status: "done",
         }),
-        { params: { id: m.id } },
+        { params: Promise.resolve({ id: m.id }) },
       );
     }
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await RESET_TIMELINE(
       new Request(`${base}/${app.id}/milestones/reset`, { method: "POST" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(200);
     const body = await readJson(res);
@@ -824,16 +844,16 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
       jsonRequest(`${base}/${app.id}`, "PATCH", { status: "rejected" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await DELETE_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(res.status).toBe(200);
     expect((await readJson(res)).data as Record<string, unknown>).toMatchObject({
@@ -848,7 +868,7 @@ describe("GET/PATCH/DELETE /api/applications/:id", () => {
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await REOPEN_APP(new Request(`${base}/${app.id}/reopen`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(res.status).toBe(400);
     const json = await readJson(res);
@@ -864,7 +884,7 @@ describe("POST /api/applications/:id/favorite", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const on = await TOGGLE_FAVORITE(
       new Request(`${base}/${app.id}/favorite`),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(on.status).toBe(200);
     expect((await readJson(on)).data as Record<string, unknown>).toMatchObject({
@@ -875,7 +895,7 @@ describe("POST /api/applications/:id/favorite", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const off = await TOGGLE_FAVORITE(
       new Request(`${base}/${app.id}/favorite`),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect((await readJson(off)).data as Record<string, unknown>).toMatchObject({
       isFavorite: false,
@@ -890,7 +910,7 @@ describe("POST /api/applications/:id/favorite", () => {
     authMock.mockResolvedValueOnce(mockSession(bob.id));
     const res = await TOGGLE_FAVORITE(
       new Request(`${base}/${app.id}/favorite`),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(404);
   });
@@ -914,7 +934,7 @@ describe("the detail payload's logo answer", () => {
     // avatar has to ask for the image.
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const first = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect(first.status).toBe(200);
     expect((await readJson(first)).data).toMatchObject({ logoMissing: false });
@@ -932,7 +952,7 @@ describe("the detail payload's logo answer", () => {
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const second = await GET_APP(new Request(`${base}/${app.id}`), {
-      params: { id: app.id },
+      params: Promise.resolve({ id: app.id }),
     });
     expect((await readJson(second)).data).toMatchObject({ logoMissing: true });
   });

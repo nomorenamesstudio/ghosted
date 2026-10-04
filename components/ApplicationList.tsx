@@ -302,7 +302,17 @@ export function ApplicationList({
   // hundred milliseconds before the columns reported in and collapsed into the
   // empty state. The seed settles first now, then the sections read their seeded
   // (empty) pages and the empty state appears in one step.
-  const ready = placementKnown && seedReady;
+  // The placement gate must not re-arm on a search change. It exists to decide
+  // where the dashboard's furniture goes, not to guard the results - and re-arming
+  // it unmounted the whole tree, toolbar included, on every debounced keystroke:
+  // the search box the visitor was typing in disappeared and came back, so the
+  // focus went with it. Once the placement is settled, it stays settled.
+  const [placementSettled, setPlacementSettled] = useState(false);
+  useEffect(() => {
+    if (placementKnown && seedReady) setPlacementSettled(true);
+  }, [placementKnown, seedReady]);
+
+  const ready = (placementKnown && seedReady) || placementSettled;
 
   if (!ready) return <DashboardLoading />;
 

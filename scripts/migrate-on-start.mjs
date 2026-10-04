@@ -11,6 +11,7 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
+import { ensureOwnerAccount } from "./ensure-owner.mjs";
 
 // Prefer the unpooled URL when present (PgBouncer): migrations need a
 // direct server connection, not a pooled one.
@@ -32,6 +33,14 @@ try {
 
   await migrate(drizzle(client), { migrationsFolder: "drizzle" });
   console.log("Database migrations applied.");
+
+  // Self-hosted solo/family instances have nobody to register the first
+  // account, so it is created here from the environment. Idempotent, and it
+  // never touches an account that already exists.
+  const owner = await ensureOwnerAccount({ sql: client });
+  if (owner.action === "skipped" && owner.reason === "exists") {
+    console.log(`Owner account ${owner.email} already exists — left untouched.`);
+  }
 
   await client`SELECT pg_advisory_unlock(${MIGRATION_LOCK_KEY})`;
 } finally {

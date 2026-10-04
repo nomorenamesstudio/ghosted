@@ -64,6 +64,14 @@ export const users = pgTable(
     providerId: text("provider_id"),
     emailVerified: boolean("email_verified").notNull().default(false),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /**
+     * Set when the account was created with a password the *operator* did not
+     * choose — the boot-seeded owner, whose generated password is printed to the
+     * container log. While it is true the account can sign in and change its
+     * password, and nothing else: a password that exists in a log file must not
+     * be a working credential for long.
+     */
+    mustChangePassword: boolean("must_change_password").notNull().default(false),
     /** Threshold for the automatic "ghosted" status; every user has one. */
     patienceLevel: patienceLevelEnum("patience_level")
       .notNull()

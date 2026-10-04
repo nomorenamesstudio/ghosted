@@ -13,11 +13,12 @@ const UUID_RE =
 
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSessionForWrite("milestones");
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }
     const body = await req.json().catch(() => null);
@@ -30,7 +31,7 @@ export async function PATCH(
         parsed.error.flatten(),
       );
     }
-    const result = await updateMilestone(userId, params.id, parsed.data);
+    const result = await updateMilestone(userId, id, parsed.data);
     if (!result) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }
@@ -42,14 +43,15 @@ export async function PATCH(
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: { id: string } },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await ctx.params;
     const userId = await requireSessionForWrite("milestones");
-    if (!UUID_RE.test(params.id)) {
+    if (!UUID_RE.test(id)) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }
-    const result = await deleteMilestone(userId, params.id);
+    const result = await deleteMilestone(userId, id);
     if (!result) {
       return jsonError(404, "Milestone not found", "NOT_FOUND");
     }

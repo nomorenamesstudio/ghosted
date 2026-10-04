@@ -62,7 +62,7 @@ describe("POST /api/applications/:id/milestones", () => {
         title: "On-site Interview",
         comment: "Bring portfolio",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(201);
     const json = await readJson(res);
@@ -83,7 +83,7 @@ describe("POST /api/applications/:id/milestones", () => {
         title: "Recruiter Chat",
         position: 1,
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(201);
 
@@ -110,7 +110,7 @@ describe("POST /api/applications/:id/milestones", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await POST_MILESTONE(
       jsonRequest(`${base}/applications/${app.id}/milestones`, "POST", {}),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(400);
   });
@@ -124,7 +124,7 @@ describe("POST /api/applications/:id/milestones", () => {
       jsonRequest(`${base}/applications/${app.id}/milestones`, "POST", {
         title: "Nope",
       }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
     expect(res.status).toBe(404);
   });
@@ -151,7 +151,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[2].id}`, "PATCH", { status: "done" }),
-      { params: { id: ms[2].id } },
+      { params: Promise.resolve({ id: ms[2].id }) },
     );
     expect(res.status).toBe(200);
     const json = await readJson(res);
@@ -171,7 +171,7 @@ describe("status auto-advance", () => {
       authMock.mockResolvedValueOnce(mockSession(user.id));
       await PATCH_MILESTONE(
         jsonRequest(`${base}/milestones/${m.id}`, "PATCH", { status: "done" }),
-        { params: { id: m.id } },
+        { params: Promise.resolve({ id: m.id }) },
       );
     }
     expect(await statusOf(user.id, app.id)).toBe("offer");
@@ -188,7 +188,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { status: "done" }),
-      { params: { id: ms[1].id } },
+      { params: Promise.resolve({ id: ms[1].id }) },
     );
     expect(await statusOf(user.id, app.id)).toBe("interviewing");
   });
@@ -206,7 +206,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[2].id}`, "PATCH", { status: "done" }),
-      { params: { id: ms[2].id } },
+      { params: Promise.resolve({ id: ms[2].id }) },
     );
     expect(res.status).toBe(200);
 
@@ -240,7 +240,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_APP(
       jsonRequest(`${base}/applications/${app.id}`, "PATCH", { status: "rejected" }),
-      { params: { id: app.id } },
+      { params: Promise.resolve({ id: app.id }) },
     );
 
     // Complete everything — status must stay rejected.
@@ -248,7 +248,7 @@ describe("status auto-advance", () => {
       authMock.mockResolvedValueOnce(mockSession(user.id));
       await PATCH_MILESTONE(
         jsonRequest(`${base}/milestones/${m.id}`, "PATCH", { status: "done" }),
-        { params: { id: m.id } },
+        { params: Promise.resolve({ id: m.id }) },
       );
     }
     expect(await statusOf(user.id, app.id)).toBe("rejected");
@@ -265,7 +265,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[0].id}`, "PATCH", { status: "done" }),
-      { params: { id: ms[0].id } },
+      { params: Promise.resolve({ id: ms[0].id }) },
     );
 
     const [row] = await db
@@ -292,7 +292,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { status: "done" }),
-      { params: { id: ms[1].id } },
+      { params: Promise.resolve({ id: ms[1].id }) },
     );
     const [afterDone] = await db
       .select()
@@ -305,7 +305,7 @@ describe("status auto-advance", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     await PATCH_MILESTONE(
       jsonRequest(`${base}/milestones/${ms[1].id}`, "PATCH", { date: future }),
-      { params: { id: ms[1].id } },
+      { params: Promise.resolve({ id: ms[1].id }) },
     );
     const [afterEdit] = await db
       .select()
@@ -328,7 +328,7 @@ describe("DELETE /api/milestones/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await DELETE_MILESTONE(
       new Request(`${base}/milestones/${ms[2].id}`),
-      { params: { id: ms[2].id } },
+      { params: Promise.resolve({ id: ms[2].id }) },
     );
     expect(res.status).toBe(200);
     const json = await readJson(res);
@@ -361,7 +361,7 @@ describe("DELETE /api/milestones/:id", () => {
     authMock.mockResolvedValueOnce(mockSession(bob.id));
     const res = await DELETE_MILESTONE(
       new Request(`${base}/milestones/${ms[0].id}`),
-      { params: { id: ms[0].id } },
+      { params: Promise.resolve({ id: ms[0].id }) },
     );
     expect(res.status).toBe(404);
   });

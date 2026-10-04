@@ -1,0 +1,52 @@
+name: Bug report
+description: Something behaves differently from what the docs say
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: is this a **security** problem? If so, use
+        *Security → Report a vulnerability* instead of a public issue.
+  - type: dropdown
+    id: shape
+    attributes:
+      label: How are you running it?
+      options:
+        - The hosted instance (ghosted.lostsignals.studio)
+        - Self-hosted with Docker (compose)
+        - Self-hosted without Docker
+        - Local development (pnpm dev)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: "`curl -s <your instance>/api/health` prints it, along with the database and config status."
+      placeholder: '{"ok":true,"version":"1.0.0",...}'
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Sign in
+        2. Open …
+        3. See …
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Server logs (`docker compose logs app`) or browser console. Remove anything personal first.
+      render: shell
+    validations:
+      required: false

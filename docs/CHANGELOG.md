@@ -2,6 +2,381 @@
 
 All notable changes, by date and type.
 
+## 2026-10-04
+
+### Changed
+- **The working branch is `staging` now** (renamed from `selfhost`, which the
+  earlier entries in this file and the review documents refer to by its old
+  name — those are dated records and were left as written). `staging` is what the
+  Railway staging environment auto-deploys from; `main` stays production, and the
+  branch flow is written down in [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
+### Break
+- **Next 15.5 and React 19.** A major upgrade, and the reason the audits are
+  clean: it closed 23 of the 28 dependency advisories, including both criticals
+  and every high one. What actually had to change in this codebase:
+  - **Route and page `params` are promises.** Eight route handlers and the
+    application detail page now `await` them; the integration tests that call
+    handlers directly hand in `Promise.resolve(...)`. Two catch blocks were
+    logging a parameter that had become scoped to the `try`, so those bindings
+    were hoisted deliberately rather than left to fail at the wrong moment.
+  - **Next stopped emitting `apple-mobile-web-app-capable`** in favour of the
+    standard `mobile-web-app-capable`. The layout's `other` block had the
+    standard one — which silently became a *duplicate* — so it now carries the
+    Apple-prefixed name instead, which is the only signal iOS older than 16.4
+    reads for a standalone home-screen app. The e2e test asserts both, once each.
+  - **A new lint rule** (`@next/next/no-html-link-for-pages`) flagged the export
+    download link. It is disabled at that line with the reason: it is a file
+    download, not in-app navigation.
+  - The `package.json` named-export warnings are gone (default import).
+  - `pnpm` is pinned in `package.json` (`packageManager: pnpm@10.12.1`) to match
+    the Dockerfile and CI instead of whatever corepack resolves.
+- `postcss` is pinned to the patched line through `pnpm.overrides`, and the
+  dependency audit became a **blocking** CI check with one accepted advisory
+  (`braces`, build time only, no released fix) recorded in `SECURITY.md`.
+- The production image grew from 343 MB to **428 MB** (Next 15 and React 19 are
+  simply bigger); the build, the boot sequence and every behavioural assertion
+  were re-verified in a container afterwards.
+- **Known deprecation:** `next lint` warns that it will be removed in Next.js 16.
+  The ESLint CLI migration is scheduled, not done.
+
+### Feature
+- **The container path is in CI, and every branch runs CI.** Three jobs existed
+  (lint/typecheck, unit/integration, e2e) and none of them built the image — which
+  is why a 2.43 GB image, then a build failure, then a crash loop on missing boot
+  dependencies all sat unnoticed. A fourth job now runs
+  `docker compose --profile selfhost up -d --wait` and asserts that the instance
+  is alive (`/api/health` with `config:"ok"`), that `/` answers `307 /login` when
+  the landing is switched off, that the crawl header and `robots.txt` refuse
+  crawlers, and that closed registration answers 403. The workflow also runs on
+  **every** branch now, not only on pushes to `main`: the branch that introduced
+  self-hosting had never been built by CI once.
+- **A project's public furniture, which was missing**: `SECURITY.md` (private
+  vulnerability reporting, the threat model, and a per-advisory triage of the 28
+  reported findings), `CONTRIBUTING.md` (getting it running, what gets merged, and
+  why a behaviour change needs a test), issue templates for bugs and feature
+  requests, and `docs/RELEASING.md` (version bumps, tags, what the version number
+  promises, and how the image is published). CI gained an informational
+  dependency audit, which reports without blocking while the Next 14 advisories
+  have no fix inside the 14.x line.
+- **The AVIF image-optimizer advisory is pinned shut at the config level.** Next
+  14 inherits a critical advisory from `sharp`'s libheif — RCE when **AVIF**
+  files are optimized — with no fix inside 14.x. A middleware guard for
+  `/_next/image` was written first and **did not work**: Next does not run
+  middleware for `_next/*`, which the production server proved (200, not 404).
+  The mitigation that does hold is configuration plus facts, each verified: the
+  app uses `next/image` zero times, `public/` ships zero AVIF files,
+  `images.formats` is pinned to `["image/webp"]`, and with no remote patterns the
+  optimizer refuses non-local URLs (`400 "url parameter is not allowed"`). The
+  other critical advisory is Windows-hosted servers; the image is Linux. CI now
+  asserts the remote-URL refusal so the pin cannot be removed by accident.
+
+### Fix
+- **The generated owner password must be replaced at first sign-in.** Both
+  reviewers put this in their "would not ship without" list, and they were right:
+  the bootstrap prints a password into the container log, and that log keeps it.
+  `users.must_change_password` (migration 0010) is set when the bootstrap
+  generates the password — not when the operator supplies `GHOSTED_USER_PASSWORD`
+  — the flag rides the JWT, every page behind the dashboard layout redirects to
+  `/change-password` while it is set, and every write answers `403
+  PASSWORD_CHANGE_REQUIRED`. Changing it clears the flag and signs the user in
+  again with their own credential. Verified in a container: `/app` and
+  `/settings` → `307 /change-password`, a `POST /api/applications` → 403.
+  The mocked-session tests could not see this — the bug was in the token — so the
+  regression test is an e2e one that failed first.
+- **The image is 343 MB instead of 2.43 GB.** Measured cause: layer duplication,
+  not content. The runner copied the full `node_modules` (an 811 MB layer) and
+  then ran `chown -R node:node /app`, which rewrites the whole tree into a second
+  764 MB layer — while the actual filesystem was 729 MB. It now copies Next's
+  `standalone` output with `--chown` on every copy: the server plus the modules it
+  imports, and a small explicit set for the boot scripts (whose dependencies the
+  trace does not carry, checked at build time so a missing one cannot reach
+  production as a crash loop).
+- **The build asserts its own shape.** `scripts/assert-build-shape.mjs` runs
+  inside `docker build` after `next build` and refuses the image if `/` stopped
+  being prerendered, or if `robots.txt`, `sitemap.xml`, `/imprint`, `/privacy` or
+  `/terms` started being prerendered. That is the regression class this branch hit
+  twice, now impossible to merge quietly.
+
+### Fix
+- **The Docker image builds again, and the deployment rules stopped being judged
+  by the build.** Prerendering the landing had made `next build` validate the
+  *deployment* — and a build has no environment, so `docker build` failed with
+  `ALLOW_REGISTRATION=true needs a delivering email transport in production`,
+  for an image whose runtime configuration was fine. The earlier "clean
+  production build, exit 0" note in this changelog was true when written and
+  stale by the time the branch was prerendered; it is corrected here rather than
+  quietly left standing. Now: `readConfig()` judges the shape flags only,
+  `deploymentProblems()` holds the rules about a deployment and is reported by
+  `/api/health`, and `POST /api/auth/register` refuses a sign-up it could never
+  verify (`MAIL_NOT_CONFIGURED`) — the one place the rule stops a real person
+  instead of a build.
+- **`ALLOW_REGISTRATION=false` was not enforced.** The flag hid a link and gated
+  account deletion; the sign-up API and the register page accepted anyone. A
+  solo or private instance therefore was not closed to strangers, which is what
+  the flag and the guide promise. Now the API answers `403 REGISTRATION_CLOSED`,
+  the register page redirects to `/login`, the login screen drops the link, and
+  one shared `registrationOpen()` reader (fails closed on a typo) serves both
+  routes that act on it. Found by running the documented path, not by reading
+  it.
+- **Prerendered pages no longer freeze deployment identity.** The three legal
+  pages and the auth group render per request again — baked, a self-hosted
+  instance published a privacy policy naming the hosted studio as the data
+  controller. The landing keeps its static HTML and carries no deployment
+  identity at all: the footer credit moved to `/api/config/site` +
+  `components/FooterCredit.tsx`, and the JSON-LD no longer names a publisher.
+  `docker compose` now passes `NEXT_PUBLIC_APP_URL` as a **build argument**, so
+  a self-hosted image bakes its own origin into the canonical URL (verified
+  inside the built image).
+- **The STARTTLS upgrade has a deadline.** `detach()` clears the reply timeout
+  before the handshake, which left the one wait in the SMTP client that nothing
+  bounded: a server answering `220 Ready to start TLS` and then stalling hung
+  the send — and every caller awaiting it — forever.
+- **A refused email is no longer reported as sent** on the resend path:
+  `sendEmail` reports whether the transport accepted the message, and the button
+  says so when it did not. Registration and password reset stay generic, because
+  a visible failure there would reveal whether an account exists.
+- **The database volume is per instance** (`GHOSTED_PG_VOLUME`, default
+  unchanged): the explicit global name meant a second instance on a host mounted
+  the first one's data, and `down -v` in either project deleted it. The guide
+  also documents that Postgres reads `POSTGRES_PASSWORD` only when the data
+  directory is created — the crash loop that follows changing it later.
+
+### Feature
+- **The landing is prerendered, and signed-in visitors can read it.** `/` no
+  longer bounces a signed-in visitor to `/app` — a marketing page you can only
+  see while logged out is a page you cannot link to anyone — and the sign-in
+  screen is where "you are already signed in" is answered, by going to the app.
+  That also removed the cookie read that made the landing render per request, so
+  with the layout's `force-dynamic` gone the page is now built once (`○ /` in the
+  route table, along with the legal pages and the register screen).
+  The deployment decisions that used to need the environment at render time
+  moved to the two places that can answer them per request:
+  - `middleware.ts` owns `/` → `/login` when `SHOW_LANDING=false`, and sets
+    `X-Robots-Tag: noindex, nofollow` when the instance is not indexable — read
+    live, so one image behaves correctly on every instance that pulls it. Both
+    now share one flag parser with `lib/config/flags.ts` (`lib/config/flag-parse.ts`,
+    dependency-free because middleware runs in the Edge runtime); middleware is
+    lenient on a typo, the boot is strict.
+  - `/api/config/analytics` + `components/Analytics.tsx` attach the tracker after
+    hydration, so prerendered HTML carries no third-party tag. A tracker baked
+    into a build would follow a published image into every self-hosted copy.
+  Verified on a production build: `/` is `○ Static`; the hosted shape serves the
+  landing and returns its analytics config; `SHOW_LANDING=false` answers `307 →
+  /login` with the crawl header; `SITE_INDEXABLE=true` removes that header —
+  all from the same build.
+- **"Check your spam folder" wherever we tell someone to expect an email.** It
+  has already landed in spam with a few providers, so the hint is now in the
+  verification banner and modal, in the resend confirmation, and on the
+  forgot-password screen. Deliberately **not** inside the emails themselves: a
+  reader has already found the message, so "check your spam folder" there answers
+  a question they no longer have.
+- **The landing's search surface.** The page now tells a crawler what it is and
+  stops downloading screenshots nobody is looking at:
+  - the title was the bare brand — it now reads "Ghosted — the job application
+    tracker that never goes quiet", which is the term a job seeker actually
+    types, and stays inside the ~60 characters a result will show. The
+    home-screen name stays short (`apple-mobile-web-app-title` is still
+    "Ghosted": iOS truncates it under the icon, and the icon test caught the
+    long title leaking there);
+  - `link rel=canonical` on the landing and all three legal pages, plus an
+    absolute `og:url`, because the same app answers on the hosted domain, on a
+    self-hoster's domain and on the Railway hostname, and those would otherwise
+    compete as duplicates;
+  - `app/sitemap.ts`, generated per request and advertised from `robots.txt`
+    only when the instance is indexable — a private instance returns an empty
+    sitemap rather than an invitation;
+  - JSON-LD (`SoftwareApplication`, with the instance's own operator as the
+    publisher) built by `lib/structured-data.ts`. Narrow on purpose: name,
+    category, platform, version, the MIT licence of the code, the repository and
+    a feature list — no price, rating or review claim the owner has not made;
+  - the captures ship as WebP beside the JPEGs
+    (`scripts/optimize-landing-views.sh`, 902 KB → 452 KB on disk) and every one
+    of them is `loading="lazy"`. The page keeps all eight variants in the DOM —
+    one per theme, one per device — so the hidden ones used to download too:
+    **measured in a browser, a desktop visit went from 8 files / 903 KB to 2
+    files / 79 KB**, a phone visit to one file / 47 KB. `tests/e2e/seo.spec.ts`
+    now pins that, because removing a single `loading` attribute brings the
+    whole payload back without changing a pixel.
+
+## 2026-09-30
+
+### Changed
+- **The legal pages name the person behind the trading name.** "Lost Signals
+  Studio" is now identified as the independent development alias of Krisztian
+  Hadi — a sole proprietorship, with no commercial-register entry — in the
+  imprint, the privacy policy's controller section and the terms. A trading name
+  is enough to trade under, but not enough on its own for an imprint, the GDPR's
+  identifiable-controller requirement or consumer/trader-information rules, and
+  "no register entry" reads as missing paperwork unless the page says it is a
+  sole trader. Self-hosters get the same shape through `OPERATOR_NAME` +
+  `OPERATOR_LEGAL_NAME` (+ `OPERATOR_SOLE_TRADER`, `OPERATOR_REGISTER`,
+  `OPERATOR_VAT`), documented in `.env.example` and `docs/SELFHOST.md` as a
+  pointer rather than legal advice.
+
+### Fixed
+- **Three independent code reviews of the self-hosting branch, merged and acted
+  on.** Claude Sonnet 5, GPT-6 Sol and GLM latest each read the whole diff; every
+  claim was checked against the code before it entered the plan, and the findings
+  that survived are fixed: SMTP now refuses to send credentials or mail over an
+  unencrypted connection, `robots.txt` is generated per request instead of baked
+  at build time, the compose database binds to loopback only with an overridable
+  password, a production `next build` no longer validates runtime configuration
+  (verified by building with no email variables at all), the SMTP reply parser
+  survives split TCP chunks, imports without timestamps are idempotent, `Subject`
+  gets the same line-break guard as the other headers, the deletion guard reads
+  one flag instead of the whole deployment, a malformed `SMTP_URL` no longer
+  echoes itself, health reports configuration, and the hosted instance keeps its
+  analytics without new variables. One claim — "the import route has no rate
+  limiting" — was wrong in two of the three reviews and is recorded as rejected.
+  Merged report: [docs/reviews/code-review-selfhost-2026-09-30.md](reviews/code-review-selfhost-2026-09-30.md),
+  raw transcripts under `docs/reviews/raw/`. Cost: $0.55 for all three.
+
+### Added
+- **`docs/SELFHOST.md`** — the self-hosting walkthrough: the two shapes the same
+  image ships (solo and family), the three-command solo setup, the environment
+  table, email options including SMTP, export/import, backups, upgrades and
+  troubleshooting. Linked from the README and `docs/INDEX.md`.
+- **`GET /api/health`** — version, uptime and a real database check, answering
+  `503` when the database is unreachable. That last part matters: the commonest
+  self-hosting failure is a container that is up while Postgres is not, which a
+  process check cannot see. Railway's `healthcheckPath` now points at it instead
+  of `/`.
+- **The compose file runs the app**, behind a `selfhost` profile so the existing
+  dev workflow (Postgres in Docker, `pnpm dev` on the host) is untouched:
+  `docker compose --profile selfhost up -d`. The service waits for the database
+  healthcheck, sets `PORT=8080`, passes every deployment variable through from
+  `.env`, and refuses to start without `AUTH_SECRET`.
+- **A `.dockerignore`, which the repo did not have.** `COPY . .` was shipping the
+  host's `node_modules`, its `.next` and — the one that matters — its `.env` into
+  the image layers.
+- **Two health tests**: the reachable-database shape, and the 503.
+
+### Changed
+- **`railway.json` healthchecks `/api/health`** rather than `/`, so a deploy that
+  cannot reach its database is reported as unhealthy instead of live.
+
+- **Import: an account can now move between instances.** `POST /api/auth/import`
+  takes the JSON the export produces (`?mode=merge`, the default, or
+  `?mode=replace` to empty the account first), validates it, and reports what
+  landed. Settings gained "Import my data" beside "Export my data" — a file, and
+  one checkbox asking whether it should replace what is there. Everything lands
+  in a single transaction, so a file that fails changes nothing.
+- **`version: 1` in the export**, and the export now leaves every timestamp as an
+  ISO string rather than a `Date`. The file and the in-process value agree, which
+  is what lets an importer validate what it actually receives; an unversioned
+  file from before this change still imports, and a file from a *newer* format is
+  refused with a sentence rather than guessed at.
+- **Eleven tests** in `tests/integration/import-export.test.ts` driving the real
+  service and the real database: the round trip into a second account, the source
+  account left untouched, a re-import that skips everything, `replace` that
+  empties only the importer's account, the version guard, a legacy unversioned
+  file, and the route's own answers for a valid file, invalid JSON, a JSON file
+  that is not an export, and no session.
+
+### Changed
+- **Duplicates are recognised by what an application *is* — company, role and
+  creation time — not by its row id.** Row ids are global, so a file imported
+  into a second account on the same instance could never reuse them; keying on
+  ids meant either a primary-key collision or silently skipping the copy. The
+  promise that actually matters is unchanged: importing the same file twice
+  changes nothing the second time. This deviates from the plan document's
+  "keep the row UUIDs", deliberately, for that reason.
+
+- **`lib/site.ts`: who runs this instance, and where the software came from.**
+  `OPERATOR_NAME` / `_EMAIL` / `_URL` publish the hoster's own details;
+  `POWERED_BY_URL`, `BRAND_TAG`, `SITE_INDEXABLE`, `UMAMI_*` cover the rest. The
+  defaults follow the deployment shape, so the hosted instance keeps its studio
+  credit while a self-hosted one — which set nothing — stops wearing somebody
+  else's name in the footer, the privacy policy, the terms and the imprint.
+  Those say "self-hosted, powered by Ghosted" instead, linked to the repo.
+- **`BRAND_TAG` replaces the `beta` superscript**, which is gone from the header
+  and the sign-in page. Empty on the hosted instance, `DIY` by default on a
+  self-hosted one, `none` (or any word) to override.
+- **A `robots.txt` route**, which the app did not have at all. Only the
+  operator's own instance is indexable (derived from `SHOW_LANDING`, overridable
+  with `SITE_INDEXABLE`); a self-hosted instance disallows everything by default
+  and adds a `noindex` metadata tag.
+- **Analytics is opt-in through `UMAMI_SRC` + `UMAMI_WEBSITE_ID`** (plus
+  optional `UMAMI_DOMAINS`) instead of a hard-coded tracker aimed at the hosted
+  instance's dashboard. Both unset renders no script at all.
+- **Nine tests**: `tests/unit/site-identity.test.ts` (the operator defaults, the
+  brand tag, the tracker gate, the indexable rule) and one in
+  `tests/integration/account.test.ts` for the new deletion guard.
+
+### Changed
+- **Deleting the only account is refused.** On an instance with registration
+  closed the account is the only way in, so `DELETE /api/auth/account` answers
+  403 `ACCOUNT_DELETION_DISABLED` and the settings page offers the export
+  instead of the destructive button. Password change is untouched.
+- **The root layout is dynamic on purpose** (`export const dynamic =
+  "force-dynamic"`): the analytics tags and robots metadata come from the
+  environment, and a statically optimised route would bake them in at build
+  time, which would end the "one published image, reconfigured by env" promise.
+  The cost is per-request rendering on the pages that used to be static.
+- **The sign-in wordmark is a link only when there is a landing page to lead
+  to**; on a landing-less instance it is a plain wordmark rather than a link to
+  the page the visitor is already on.
+- **The donate default stays the original creator's page**, now with a comment
+  in `lib/utils/donate-banner.ts` and `.env.example` asking self-hosters to keep
+  it there, and `NEXT_PUBLIC_DONATE_URL` to point elsewhere.
+
+### Removed
+- **The landing's local `REPO_URL` / `LICENSE_URL` constants** — the FAQ links
+  now read them from `lib/site.ts`, so the repo URL lives in one place. The
+  hard-coded Umami script tag and the `beta` superscripts went with them.
+
+- **Provider-neutral email: `resend`, `smtp` or `log`.** `lib/email/` holds one
+  `EmailTransport` interface and three implementations. `EMAIL_TRANSPORT` picks
+  one; unset keeps the previous behaviour exactly (Resend when `RESEND_API_KEY`
+  is set, the log stub otherwise). SMTP takes a single `SMTP_URL`
+  (`smtps://user:pass@host:465`) and covers Postmark, SendGrid, Mailgun,
+  Fastmail and a local Postfix. Deployment validation now refuses to boot an
+  instance that has `ALLOW_REGISTRATION=true` in production without a transport
+  that actually delivers, or without `EMAIL_FROM` — the combination where
+  verification and reset mail silently never arrives. A solo instance with
+  registration closed may run the log stub forever.
+- **A hand-written SMTP client** (`lib/email/smtp.ts`): implicit TLS or
+  STARTTLS, AUTH PLAIN with an AUTH LOGIN fallback, dot-stuffing, CRLF
+  normalisation and RFC 2047 subject encoding — one message per connection.
+  Written rather than imported because `nodemailer` cannot be added without
+  regenerating the pinned lockfile in this environment; the transport interface
+  above it means swapping the client later changes nothing else. The wire
+  contract is pinned by a fake SMTP server in `tests/unit/smtp.test.ts`, which
+  caught a real defect: the body's LF endings were not normalised to CRLF, so a
+  line beginning with a dot was not stuffed and would have ended the DATA block
+  early.
+- **Twenty-one tests** across `tests/unit/email-transport.test.ts` (transport
+  resolution, the boot rules, the log transport's payload) and
+  `tests/unit/smtp.test.ts` (URL parsing, message framing, the full dialogue
+  against a fake server, a refused recipient).
+- **Deployment flags, and the owner bootstrap behind them.** `SHOW_LANDING` and
+  `ALLOW_REGISTRATION` (both default to the hosted shape, so the live instance
+  is unchanged), plus `GHOSTED_USER_EMAIL` / `_NAME` / `_PASSWORD`. With
+  registration closed the container start creates one verified owner account —
+  name **Haunty**, avatar `/haunty.png` (the retired app icon), a random
+  password printed **once** in the boot log — and never touches an existing
+  account, so restarts cannot reset a password somebody already changed.
+  `lib/config/flags.ts` parses the booleans strictly (an empty value counts as
+  unset; a typo stops the boot listing every problem at once) and refuses a
+  closed instance with no owner address, because that instance has no way in.
+  New `scripts/ensure-owner.mjs`, called from `scripts/migrate-on-start.mjs`
+  after the migrations.
+- **Eleven tests for that surface**: `tests/unit/flags.test.ts` (defaults,
+  spellings, the empty-value rule, typo rejection, every-problem-at-once) and
+  `tests/integration/ensure-owner.test.ts` (creation against the real database,
+  idempotency including the password hash, registration open, missing address,
+  supplied password).
+
+### Changed
+- **One seam for the signed-in user.** `lib/auth/current-user.ts`
+  (`getCurrentUser()` / `requireUser()`) replaces the seven direct `auth()`
+  calls — the dashboard layout, dashboard and settings pages, both image routes
+  and the API guard — so when the session strategy moves it moves in one place.
+  `/` renders the landing only while `SHOW_LANDING` is on, and redirects to
+  `/login` (the starter screen on a self-hosted instance) when it is not;
+  a signed-in visitor still goes straight to `/app` either way.
+
 ## 2026-09-28
 
 ### Added
