@@ -10,3 +10,5 @@
 - [Code review round 2, 2026-10-04](reviews/code-review-selfhost-round2-2026-10-04.md) - stability and security, on the prerendered landing
 - [Releasing](RELEASING.md) - version bumps, tags, publishing an image
 - [Release notes: 1.0.0](releases/v1.0.0.md) - what the first release contains and what it promises
+- [Blog: Ghosted 1.0, and the day I nearly pointed staging at production](blog/2026-10-04-shipping-ghosted-1-0.md) - the release, the near-miss, and what it cost
+- [What building this costs](COSTS.md) - tokens, the estimate, and the provider balance
