@@ -38,16 +38,6 @@ function flag(raw: string | undefined, fallback: boolean): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // The image optimizer is not used anywhere in this app (no `next/image`), and
-  // Next 14's optimizer carries an unauthenticated RCE advisory (AVIF path)
-  // whose only fix is Next 15. Rather than upgrade under time pressure, the
-  // endpoint is closed: 404 for a route nothing requests. Delete this guard as
-  // part of the Next 15 upgrade — and if `next/image` is ever adopted first,
-  // delete it then.
-  if (pathname.startsWith("/_next/image")) {
-    return new NextResponse(null, { status: 404 });
-  }
-
   const showLanding = flag(process.env.SHOW_LANDING, true);
 
   if (pathname === "/" && !showLanding) {

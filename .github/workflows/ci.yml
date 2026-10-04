@@ -140,6 +140,14 @@ jobs:
             -d '{"email":"stranger@example.com","password":"password123","name":"Stranger"}')
           echo "register -> $code"
           [ "$code" = "403" ] || { echo "closed registration is not enforced"; exit 1; }
+
+          # The image optimizer must never accept a URL it does not own: that
+          # refusal is what keeps the AVIF advisory (no fix in Next 14)
+          # unreachable, so it is worth a test rather than a comment.
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            'http://localhost:8080/_next/image?url=https%3A%2F%2Fexample.com%2Fx.avif&w=64&q=75')
+          echo "optimizer, remote url -> $code"
+          [ "$code" = "400" ] || { echo "the image optimizer accepts remote URLs"; exit 1; }
       - name: Container logs on failure
         if: failure()
         run: docker compose --profile selfhost logs --tail=200

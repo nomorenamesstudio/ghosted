@@ -23,11 +23,17 @@ All notable changes, by date and type.
   promises, and how the image is published). CI gained an informational
   dependency audit, which reports without blocking while the Next 14 advisories
   have no fix inside the 14.x line.
-- **The unused image optimizer is closed.** Next 14's `/_next/image` carries an
-  unauthenticated RCE advisory (AVIF path) fixed only in Next 15; this app uses
-  `next/image` zero times, so `middleware.ts` answers that path with a 404 and
-  the guard is documented for deletion with the upgrade. The other critical
-  advisory is Windows-hosted servers, and the image is Linux.
+- **The AVIF image-optimizer advisory is pinned shut at the config level.** Next
+  14 inherits a critical advisory from `sharp`'s libheif — RCE when **AVIF**
+  files are optimized — with no fix inside 14.x. A middleware guard for
+  `/_next/image` was written first and **did not work**: Next does not run
+  middleware for `_next/*`, which the production server proved (200, not 404).
+  The mitigation that does hold is configuration plus facts, each verified: the
+  app uses `next/image` zero times, `public/` ships zero AVIF files,
+  `images.formats` is pinned to `["image/webp"]`, and with no remote patterns the
+  optimizer refuses non-local URLs (`400 "url parameter is not allowed"`). The
+  other critical advisory is Windows-hosted servers; the image is Linux. CI now
+  asserts the remote-URL refusal so the pin cannot be removed by accident.
 
 ### Fix
 - **The generated owner password must be replaced at first sign-in.** Both

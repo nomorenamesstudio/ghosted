@@ -42,7 +42,7 @@ are not mistaken for a wall of exploitable holes:
 | Advisory | Applies here? | Why |
 | --- | --- | --- |
 | Next.js: unauthenticated RCE on **Windows-hosted** servers (critical) | **No** | The image is Linux (`node:22-alpine`); the advisory is Windows-specific |
-| Next.js: unauthenticated RCE in the **Image Optimization API** with AVIF (critical) | **No** — and closed anyway | The app uses `next/image` **0 times**; `/_next/image` is now answered with a 404 by `middleware.ts`, and that guard goes away with the Next 15 upgrade |
+| Next.js: unauthenticated RCE in the **Image Optimization API** when **AVIF** files are optimized (critical) | **No** — and pinned shut | The flaw is in `sharp`'s libheif handling of AVIF *input*, fixed only in Next 15. Here: `next/image` is used **0 times**, `public/` ships **0 AVIF files**, `images.formats` is explicitly `["image/webp"]` (no AVIF output), and with no `remotePatterns` the optimizer refuses non-local URLs — verified: a remote request answers `400 "url parameter is not allowed"`. The config comment explains what must not change before the upgrade |
 | Middleware / proxy bypass in **Pages Router** apps with i18n (high) | **No** | App Router only; there is no `pages/` directory and no i18n config |
 | SSRF via **rewrites** with an attacker-controlled destination (high) | **No** | `next.config.mjs` defines no rewrites |
 | SSRF in **Server Actions on custom servers** (high) | **No** | The app runs Next's own server (`next start` / standalone `server.js`), not a custom one |
@@ -58,7 +58,9 @@ planned, and the upgrade resolves the whole table at once.
 
 To reproduce the numbers: `pnpm audit --prod`. CI runs the same command
 informational-only (it does not fail the build, because a fix for most of these
-does not exist inside the 14.x line).
+does not exist inside the 14.x line). The image job in CI also asserts the
+optimizer still refuses a remote URL, so the AVIF mitigation above cannot be
+removed by accident.
 
 ## Secrets
 

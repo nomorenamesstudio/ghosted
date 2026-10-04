@@ -56,14 +56,6 @@ describe("middleware", () => {
     expect(run("/privacy").headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
   });
 
-  it("closes the unused image optimizer", () => {
-    // Not used anywhere in this app, and Next 14's optimizer carries an
-    // unauthenticated RCE advisory fixed only in Next 15. A 404 for a route
-    // nothing requests is cheaper than a rushed major upgrade.
-    const res = run("/_next/image?url=https%3A%2F%2Fexample.com%2Fa.avif&w=640&q=75");
-    expect(res.status).toBe(404);
-  });
-
   it("keeps authenticated API responses out of the browser cache", () => {
     expect(run("/api/applications").headers.get("Cache-Control")).toBe("no-store");
   });
