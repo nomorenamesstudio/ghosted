@@ -23,9 +23,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # No `version` here on purpose: package.json's `packageManager` is the
+      # single pin, and naming one in both places makes this action fail with
+      # "Multiple versions of pnpm specified" before anything is installed.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -53,9 +54,10 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      # No `version` here on purpose: package.json's `packageManager` is the
+      # single pin, and naming one in both places makes this action fail with
+      # "Multiple versions of pnpm specified" before anything is installed.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -74,9 +76,10 @@ jobs:
     # SECURITY.md. Anything new fails here.
     steps:
       - uses: actions/checkout@v4
+      # No `version` here on purpose: package.json's `packageManager` is the
+      # single pin, and naming one in both places makes this action fail with
+      # "Multiple versions of pnpm specified" before anything is installed.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -173,9 +176,10 @@ jobs:
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      # No `version` here on purpose: package.json's `packageManager` is the
+      # single pin, and naming one in both places makes this action fail with
+      # "Multiple versions of pnpm specified" before anything is installed.
       - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
