@@ -29,7 +29,7 @@ short one.
    is a support ticket.
 6. **Publish the image**, tagged twice so both answers exist:
    ```bash
-   docker build --build-arg NEXT_PUBLIC_APP_URL=https://ghosted.lostsignals.studio \
+   docker build --build-arg NEXT_PUBLIC_APP_URL=https://ghosted.boo \
      -t ghcr.io/krisztianhadi/ghosted:1.0.0 -t ghcr.io/krisztianhadi/ghosted:latest .
    docker push ghcr.io/krisztianhadi/ghosted:1.0.0
    docker push ghcr.io/krisztianhadi/ghosted:latest

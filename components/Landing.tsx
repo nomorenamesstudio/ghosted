@@ -239,8 +239,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
         <p>
           If you work for a company that would sponsor the project, or want to
           talk about white-label options, drop an email to{" "}
-          <a href="mailto:ghosted@lostsignals.studio" className={FAQ_LINK}>
-            ghosted@lostsignals.studio
+          <a href="mailto:hey@nomorenames.studio" className={FAQ_LINK}>
+            hey@nomorenames.studio
           </a>
           .
         </p>

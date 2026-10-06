@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Ghosted — banner</title>
+<style>
+  /* The app's own typeface, straight out of the repo. */
+  @font-face {
+    font-family: "Geist";
+    src: url("../../../app/fonts/GeistVF.woff") format("woff");
+    font-weight: 100 900;
+    font-display: block;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: #000; }
+
+  /* Two canvases, one design: the README strip is wider and shorter than the
+     social card, so only the numbers change between them. */
+  .canvas {
+    position: relative;
+    overflow: hidden;
+    font-family: "Geist", system-ui, sans-serif;
+    color: #fff;
+    background: linear-gradient(168deg, #7c3aed 0%, #6d28d9 58%, #5b21b6 100%);
+    isolation: isolate;
+  }
+  .canvas.header { width: 1600px; height: 640px; }
+  .canvas.social { width: 1200px; height: 630px; }
+
+  /* The field's texture: the same mascot, very faint, at the landing's angles. */
+  .ghost {
+    position: absolute;
+    opacity: 0.08;
+    user-select: none;
+  }
+  .ghost svg { display: block; width: 100%; height: auto; }
+
+  .content {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-items: center;
+    padding-left: 86px;
+    grid-template-columns: minmax(0, 1fr) 640px;
+    gap: 24px;
+  }
+  .social .content { grid-template-columns: minmax(0, 1fr) 560px; padding-left: 64px; }
+
+  /* --- left: what it is --------------------------------------------------- */
+  .brand span {
+    font-size: 50px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; 
+  }
+  .social .brand span { font-size: 44px; }
+
+  h1 {
+    margin-top: 24px;
+    font-size: 60px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.035em;
+    max-width: 790px;
+    text-wrap: balance;
+  }
+  .social h1 { font-size: 48px; margin-top: 20px; max-width: 560px; }
+
+  .meta {
+    margin-top: 34px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 19px; font-weight: 450; letter-spacing: -0.01em;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .social .meta { margin-top: 28px; font-size: 17px; }
+  .meta i { width: 5px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.45); }
+
+  /* --- right: the pile, centred in its half ------------------------------- */
+  .stage { position: relative; height: 100%; }
+  .pile {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 560px; height: 474px;
+  }
+
+  .card {
+    position: absolute;
+    border-radius: 18px;
+    box-shadow: 0 40px 70px -30px rgba(20, 4, 55, 0.75), 0 12px 30px -18px rgba(20, 4, 55, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.16);
+  }
+  /* The cards lean against each other; the ghosts stand in front of them. */
+  .card.ghosted { width: 384px; left: 125px; top: 50px; transform: rotate(2.6deg); }
+  .card.offer   { width: 404px; left: 0;    top: 222px; transform: rotate(-3.2deg); }
+
+  .mascot { position: absolute; z-index: 2; }
+  .mascot.happy       { width: 200px; left: -55px; top: 95px; transform: rotate(-7deg); }
+  .mascot.finger-guns { width: 200px; right: 16px;  top: 260px; transform: rotate(7deg);}
+</style>
+</head>
+<body>
+  <div class="canvas" id="canvas">
+    <!-- texture -->
+    <!-- <div class="ghost" style="width: 190px; left: -34px; top: -46px; transform: rotate(-16deg);"><img src="../../../public/staring-at-phone-sad.svg" width="190" /></div>
+    <div class="ghost" style="width: 132px; left: 640px; bottom: -40px; transform: rotate(12deg);"><img src="../../../public/confused.svg" width="132" /></div>
+    <div class="ghost" style="width: 118px; right: 96px; top: 22px; transform: rotate(-9deg);"><img src="../../../public/content.svg" width="118" /></div> -->
+
+    <div class="content">
+      <div>
+        <div class="brand"><span>Ghosted</span></div>
+        <h1>Never let a job application go quiet on you.</h1>
+        <div class="meta">
+          <span>Job application tracker</span><i></i>
+          <span>Self-hosted in one command</span><i></i>
+          <span>MIT</span>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="pile">
+          <img class="card ghosted" src="./card-ghosted.png" alt="" />
+          <img class="card offer" src="./card-offer.png" alt="" />
+          <img class="mascot happy" src="../../../public/staring-at-phone-happy.svg" alt="" />
+          <img class="mascot finger-guns" src="../../../public/finger-guns.svg" alt="" />
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // ?size=header|social picks the canvas, so one file renders both.
+    const size = new URLSearchParams(location.search).get("size") || "header";
+    document.getElementById("canvas").classList.add(size);
+  </script>
+</body>
+</html>

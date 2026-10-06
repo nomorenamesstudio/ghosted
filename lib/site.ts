@@ -40,7 +40,10 @@ const HOSTED_OPERATOR = {
   soleTrader: true,
   register: null as string | null,
   vat: null as string | null,
-  email: "hey@lostsignals.studio",
+  email: "hey@nomorenames.studio",
+  // The studio's own site: where somebody with a question about the hosted
+  // instance ends up, rather than an email client.
+  url: "https://nomorenames.studio",
 };
 
 /**
@@ -52,7 +55,7 @@ const HOSTED_OPERATOR = {
 const HOSTED_UMAMI: UmamiConfig = {
   src: "https://ramen.lostsignals.studio/script.js",
   websiteId: "c8f73665-dca1-464b-9427-a56f8b27c799",
-  domains: "ghosted.lostsignals.studio",
+  domains: "ghosted.boo",
 };
 
 export interface Operator {
@@ -121,7 +124,7 @@ export function readSiteIdentity(
           register: text(env, "OPERATOR_REGISTER"),
           vat: text(env, "OPERATOR_VAT"),
           email: text(env, "OPERATOR_EMAIL") ?? HOSTED_OPERATOR.email,
-          url: text(env, "OPERATOR_URL"),
+          url: text(env, "OPERATOR_URL") ?? HOSTED_OPERATOR.url,
         }
       : null;
 
@@ -187,7 +190,7 @@ let cached: SiteIdentity | null = null;
 export function siteOrigin(
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const raw = env.NEXT_PUBLIC_APP_URL?.trim() || "https://ghosted.lostsignals.studio";
+  const raw = env.NEXT_PUBLIC_APP_URL?.trim() || "https://ghosted.boo";
   return raw.replace(/\/+$/, "");
 }
 

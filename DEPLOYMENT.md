@@ -7,18 +7,18 @@ one-time, done in your own accounts; the code is already deployment-ready
 deploy).
 
 Replace `<APP_URL>` below with your final app subdomain, e.g.
-`https://ghosted.lostsignals.studio`.
+`https://ghosted.boo`.
 
 ---
 
 ## 1. Domain
 
 1. Buy a domain for Lost Signals at any registrar (e.g. Namecheap, Cloudflare,
-   Porkbun) — something like `lostsignals.studio` or `lostsignals.dev`.
+   Porkbun) — something like `nomorenames.studio` or `ghosted.boo`.
 2. Decide the app subdomain: `ghosted.` or `app.` on that domain.
 
 > Note: if you want email from the same domain (e.g.
-> `noreply@lostsignals.studio`), pick a domain you can add to Resend — Resend
+> `noreply@nomorenames.studio`), pick a domain you can add to Resend — Resend
 > will give you DNS records to add at the registrar.
 
 ## 2. Email (Resend)
@@ -29,7 +29,7 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
 3. Wait for the domain to verify (usually minutes).
 4. Create an **API key** (API Keys → Create) → `RESEND_API_KEY`.
 5. Set `EMAIL_FROM` to a sender your domain allows, e.g.
-   `Ghosted <noreply@lostsignals.studio>`.
+   `Ghosted <noreply@nomorenames.studio>`.
    - Until the domain is verified, `onboarding@resend.dev` only reaches your
      own inbox — fine for testing, not for launch.
 

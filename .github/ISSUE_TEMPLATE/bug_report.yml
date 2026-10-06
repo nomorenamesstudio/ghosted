@@ -12,7 +12,7 @@ body:
     attributes:
       label: How are you running it?
       options:
-        - The hosted instance (ghosted.lostsignals.studio)
+        - The hosted instance (ghosted.boo)
         - Self-hosted with Docker (compose)
         - Self-hosted without Docker
         - Local development (pnpm dev)

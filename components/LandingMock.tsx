@@ -24,7 +24,7 @@ function BrowserChrome() {
         <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
       </span>
       <span className="ml-1 truncate rounded-md bg-background/80 px-2 py-0.5 font-mono text-[11px] tracking-tight text-muted-foreground">
-        ghosted.lostsignals.studio
+        ghosted.boo
       </span>
     </div>
   );
