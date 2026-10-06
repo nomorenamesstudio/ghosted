@@ -28,7 +28,7 @@ runs it, the same image the self-hosted shape uses.
 - **Keyboard and screen-reader honest.** The end-to-end suite runs axe on every
   page; the app is usable without a mouse and readable at 200% zoom.
 
-![The board view: columns for applied, interviewing, offers, ghosted and rejected, with real cards showing company, role, the last round, how long ago it moved and a progress bar — the ghosted column full, the two empty columns at the left showing how little has moved recently](docs/assets/board.png)
+![The board view: every column populated — applied 5, interviewing 7, offers 4 and ghosted 9 — with real cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
 
 ## Built with AI
 
