@@ -116,6 +116,14 @@ Five things about Railway environments that cost real time to learn:
 the build: Railway does pass service variables to the Dockerfile build, verified
 by the staging canonical URL matching the staging domain rather than production's.
 
+### Scope the Resend key to sending
+
+The app only ever sends. Create the key with **Sending access** rather than Full
+access: an environment variable that leaks out of a running container should not
+also be able to read contact lists or change domain records. Reading delivery
+status (which is what this runbook does when mail is in question) needs the wider
+scope, so keep that key in the dashboard rather than in the deployment.
+
 ## 5. Post-launch checklist
 
 - [ ] Legal pages (`/privacy`, `/terms`, `/imprint`) still contain bracketed
