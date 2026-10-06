@@ -72,7 +72,7 @@ If you didn't request this, you can ignore this email.`;
       </div>
 
       <MailFrame
-        from="Ghosted <ghosted@lostsignals.studio>"
+        from="Haunty from Ghosted <haunty@ghosted.boo>"
         subject="Confirm your email — Ghosted"
         html={renderEmailShell({
           title: "Welcome to Ghosted!",
@@ -87,7 +87,7 @@ If you didn't request this, you can ignore this email.`;
       />
 
       <MailFrame
-        from="Ghosted <ghosted@lostsignals.studio>"
+        from="Haunty from Ghosted <haunty@ghosted.boo>"
         subject="Reset your password — Ghosted"
         html={renderEmailShell({
           title: "Reset your password",
