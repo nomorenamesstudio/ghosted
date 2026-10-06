@@ -66,3 +66,6 @@ next-env.d.ts
 
 # npm cache for the sandbox
 .npm-cache/
+
+# Intermediate renders from scripts/render-readme-banner.mjs
+/docs/assets/banner/rendered-*.png
