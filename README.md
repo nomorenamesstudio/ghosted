@@ -9,8 +9,9 @@ A job-application tracker for the part of a hunt nobody tracks: the silence. Log
 every application, keep its interview timeline in one place, and the ones that
 stopped answering get their own section instead of slowly being forgotten.
 
-A hosted instance runs at **[ghosted.lostsignals.studio](https://ghosted.lostsignals.studio)**,
-and everything here is what runs it — the same image is the self-hosted one.
+A hosted instance runs at **[ghosted.boo](https://ghosted.boo)**, by
+[No More Names Studio](https://nomorenames.studio) — and everything here is what
+runs it, the same image the self-hosted shape uses.
 
 - **Ghosted is a state, not a mood.** An application that has not moved in ten
   days (configurable, per-user) leaves its column and joins the ghosted ones, so
@@ -137,4 +138,5 @@ Full walkthrough, environment reference, email options, backups and upgrades:
 
 ## License
 
-MIT - see [LICENSE](LICENSE).
+MIT - see [LICENSE](LICENSE). Built by
+[No More Names Studio](https://nomorenames.studio) (hey@nomorenames.studio).

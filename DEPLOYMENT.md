@@ -7,7 +7,7 @@ one-time, done in your own accounts; the code is already deployment-ready
 deploy).
 
 Replace `<APP_URL>` below with your final app subdomain, e.g.
-`https://ghosted.lostsignals.studio`.
+`https://ghosted.boo`.
 
 ---
 

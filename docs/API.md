@@ -2,7 +2,7 @@
 
 ## Base URL
 
-`https://ghosted.lostsignals.studio/api` (production) or `http://localhost:3000/api` (dev)
+`https://ghosted.boo/api` (production) or `http://localhost:3000/api` (dev)
 
 ## Conventions
 
@@ -191,7 +191,7 @@ application.
 Create an application with curl:
 
 ```bash
-curl -X POST https://ghosted.lostsignals.studio/api/applications \
+curl -X POST https://ghosted.boo/api/applications \
   -H "Content-Type: application/json" \
   -b session-cookie.txt \
   -d '{"company":"Acme","role":"Engineer"}'

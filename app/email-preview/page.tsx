@@ -7,7 +7,7 @@ import { renderEmailShell } from "@/lib/emails";
  * emails in an inbox-style frame, plus their plain-text versions.
  */
 
-const PREVIEW_URL = "https://ghosted.lostsignals.studio/verify-email?token=0xVERIFY0x";
+const PREVIEW_URL = "https://ghosted.boo/verify-email?token=0xVERIFY0x";
 
 function MailFrame({
   from,

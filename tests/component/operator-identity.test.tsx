@@ -17,9 +17,9 @@ describe("OperatorContact", () => {
       screen.getByText(/independent development alias of\s*Krisztian Hadi/),
     ).toBeInTheDocument();
     expect(screen.getByText(/sole proprietorship/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "hey@lostsignals.studio" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "hey@nomorenames.studio" })).toHaveAttribute(
       "href",
-      "mailto:hey@lostsignals.studio",
+      "mailto:hey@nomorenames.studio",
     );
   });
 });

@@ -5,7 +5,7 @@
 Please **do not open a public issue** for a security problem. Use GitHub's
 private reporting instead: *Security → Report a vulnerability* on this
 repository, which opens a private advisory only the maintainer can see. If you
-cannot use that, email the address on the [imprint](https://ghosted.lostsignals.studio/imprint).
+cannot use that, email the address on the [imprint](https://ghosted.boo/imprint).
 
 Useful reports say what you did, what happened, and what you expected. A proof of
 concept — a curl command, a request, a file — is worth more than a severity

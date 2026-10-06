@@ -27,8 +27,8 @@ describe("readSiteIdentity", () => {
       soleTrader: true,
       register: null,
       vat: null,
-      email: "hey@lostsignals.studio",
-      url: null,
+      email: "hey@nomorenames.studio",
+      url: "https://nomorenames.studio",
     });
   });
 
@@ -86,7 +86,7 @@ describe("readSiteIdentity", () => {
     // Upgrading an existing deployment must not silently stop its analytics.
     expect(readSiteIdentity(hosted, {}).umami).toMatchObject({
       src: "https://ramen.lostsignals.studio/script.js",
-      domains: "ghosted.lostsignals.studio",
+      domains: "ghosted.boo,ghosted.lostsignals.studio",
     });
     // A self-hosted shape reports nowhere, which is the whole point.
     expect(readSiteIdentity(selfHosted, {}).umami).toBeNull();
@@ -145,9 +145,9 @@ describe("siteOrigin", () => {
   });
 
   it("falls back to the hosted origin rather than emitting relative URLs", () => {
-    expect(siteOrigin({})).toBe("https://ghosted.lostsignals.studio");
+    expect(siteOrigin({})).toBe("https://ghosted.boo");
     expect(siteOrigin({ NEXT_PUBLIC_APP_URL: "  " })).toBe(
-      "https://ghosted.lostsignals.studio",
+      "https://ghosted.boo",
     );
   });
 });

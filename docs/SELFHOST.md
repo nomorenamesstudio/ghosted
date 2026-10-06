@@ -10,7 +10,7 @@ Two shapes, both supported by the same image:
 | **Family / friends** | off | anyone who has the URL | yes |
 | **Solo** | off | nobody — one account, created at boot | no |
 
-The hosted instance (`ghosted.lostsignals.studio`) runs a third shape: landing
+The hosted instance (`ghosted.boo`) runs a third shape: landing
 on, registration open. That is what the defaults do, so a copy that sets nothing
 behaves like it.
 

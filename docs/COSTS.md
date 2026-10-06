@@ -6,7 +6,7 @@ Three lanes, and only one of them is measured here.
 |---|---|---|
 | DeepSeek API, through this harness | Everything the agent did: the app, the reviews, the upgrade, the release | **Usage-based** — the numbers below |
 | Railway | The hosted instance, the staging environment, two Postgres services | Hobby plan, billed monthly — **not sampled in this file** |
-| Domains | `lostsignals.studio` and friends | Yearly registration — **not sampled in this file** |
+| Domains | `ghosted.boo`, `lostsignals.studio` and friends | Yearly registration — **not sampled in this file** |
 
 Most side projects have no idea what they cost, and "it felt cheap" is not a
 number. So this file keeps three answers, in increasing order of truthfulness:
