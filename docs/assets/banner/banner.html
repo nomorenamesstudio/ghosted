@@ -48,17 +48,18 @@
 
   /* --- left: what it is --------------------------------------------------- */
   .brand span {
-    font-size: 50px; font-weight: 600; letter-spacing: -0.035em; line-height: 1;
+    font-size: 50px; font-weight: 600; letter-spacing: -0.035em; line-height: 1; 
   }
   .social .brand span { font-size: 44px; }
 
   h1 {
-    margin-top: 46px;
+    margin-top: 24px;
     font-size: 60px;
     font-weight: 600;
     line-height: 1.1;
     letter-spacing: -0.035em;
     max-width: 790px;
+    text-wrap: balance;
   }
   .social h1 { font-size: 48px; margin-top: 38px; max-width: 560px; }
 
@@ -66,7 +67,7 @@
     margin-top: 34px;
     display: flex; align-items: center; gap: 14px;
     font-size: 19px; font-weight: 450; letter-spacing: -0.01em;
-    color: rgba(255, 255, 255, 0.82);
+    color: rgba(255, 255, 255, 0.7);
   }
   .social .meta { margin-top: 28px; font-size: 17px; }
   .meta i { width: 5px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.45); }
@@ -88,14 +89,14 @@
       0 0 0 1px rgba(255, 255, 255, 0.16);
   }
   /* The cards lean against each other; the ghosts stand in front of them. */
-  .card.ghosted { width: 384px; left: 176px; top: 0; transform: rotate(2.6deg); }
+  .card.ghosted { width: 384px; left: 125px; top: 50px; transform: rotate(2.6deg); }
   .card.offer   { width: 404px; left: 0;    top: 222px; transform: rotate(-3.2deg); }
   .social .card.ghosted { width: 322px; left: 148px; top: 0; transform: rotate(2.6deg); }
   .social .card.offer   { width: 336px; left: 0;     top: 186px; transform: rotate(-3.2deg); }
 
   .mascot { position: absolute; z-index: 2; }
-  .mascot.happy       { width: 146px; left: -62px; top: 150px; }
-  .mascot.finger-guns { width: 158px; right: 6px;  top: 196px; }
+  .mascot.happy       { width: 200px; left: -55px; top: 95px; transform: rotate(-7deg); }
+  .mascot.finger-guns { width: 200px; right: 16px;  top: 260px; transform: rotate(7deg);}
   .social .mascot.happy       { width: 122px; left: -52px; top: 128px; }
   .social .mascot.finger-guns { width: 134px; right: 4px;  top: 164px; }
 </style>
@@ -103,9 +104,9 @@
 <body>
   <div class="canvas" id="canvas">
     <!-- texture -->
-    <div class="ghost" style="width: 190px; left: -34px; top: -46px; transform: rotate(-16deg);"><img src="../../../public/staring-at-phone-sad.svg" width="190" /></div>
+    <!-- <div class="ghost" style="width: 190px; left: -34px; top: -46px; transform: rotate(-16deg);"><img src="../../../public/staring-at-phone-sad.svg" width="190" /></div>
     <div class="ghost" style="width: 132px; left: 640px; bottom: -40px; transform: rotate(12deg);"><img src="../../../public/confused.svg" width="132" /></div>
-    <div class="ghost" style="width: 118px; right: 96px; top: 22px; transform: rotate(-9deg);"><img src="../../../public/content.svg" width="118" /></div>
+    <div class="ghost" style="width: 118px; right: 96px; top: 22px; transform: rotate(-9deg);"><img src="../../../public/content.svg" width="118" /></div> -->
 
     <div class="content">
       <div>
