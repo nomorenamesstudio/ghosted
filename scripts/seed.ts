@@ -325,9 +325,11 @@ async function main() {
         name: "Demo User",
         passwordHash,
         provider: "email",
-        // The live app icon stands in as the demo account's avatar so the user
+        // The zoomed-in alternative icon, not the plain app icon: at avatar size
+        // (32px in the app bar) the tighter crop reads as a face, which is the
+        // version the owner wants in every screenshot.
         // menu and the marketing captures show a face rather than "DU".
-        image: "/icon-192.png",
+        image: "/staring-at-phone-sad-app-icon-alt.png",
       })
       .returning();
     console.log(`created demo user ${DEMO_EMAIL} / ${DEMO_PASSWORD}`);
