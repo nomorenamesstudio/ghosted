@@ -2,6 +2,31 @@
 
 All notable changes, by date and type.
 
+## 1.2.1 — 2026-10-06
+
+### Fixed
+- **CI had been failing in every job that installs anything**, and had been since
+  the Next 15 upgrade: the workflow named `version: 10` while `package.json`
+  declared `packageManager: pnpm@10.12.1`, and `pnpm/action-setup` refuses that
+  combination outright ("Multiple versions of pnpm specified") before a single
+  dependency is fetched. The workflow defers to the package manifest now, which is
+  the same pin the Dockerfile uses. The container job was green throughout, which
+  is what made a workflow problem look like a README problem.
+- **Cloudflare's Web Analytics beacon was refused by our own Content-Security
+  Policy** — the browser logged the refusal and nothing else happened. The script
+  and the endpoint it posts to are both allowed now. Nothing in the application
+  references either host.
+- **Two advisories published after the last release** (`source-map-js`, high;
+  `postcss-selector-parser`, moderate) are pinned to their patched lines rather
+  than written off, and `pnpm audit --prod` is back to its one accepted finding
+  and exits 0.
+
+### Changed
+- The README's board screenshot is the landing page's own capture — applied 5,
+  interviewing 7, offers 4, ghosted 9 — and the application screenshot carries the
+  alternative, zoomed-in avatar the owner asked for. The demo account's avatar in
+  `scripts/seed.ts` is that icon too, so captures start from it.
+
 ## 1.2.0 — 2026-10-06
 
 ### Changed
