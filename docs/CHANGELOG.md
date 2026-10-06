@@ -2,6 +2,24 @@
 
 All notable changes, by date and type.
 
+## 1.2.0 — 2026-10-06
+
+### Changed
+- **The instance lives at `ghosted.boo`.** The canonical origin, the API docs, the
+  release steps and the social card all use it; the old hostname keeps answering
+  so nobody's bookmark breaks, but the tracker's domain guard now counts only the
+  new one.
+- **No More Names Studio is linked** wherever the hosted instance signs itself —
+  the footer credit and the imprint — and the contact address is
+  `hey@nomorenames.studio`, including the landing's sponsorship answer.
+- The README has a banner and screenshots instead of a wall of text, and the
+  repository carries the images' source so they can be regenerated.
+
+### Note
+- Three references to the old domain remain on purpose and are documented in the
+  commit that removed the rest: the analytics script's host (pinned in the CSP
+  too), the Resend-verified transactional sender, and a Buy Me a Coffee handle.
+
 ## 1.1.0 — 2026-10-04
 
 ### Feature
