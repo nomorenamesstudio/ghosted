@@ -75,7 +75,9 @@
   },
   "pnpm": {
     "overrides": {
-      "postcss": "^8.5.18"
+      "postcss": "^8.5.18",
+      "postcss-selector-parser": "^7.1.6",
+      "source-map-js": "^1.2.2"
     },
     "auditConfig": {
       "ignoreGhsas": [

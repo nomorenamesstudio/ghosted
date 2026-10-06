@@ -57,6 +57,13 @@ alarming and mostly inapplicable:
   `pnpm.overrides` (it sits in the production graph, because Next processes CSS
   with it), leaving the one row above.
 
+Two more advisories were published after that upgrade and were closed the same
+way, by pinning the patched line in `pnpm.overrides` rather than writing an
+exception: `source-map-js` (high, GHSA-68fv-2mgg-jv7q, via Next's own postcss)
+and `postcss-selector-parser` (moderate, GHSA-rj75-hqrm-r3gf, via
+`tailwindcss-animate` → tailwindcss). Both are build-time dependencies, and
+pinning a fix is always better than explaining a risk away.
+
 CI runs `pnpm audit --prod` **as a blocking check** now: a new advisory in the
 production tree fails the build, and anything accepted has to be written down
 here first.
