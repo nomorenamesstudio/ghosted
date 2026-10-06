@@ -55,10 +55,7 @@ const HOSTED_OPERATOR = {
 const HOSTED_UMAMI: UmamiConfig = {
   src: "https://ramen.lostsignals.studio/script.js",
   websiteId: "c8f73665-dca1-464b-9427-a56f8b27c799",
-  // Both hostnames answer until the old one is retired: the tracker's domain
-  // guard is an allowlist, and dropping the old name would silently stop
-  // counting traffic that still arrives there.
-  domains: "ghosted.boo,ghosted.lostsignals.studio",
+  domains: "ghosted.boo",
 };
 
 export interface Operator {
