@@ -6,9 +6,16 @@ const isProd = process.env.NODE_ENV === "production";
 
 const umamiOrigin = "https://ramen.lostsignals.studio";
 
+// Cloudflare injects its own analytics beacon for zones with Web Analytics on.
+// It was being blocked by our CSP (the browser refused the script and logged it),
+// so both halves are allowed here: the script it loads and the endpoint it posts
+// to. Nothing in the app references either host.
+const cloudflareScript = "https://static.cloudflareinsights.com";
+const cloudflareBeacon = "https://cloudflareinsights.com";
+
 const scriptSrc = isProd
-  ? `'self' 'unsafe-inline' ${umamiOrigin}` // inline theme no-flash script; no eval in prod
-  : `'self' 'unsafe-inline' 'unsafe-eval' ${umamiOrigin}`;
+  ? `'self' 'unsafe-inline' ${umamiOrigin} ${cloudflareScript}` // inline theme no-flash script; no eval in prod
+  : `'self' 'unsafe-inline' 'unsafe-eval' ${umamiOrigin} ${cloudflareScript}`;
 
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
@@ -27,7 +34,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https:",
       "font-src 'self' data:",
-      `connect-src 'self' ${umamiOrigin}`,
+      `connect-src 'self' ${umamiOrigin} ${cloudflareBeacon}`,
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
