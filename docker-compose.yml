@@ -48,6 +48,7 @@ services:
       # only under `environment:` would leave the hosted default in the HTML.
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
+        NEXT_PUBLIC_DONATE_URL: ${NEXT_PUBLIC_DONATE_URL:-https://www.buymeacoffee.com/nomorenames}
     # Once published, pulling is faster than building:
     # image: ghcr.io/krisztianhadi/ghosted:latest
     container_name: ghosted-app
@@ -72,6 +73,7 @@ services:
       # canonical origin are built from these.
       AUTH_URL: ${AUTH_URL:-http://localhost:8080}
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
+      NEXT_PUBLIC_DONATE_URL: ${NEXT_PUBLIC_DONATE_URL:-https://www.buymeacoffee.com/nomorenames}
       # Deployment shape — see .env.example for the full list and docs/SELFHOST.md
       # for what each combination does.
       SHOW_LANDING: ${SHOW_LANDING:-true}

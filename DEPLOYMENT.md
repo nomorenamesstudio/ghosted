@@ -62,7 +62,7 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
    | `AUTH_SECRET` | `openssl rand -base64 32` |
    | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | from step 3 |
    | `RESEND_API_KEY` | from step 2 |
-   | `EMAIL_FROM` | `Ghosted <ghosted@lostsignals.studio>` |
+   | `EMAIL_FROM` | `Haunty from Ghosted <haunty@ghosted.boo>` |
    | `NEXT_PUBLIC_APP_URL` | `https://<APP_URL-host>` |
    | `NEXT_PUBLIC_DONATE_URL` | your coffee/patreon page |
    | `NODE_ENV` | `production` |
@@ -115,6 +115,14 @@ Five things about Railway environments that cost real time to learn:
 `NEXT_PUBLIC_APP_URL` is baked into prerendered pages, so it must be set **before**
 the build: Railway does pass service variables to the Dockerfile build, verified
 by the staging canonical URL matching the staging domain rather than production's.
+
+### Scope the Resend key to sending
+
+The app only ever sends. Create the key with **Sending access** rather than Full
+access: an environment variable that leaks out of a running container should not
+also be able to read contact lists or change domain records. Reading delivery
+status (which is what this runbook does when mail is in question) needs the wider
+scope, so keep that key in the dashboard rather than in the deployment.
 
 ## 5. Post-launch checklist
 
