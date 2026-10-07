@@ -1,6 +1,6 @@
 {
   "name": "ghosted",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "packageManager": "pnpm@10.12.1",
   "private": true,
   "license": "MIT",

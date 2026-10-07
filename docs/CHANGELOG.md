@@ -2,6 +2,16 @@
 
 All notable changes, by date and type.
 
+## 1.2.3 — 2026-10-07
+
+### Changed
+- **The analytics tracker is served from `ramen.nomorenames.studio`.** That is the
+  Umami instance's canonical host now; `ramen.lostsignals.studio` keeps answering
+  for a few days so any instance that has not been updated keeps counting instead
+  of going quietly blind. The website id is unchanged. It is a build-time value —
+  `next build` inlines it, and `next.config.mjs` pins the same origin in the
+  Content-Security-Policy — so this needs a rebuild, not a variable change.
+
 ## 1.2.2 — 2026-10-06
 
 ### Fixed
