@@ -22,7 +22,7 @@ export const DONATE_HIDE_MS = 7 * 24 * 60 * 60 * 1000; // one week
  */
 export const DONATE_URL =
   process.env.NEXT_PUBLIC_DONATE_URL ??
-  "https://www.buymeacoffee.com/lostsignals";
+  "https://www.buymeacoffee.com/nomorenames";
 
 export function shouldShowBanner(
   state: DonateState | null,
