@@ -20,6 +20,11 @@ FROM base AS build
 # runtime variable. Compose passes it from .env.
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
+# Both are inlined by `next build`, so every NEXT_PUBLIC_* the code reads needs an
+# ARG here or the value silently falls back to the default in the source. This one
+# was missing, which is why setting it on the platform changed nothing.
+ARG NEXT_PUBLIC_DONATE_URL
+ENV NEXT_PUBLIC_DONATE_URL=${NEXT_PUBLIC_DONATE_URL:-https://www.buymeacoffee.com/nomorenames}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Fails the build if a page that reads the environment got prerendered (or the
