@@ -2,6 +2,23 @@
 
 All notable changes, by date and type.
 
+## 1.2.2 — 2026-10-06
+
+### Fixed
+- **`NEXT_PUBLIC_DONATE_URL` could not be set from the deployment.** `next build`
+  inlines every `NEXT_PUBLIC_*` variable, so the Dockerfile has to receive each one
+  as a build ARG — and it declared only `NEXT_PUBLIC_APP_URL`. The donate link
+  therefore always fell back to the value compiled into the source, which is why
+  setting the variable on the platform appeared to do nothing. The ARG, the compose
+  build argument and a note in `.env.example` are all there now.
+
+### Changed
+- The coffee page moved with the studio: `buymeacoffee.com/nomorenames`, in the
+  default, the example and the hosted instance.
+- The mail sender in the preview page and the deployment runbook matches what
+  production sends (`Haunty from Ghosted <haunty@ghosted.boo>`), and the runbook
+  now says to give the app a send-only Resend key.
+
 ## 1.2.1 — 2026-10-06
 
 ### Fixed
