@@ -85,7 +85,7 @@ describe("readSiteIdentity", () => {
   it("keeps the hosted instance's own tracker with no new configuration", () => {
     // Upgrading an existing deployment must not silently stop its analytics.
     expect(readSiteIdentity(hosted, {}).umami).toMatchObject({
-      src: "https://ramen.lostsignals.studio/script.js",
+      src: "https://ramen.nomorenames.studio/script.js",
       domains: "ghosted.boo",
     });
     // A self-hosted shape reports nowhere, which is the whole point.

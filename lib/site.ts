@@ -53,7 +53,7 @@ const HOSTED_OPERATOR = {
  * deployment flags.
  */
 const HOSTED_UMAMI: UmamiConfig = {
-  src: "https://ramen.lostsignals.studio/script.js",
+  src: "https://ramen.nomorenames.studio/script.js",
   websiteId: "c8f73665-dca1-464b-9427-a56f8b27c799",
   domains: "ghosted.boo",
 };

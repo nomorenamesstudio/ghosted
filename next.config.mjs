@@ -4,7 +4,7 @@
 // the production build; keep the production CSP stricter.
 const isProd = process.env.NODE_ENV === "production";
 
-const umamiOrigin = "https://ramen.lostsignals.studio";
+const umamiOrigin = "https://ramen.nomorenames.studio";
 
 // Cloudflare injects its own analytics beacon for zones with Web Analytics on.
 // It was being blocked by our CSP (the browser refused the script and logged it),
