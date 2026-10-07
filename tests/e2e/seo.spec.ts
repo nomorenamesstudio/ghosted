@@ -131,7 +131,7 @@ test("the served page carries no deployment identity of its own", async ({
   // its footer. On this (hosted) shape both would appear in the HTML if they
   // regressed, which is why the assertions mean something.
   const html = await (await request.get("/")).text();
-  expect(html).not.toContain("ramen.lostsignals.studio");
+  expect(html).not.toContain("ramen.nomorenames.studio");
   expect(html).not.toContain("No More Names Studio");
 
   // And the deployment still answers for itself, at runtime.
