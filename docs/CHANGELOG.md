@@ -2,6 +2,84 @@
 
 All notable changes, by date and type.
 
+## 1.3.0 — 2026-10-09
+
+### Feature
+- **Settings shows which sign-in accounts are connected, and what connecting
+  does.** "Connected accounts" gives Google and LinkedIn a row each: a green
+  `Connected` badge for what is attached to the account, a `Connect` button for
+  what is not, and one line of copy saying that a provider attaches to the
+  account when it uses the same email address — it never creates a second one.
+- **A second provider no longer overwrites the first.** OAuth identities moved
+  out of `users.provider`/`provider_id` — which now record only how the account
+  was *created* — into a new `oauth_accounts` table, one row per linked identity,
+  unique on `(provider, provider_id)`. The migration backfills every existing
+  OAuth account, so signing in with a second provider adds a row instead of
+  replacing one. The link / adopt / create rules live in
+  `lib/services/oauth-accounts.ts` and are covered by integration tests at that
+  boundary rather than through Auth.js.
+- **LinkedIn sign-in is live and verified end to end.** `Continue with LinkedIn`
+  carries LinkedIn's mark and the same surface treatment as the Google button,
+  and the login page, the Auth.js config and Settings all read the provider list
+  from one place (`lib/config/oauth-providers.ts`), so a provider can no longer
+  be button-visible in one place and missing in another.
+- **A closed instance stays closed through the OAuth buttons too.**
+  `ALLOW_REGISTRATION=false` hid the register form and refused
+  `POST /api/auth/register`, but the LinkedIn and Google buttons still created
+  accounts. A new `signIn` callback classifies the sign-in first — an identity
+  already linked, or an email that belongs to an existing account, is a sign-in
+  and always allowed; anything else is registration, and is refused with "This
+  instance is not accepting new accounts" when sign-ups are closed.
+- **A provider that shares no email is refused, not given a made-up address.**
+  LinkedIn documents `email` as optional; ghosted used to create
+  `<provider-sub>@linkedin.local` and mark it verified, an account nobody could
+  ever be mailed at. The sign-in now stops with its own message instead.
+- **An account with no password can set one.** Google/LinkedIn sign-ups have no
+  password, and the adopt rule below drops the password of an unverified account
+  a provider takes over. Both states were dead ends: `change-password` needs a
+  password to compare against, and the reset flow only issues a token for an
+  account that has one — so such a user could never sign in with email again.
+  Settings now offers **Set a password** (new `POST /api/auth/set-password`,
+  session-authenticated, refuses an account that already has one), and the
+  password card moved to `components/PasswordCard.tsx` with it.
+- **A dropped password is explained, not discovered at the login form.** When a
+  provider sign-in takes over an unverified account (the adopt rule), the
+  dashboard now shows a one-time notice — "Your password was removed" — with the
+  reason, a *Set a password* link and a Dismiss button. The adopt path stamps
+  `users.password_dropped_at`; dismissing clears it
+  (`POST /api/auth/dismiss-password-notice`), which is permanent rather than the
+  verification banner's 24-hour "Later". The two banners never appear together:
+  adopting an account also marks its email verified.
+- **The provider buttons are on both auth pages, above the email form.** One
+  button signs in *and* signs up, which is the part people miss when they only
+  meet it on one of the two screens — so login and register now render the same
+  `ProviderButtons` first, with the email form under the "or". The register page
+  shows them too.
+- **Closing sign-ups does not take provider sign-in away.** The buttons follow
+  `AUTH_GOOGLE_*` / `AUTH_LINKEDIN_*`, not `ALLOW_REGISTRATION`: an instance that
+  ran open and closed later keeps provider sign-in for the accounts it already
+  has — some of which have no password, so hiding the buttons would lock their
+  owners out. What the flag enforces is the account: a provider sign-in with no
+  account behind it is refused with "This instance is not accepting new
+  accounts. Sign in with the email address you registered with, or ask the
+  operator for one."
+
+### Fixed
+- **OAuth identities were keyed on a value that changes at every sign-in.**
+  `@auth/core` fills `user.id` with a fresh `crypto.randomUUID()` and keeps the
+  provider's own id in `account.providerAccountId` — so the identity rows (and
+  the pre-1.3.0 `users.provider_id` column) held random UUIDs that could never
+  match again. Every sign-in would have added another identity row, and every
+  email-less account would have multiplied into a new account each time. Both
+  callbacks now use `providerAccountId`; migration `0012` deletes the rows
+  written the wrong way, which costs nothing because the email path re-links an
+  account on its next sign-in.
+
+### Changed
+- A provider with only half its credentials set (`AUTH_LINKEDIN_ID` without the
+  secret, or a blank value) now counts as unconfigured instead of rendering a
+  button whose flow dies at the callback.
+
 ## 1.2.3 — 2026-10-07
 
 ### Changed
