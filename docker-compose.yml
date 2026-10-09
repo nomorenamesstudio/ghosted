@@ -49,8 +49,10 @@ services:
       args:
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:8080}
         NEXT_PUBLIC_DONATE_URL: ${NEXT_PUBLIC_DONATE_URL:-https://www.buymeacoffee.com/nomorenames}
-    # Once published, pulling is faster than building:
-    # image: ghcr.io/krisztianhadi/ghosted:latest
+    # No published image, deliberately: everything baked in above is *this*
+    # project's origin, so a prebuilt image would ship this canonical URL,
+    # `og:url`, JSON-LD, emailed links and analytics tracker to someone else's
+    # instance. Building here is the documented path (docs/SELFHOST.md).
     container_name: ghosted-app
     restart: unless-stopped
     depends_on:
