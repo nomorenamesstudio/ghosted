@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { registrationOpen } from "@/lib/config/flags";
+import { configuredOAuthProviders } from "@/lib/config/oauth-providers";
 import { RegisterForm } from "./register-form";
 
 /**
@@ -10,5 +11,8 @@ import { RegisterForm } from "./register-form";
 export default function RegisterPage() {
   if (!registrationOpen()) redirect("/login");
 
-  return <RegisterForm />;
+  // The same provider buttons as the login page: one button does both jobs.
+  const providers = configuredOAuthProviders().map(({ provider }) => provider);
+
+  return <RegisterForm providers={providers} />;
 }

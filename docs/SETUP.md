@@ -90,6 +90,11 @@ pnpm dev:pretty     # same, piped through pino-pretty
 Note: in the development sandbox port 3000 is occupied by a system nginx, so
 e2e tests run the app on port 3100 (see `playwright.config.ts`).
 
+**One dev server at a time.** On the owner's machine :3000 is the live working
+instance. E2E runs and screenshots use :3100 against `TEST_DATABASE_URL`, and
+only while :3000 is stopped — two dev servers share a single `.next`, which
+breaks chunks in both.
+
 Optional demo data:
 
 ```bash

@@ -22,7 +22,15 @@ export { ConfigError };
 export interface RuntimeConfig {
   /** `false` sends `/` to `/login` instead of rendering the landing page. */
   showLanding: boolean;
-  /** `false` hides the register form, OAuth sign-up and "add account" paths. */
+  /**
+   * `false` hides the register form and closes `POST /api/auth/register`.
+   *
+   * The provider buttons stay where the credentials put them: an instance can
+   * run with sign-ups open, get its accounts, and close them later — taking the
+   * buttons away then would lock out everyone who has no password. What the flag
+   * does enforce is that a provider sign-in with no account behind it is refused
+   * (see `oauthSignInDecision`), with a message pointing at the operator.
+   */
   allowRegistration: boolean;
   /** The boot-seeded owner account, when registration is closed. */
   ownerEmail: string | null;

@@ -81,6 +81,12 @@ mail lands in spam.
 The app refuses to start if registration is open in production without a
 transport that actually sends, rather than letting sign-ups break one at a time.
 
+Closing sign-ups later (`ALLOW_REGISTRATION=false`) does not touch provider
+sign-in: the buttons stay if you have credentials, because the accounts that
+already exist may have no password to fall back on. Someone who never had an
+account there gets "This instance is not accepting new accounts" instead of an
+account of their own.
+
 ### Using SMTP instead of Resend
 
 ```ini
@@ -165,7 +171,7 @@ the file to copy. The ones that change what the instance *is*:
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `SHOW_LANDING` | `true` | `false` sends `/` to `/login` instead of the marketing page |
-| `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups and hides the register form |
+| `ALLOW_REGISTRATION` | `true` | `false` closes sign-ups: no register form, and the register API refuses. It does not take the provider buttons away — those follow `AUTH_GOOGLE_*` / `AUTH_LINKEDIN_*`, so accounts that sign in that way keep working; only a provider sign-in with no account behind it is refused |
 | `GHOSTED_USER_EMAIL` | — | the owner account created at boot when registration is closed |
 | `GHOSTED_USER_NAME` | `Haunty` | display name for that account |
 | `GHOSTED_USER_PASSWORD` | random, logged once | set it for scripted setups |

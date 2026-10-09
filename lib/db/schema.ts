@@ -6,6 +6,7 @@ import {
   integer,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
@@ -60,10 +61,30 @@ export const users = pgTable(
      *  initials); OAuth providers fill it, and the demo account points at the
      *  app icon. */
     image: text("image"),
+    /**
+     * How the account was *created* - its origin, not its current sign-in
+     * options. OAuth identities attached to the account live in
+     * `oauth_accounts`, one row each, so linking Google and LinkedIn to the same
+     * account no longer overwrites the other.
+     */
     provider: providerEnum("provider").notNull().default("email"),
+    /**
+     * The provider's subject id, set when the account was created by OAuth.
+     * Accounts created before 1.3.0 hold a random UUID here instead: @auth/core
+     * fills `user.id` that way on every sign-in and keeps the provider's own id
+     * in `account.providerAccountId` (see `providerAccountId` in lib/auth.ts).
+     * Nothing reads this column — linked identities live in `oauth_accounts`.
+     */
     providerId: text("provider_id"),
     emailVerified: boolean("email_verified").notNull().default(false),
     emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    /**
+     * When a provider sign-in took over an unverified account and cleared its
+     * password (the adopt rule in lib/services/oauth-accounts.ts). Drives the
+     * one-time notice on the dashboard, and clearing it is the user
+     * acknowledging it — the event is only interesting until it has been told.
+     */
+    passwordDroppedAt: timestamp("password_dropped_at", { withTimezone: true }),
     /**
      * Set when the account was created with a password the *operator* did not
      * choose — the boot-seeded owner, whose generated password is printed to the
@@ -81,6 +102,37 @@ export const users = pgTable(
       .notNull(),
   },
   (t) => [index("users_email_idx").on(t.email)],
+);
+
+/**
+ * One OAuth identity linked to an account.
+ *
+ * An account can hold several (Google *and* LinkedIn) because the provider
+ * columns on `users` only ever describe how the account was created: a second
+ * provider used to overwrite the first, which both lost the link and made "what
+ * is connected?" unanswerable. The pair is globally unique because a provider
+ * subject identifies exactly one member, and a member's LinkedIn login must
+ * always land on the same account here.
+ */
+export const oauthAccounts = pgTable(
+  "oauth_accounts",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: providerEnum("provider").notNull(),
+    /** The provider's stable subject id (`sub` for OIDC providers). */
+    providerId: text("provider_id").notNull(),
+    /** When the identity was first attached - shown in Settings. */
+    linkedAt: timestamp("linked_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [
+    uniqueIndex("oauth_accounts_provider_id_idx").on(t.provider, t.providerId),
+    index("oauth_accounts_user_id_idx").on(t.userId),
+  ],
 );
 
 export const applications = pgTable(
@@ -211,6 +263,14 @@ export const emailVerificationTokens = pgTable(
 
 export const usersRelations = relations(users, ({ many }) => ({
   applications: many(applications),
+  oauthAccounts: many(oauthAccounts),
+}));
+
+export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
+  user: one(users, {
+    fields: [oauthAccounts.userId],
+    references: [users.id],
+  }),
 }));
 
 export const applicationsRelations = relations(applications, ({ one, many }) => ({
@@ -250,6 +310,8 @@ export const emailVerificationTokensRelations = relations(
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+export type OAuthAccount = typeof oauthAccounts.$inferSelect;
+export type NewOAuthAccount = typeof oauthAccounts.$inferInsert;
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
 export type Milestone = typeof milestones.$inferSelect;

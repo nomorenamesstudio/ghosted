@@ -2,16 +2,49 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Linkedin from "next-auth/providers/linkedin";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
 import { users, type Provider } from "@/lib/db/schema";
+import { registrationOpen } from "@/lib/config/flags";
+import {
+  configuredOAuthProviders,
+  isOAuthProvider,
+} from "@/lib/config/oauth-providers";
+import {
+  classifyOAuthSignIn,
+  oauthSignInDecision,
+  resolveOAuthUser,
+} from "@/lib/services/oauth-accounts";
 import { resolveGravatarPath } from "@/lib/services/gravatar";
 import { logger } from "@/lib/utils/logger";
 
 export const SESSION_IDLE_SECONDS = 30 * 24 * 60 * 60; // 30 days idle
 export const SESSION_ABSOLUTE_SECONDS = 7 * 24 * 60 * 60; // 7 days absolute
 export const BCRYPT_ROUNDS = 12;
+
+/**
+ * The OAuth providers this deployment has credentials for. One reader shared
+ * with the login page and Settings, so the buttons, the provider list and the
+ * "connected accounts" panel can never disagree about what is available.
+ */
+const oauthProviders = configuredOAuthProviders();
+
+/**
+ * The provider's own, stable id for the member.
+ *
+ * Deliberately not `user.id`: @auth/core fills that with a fresh
+ * `crypto.randomUUID()` on every sign-in and keeps the provider's id in
+ * `account.providerAccountId` (@auth/core `getUserAndAccount`). An identity
+ * keyed on `user.id` matches nothing on the next sign-in, so every sign-in
+ * would write another identity row and every email-less account would multiply.
+ */
+function providerAccountId(
+  user: { id?: string | number },
+  account: { providerAccountId?: string },
+): string {
+  return account.providerAccountId || String(user.id ?? "");
+}
 
 // In production, pin the canonical base URL so Auth.js never derives it from
 // the spoofable `x-forwarded-host` / `x-forwarded-proto` request headers
@@ -84,24 +117,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
-    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
-      ? [
-          Google({
-            clientId: process.env.AUTH_GOOGLE_ID,
-            clientSecret: process.env.AUTH_GOOGLE_SECRET,
-          }),
-        ]
-      : []),
-    ...(process.env.AUTH_LINKEDIN_ID && process.env.AUTH_LINKEDIN_SECRET
-      ? [
-          Linkedin({
-            clientId: process.env.AUTH_LINKEDIN_ID,
-            clientSecret: process.env.AUTH_LINKEDIN_SECRET,
-          }),
-        ]
-      : []),
+    ...oauthProviders.map(({ provider, clientId, clientSecret }) =>
+      provider === "google"
+        ? Google({ clientId, clientSecret })
+        : Linkedin({ clientId, clientSecret }),
+    ),
   ],
   callbacks: {
+    /**
+     * The gate, and the only place a stranger is turned away before anything is
+     * written: linking to an existing account is a sign-in, creating one is
+     * registration, and `ALLOW_REGISTRATION=false` means it. A provider that
+     * shares no email cannot be matched to an account, so it is refused with its
+     * own message instead of getting a fabricated address.
+     *
+     * Returning a string redirects (see handleAuthorized in @auth/core); the
+     * default `redirect` callback keeps it to same-origin paths.
+     */
+    async signIn({ user, account }) {
+      if (!account || !isOAuthProvider(account.provider)) return true;
+
+      const outcome = await classifyOAuthSignIn({
+        provider: account.provider,
+        providerId: providerAccountId(user, account),
+        email: user.email,
+        name: user.name,
+      });
+      const decision = oauthSignInDecision(outcome, {
+        registrationOpen: registrationOpen(),
+      });
+      if (decision === "allow") return true;
+      if (decision === "email-required") {
+        logger.info(
+          { provider: account.provider },
+          "oauth: refused sign-in, provider shared no email",
+        );
+        return "/login?error=OAuthEmailRequired";
+      }
+      logger.info(
+        { provider: account.provider },
+        "oauth: refused sign-in, registration is closed",
+      );
+      return "/login?error=RegistrationClosed";
+    },
     async jwt({ token, user, account, trigger, session }) {
       // Profile updates (name/email) propagate into the JWT immediately so
       // the user menu stays in sync without a fresh sign-in.
@@ -146,72 +204,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
-      // OAuth sign-in: find-or-create our DB user and pin token.sub to OUR id.
-      if (user && account?.provider && account.provider !== "credentials") {
-        const provider = account.provider as Provider;
-        const providerId = String(user.id);
-        let [dbUser] = await db
-          .select()
-          .from(users)
-          .where(
-            and(eq(users.provider, provider), eq(users.providerId, providerId)),
-          )
-          .limit(1);
-
-        if (!dbUser) {
-          const email = user.email?.trim().toLowerCase();
-          if (email) {
-            [dbUser] = await db
-              .select()
-              .from(users)
-              .where(eq(users.email, email))
-              .limit(1);
-            if (dbUser) {
-              if (dbUser.emailVerified) {
-                // Safe link: the existing account already proved email
-                // ownership via a verification link, so attaching the OAuth
-                // identity to it is legitimate.
-                [dbUser] = await db
-                  .update(users)
-                  .set({ provider, providerId })
-                  .where(eq(users.id, dbUser.id))
-                  .returning();
-              } else {
-                // The OAuth provider has just verified this email, so this
-                // user owns it. The existing account is unverified (possibly
-                // registered by someone else — email squatting). Adopt it for
-                // the verified OAuth identity, but drop the password
-                // credential so a squatter can never keep password access to
-                // the account afterwards.
-                [dbUser] = await db
-                  .update(users)
-                  .set({
-                    provider,
-                    providerId,
-                    emailVerified: true,
-                    emailVerifiedAt: new Date(),
-                    passwordHash: null,
-                  })
-                  .where(eq(users.id, dbUser.id))
-                  .returning();
-              }
-            }
-          }
-          if (!dbUser) {
-            [dbUser] = await db
-              .insert(users)
-              .values({
-                email: email ?? `${providerId}@${provider}.local`,
-                name: user.name ?? "User",
-                provider,
-                providerId,
-                // OAuth providers verify the email themselves.
-                emailVerified: true,
-              })
-              .returning();
-          }
-        }
-        token.sub = dbUser.id;
+      // OAuth sign-in: resolve the provider identity to a local account — an
+      // existing link, the account that owns the email, or a new account — and
+      // pin token.sub to OUR id. The rules live in
+      // lib/services/oauth-accounts.ts so they can be tested without Auth.js.
+      if (user && account?.provider && isOAuthProvider(account.provider)) {
+        const { userId } = await resolveOAuthUser({
+          provider: account.provider,
+          providerId: providerAccountId(user, account),
+          email: user.email,
+          name: user.name,
+        });
+        token.sub = userId;
         if (user.image) token.picture = user.image;
         // OAuth providers verify the email themselves, so the account is
         // always considered verified after linking/creating.

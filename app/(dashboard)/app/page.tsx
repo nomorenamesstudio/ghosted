@@ -23,6 +23,7 @@ export default async function DashboardPage() {
       .select({
         emailVerified: users.emailVerified,
         patienceLevel: users.patienceLevel,
+        passwordDroppedAt: users.passwordDroppedAt,
       })
       .from(users)
       .where(eq(users.id, user.id))
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
   return (
     <Dashboard
       emailVerified={emailVerified}
+      passwordDropped={Boolean(dbUser?.passwordDroppedAt)}
       applicationCount={applicationCount}
       unverifiedAppLimit={UNVERIFIED_APP_LIMIT}
       patienceDays={patienceDays}

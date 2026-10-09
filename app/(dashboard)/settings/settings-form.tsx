@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import {
   BadgeCheck,
   Database,
@@ -11,7 +11,6 @@ import {
   FaceGrinning,
   FaceSlightlySmiling,
   Hourglass,
-  KeyRound,
   Mail,
   Moon,
   Palette,
@@ -24,12 +23,16 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { PatienceLevel } from "@/lib/db/schema";
+import type { OAuthProvider } from "@/lib/config/oauth-providers";
 import {
   PATIENCE_LABELS,
   PATIENCE_LEVELS,
 } from "@/lib/utils/status";
 import { useTheme } from "@/components/theme-provider";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ConnectedAccountsCard } from "@/components/ConnectedAccountsCard";
+import { Message, type Msg } from "@/components/FormMessage";
+import { PasswordCard } from "@/components/PasswordCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,24 +59,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Msg = { type: "ok" | "error"; text: string } | null;
-
-function Message({ state }: { state: Msg }) {
-  if (!state) return null;
-  return (
-    <p
-      role={state.type === "error" ? "alert" : "status"}
-      className={
-        state.type === "error"
-          ? "text-sm text-destructive"
-          : "text-sm text-emerald-600 dark:text-emerald-400"
-      }
-    >
-      {state.text}
-    </p>
-  );
-}
-
 /**
  * One face per patience level - the friendlier the face, the longer the app
  * waits before it is called ghosted.
@@ -90,6 +75,9 @@ export function SettingsForm({
   emailVerified,
   patienceLevel: initialPatience,
   canDeleteAccount,
+  oauthProviders,
+  linkedProviders,
+  hasPassword,
 }: {
   name: string;
   email: string;
@@ -102,6 +90,12 @@ export function SettingsForm({
    * server will not honour.
    */
   canDeleteAccount: boolean;
+  /** The sign-in providers this deployment has credentials for, in display order. */
+  oauthProviders: OAuthProvider[];
+  /** The providers already attached to this account. */
+  linkedProviders: OAuthProvider[];
+  /** False for an account that signs in with a provider only — see PasswordCard. */
+  hasPassword: boolean;
 }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -117,21 +111,12 @@ export function SettingsForm({
   const [profileMsg, setProfileMsg] = useState<Msg>(null);
   const [profileBusy, setProfileBusy] = useState(false);
 
-  // Password change modal.
-  const [pwOpen, setPwOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [pwMsg, setPwMsg] = useState<Msg>(null);
-  const [pwBusy, setPwBusy] = useState(false);
-
   // Import modal: a file, and one honest question about what it replaces.
   const [importOpen, setImportOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importReplace, setImportReplace] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
   const [importMsg, setImportMsg] = useState<Msg>(null);
-  const [pwUpdated, setPwUpdated] = useState(false);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
@@ -228,47 +213,6 @@ export function SettingsForm({
     setName(savedName);
     setEmail(savedEmail);
     setProfileMsg(null);
-  }
-
-  async function submitPassword(e: React.FormEvent) {
-    e.preventDefault();
-    setPwMsg(null);
-    if (newPassword !== confirmPassword) {
-      setPwMsg({ type: "error", text: "Passwords do not match." });
-      return;
-    }
-    if (newPassword.length < 8) {
-      setPwMsg({
-        type: "error",
-        text: "New password must be at least 8 characters.",
-      });
-      return;
-    }
-    setPwBusy(true);
-    try {
-      const res = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-          confirmPassword,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        throw new Error(body?.error ?? "Failed to change password");
-      }
-      setPwOpen(false);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPwUpdated(true);
-    } catch (err) {
-      setPwMsg({ type: "error", text: (err as Error).message });
-    } finally {
-      setPwBusy(false);
-    }
   }
 
   async function submitImport(event: React.FormEvent) {
@@ -484,28 +428,13 @@ export function SettingsForm({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4" />
-            Password
-          </CardTitle>
-          <CardDescription>
-            Change the password used to sign in with email.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button variant="outline" onClick={() => setPwOpen(true)}>
-            <KeyRound />
-            Change password
-          </Button>
-          {pwUpdated && (
-            <p role="status" className="text-sm text-emerald-600 dark:text-emerald-400">
-              Password updated.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      <PasswordCard hasPassword={hasPassword} />
+
+      <ConnectedAccountsCard
+        providers={oauthProviders}
+        linkedProviders={linkedProviders}
+        onConnect={(provider) => signIn(provider, { callbackUrl: "/settings" })}
+      />
 
       <Card>
         <CardHeader>
@@ -619,71 +548,6 @@ export function SettingsForm({
               </Button>
               <Button type="submit" disabled={!importFile || importBusy}>
                 {importBusy ? "Importing…" : "Import"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password change modal */}
-      <Dialog open={pwOpen} onOpenChange={setPwOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change password</DialogTitle>
-            <DialogDescription>
-              Choose a new password (at least 8 characters).
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={submitPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="pw-current">Current password</Label>
-              <Input
-                id="pw-current"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pw-new">New password</Label>
-              <Input
-                id="pw-new"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pw-confirm">Confirm new password</Label>
-              <Input
-                id="pw-confirm"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Message state={pwMsg} />
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setPwOpen(false)}
-                disabled={pwBusy}
-              >
-                <X />
-                Cancel
-              </Button>
-              <Button type="submit" disabled={pwBusy}>
-                <Save />
-                {pwBusy ? "Updating…" : "Update password"}
               </Button>
             </DialogFooter>
           </form>
