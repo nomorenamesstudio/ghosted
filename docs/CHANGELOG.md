@@ -2,6 +2,28 @@
 
 All notable changes, by date and type.
 
+## 1.3.1 — 2026-10-09
+
+### Fixed
+- **The auth screens say what creating an account or signing in agrees to**, one
+  line under the box: "By creating an account or signing in you agree to the
+  Terms of Service and the Privacy Policy", both linked. A footer link alone
+  does not incorporate terms into the contract (OLG Frankfurt, 6 U 121/21), and
+  the OAuth buttons create accounts from that same screen. Deliberately not a
+  checkbox: a privacy policy is information the controller owes (GDPR Art. 13)
+  rather than something to accept, and demanding acceptance of it can imply a
+  consent basis the service does not rely on.
+
+### Changed
+- **No prebuilt container image is published.** The origin is baked at build
+  time, so a shared image would carry this instance's canonical URL, `og:url`,
+  JSON-LD, emailed links and analytics tracker to someone else's domain — the
+  failure would show up in their users' inboxes. `docs/RELEASING.md` and
+  `docs/SELFHOST.md` say so, and the commented `image:` line in
+  `docker-compose.yml` is gone. Self-hosters run
+  `docker compose --profile selfhost up -d --build`, which is the documented path
+  and what CI boots on every push.
+
 ## 1.3.0 — 2026-10-09
 
 ### Feature
