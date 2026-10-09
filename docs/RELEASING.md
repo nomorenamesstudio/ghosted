@@ -27,17 +27,15 @@ short one.
    body, and add anything an operator must act on (a new environment variable, a
    migration, a breaking change). A release that silently requires a new variable
    is a support ticket.
-6. **Publish the image**, tagged twice so both answers exist:
-   ```bash
-   docker build --build-arg NEXT_PUBLIC_APP_URL=https://ghosted.boo \
-     -t ghcr.io/krisztianhadi/ghosted:1.0.0 -t ghcr.io/krisztianhadi/ghosted:latest .
-   docker push ghcr.io/krisztianhadi/ghosted:1.0.0
-   docker push ghcr.io/krisztianhadi/ghosted:latest
-   ```
-   **Prebuilt images bake `NEXT_PUBLIC_APP_URL`** (it is the canonical URL, the
-   `og:url` and the JSON-LD `url`). A self-hoster who wants their own domain in
-   those places builds their own image — that is what `docker compose up --build`
-   does, and it is the documented path.
+6. **No prebuilt image is published**, on purpose. `NEXT_PUBLIC_APP_URL` and the
+   donate URL are baked at build time, and so are the prerendered canonical URL,
+   `og:url`, JSON-LD, emailed links and the analytics tracker's CSP origin — a
+   published image would therefore be the hosted instance's image, wrong for
+   anyone else's domain, and wrong in a way that is not obvious (their
+   verification mail would link to ghosted.boo). Self-hosters run
+   `docker compose --profile selfhost up -d --build`, which is the documented
+   path; CI proves the Dockerfile still builds and boots on every push, which is
+   what the release actually needs.
 
 7. **Sync the release back into `staging`** (`git merge --ff-only main`). The
    version bump makes the two branches differ the moment a release is cut, and

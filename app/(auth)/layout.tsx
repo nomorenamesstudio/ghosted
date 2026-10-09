@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AppProviders } from "@/components/AppProviders";
+import { LegalNotice } from "@/components/LegalNotice";
 import { runtimeConfig } from "@/lib/config/flags";
 import { siteIdentity } from "@/lib/site";
 
@@ -57,6 +58,7 @@ export default function AuthLayout({
             <div className="flex flex-col items-center gap-2">{mark}</div>
           )}
           {children}
+          <LegalNotice />
         </main>
       </div>
     </AppProviders>

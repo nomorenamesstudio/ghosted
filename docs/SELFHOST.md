@@ -257,10 +257,11 @@ setting on a running container or have to build again:
 | `AUTH_SECRET`, `AUTH_URL` | |
 
 `docker compose --profile selfhost up -d --build` passes `NEXT_PUBLIC_APP_URL`
-into the build, so the images you build yourself carry your own origin. If you
-ever pull a **prebuilt** image instead, that origin is the one it was built with
-— set `NEXT_PUBLIC_APP_URL` in `.env` and build your own if you want your domain
-in the canonical URL.
+into the build, so the images you build yourself carry your own origin. That is
+the only way to get one: no prebuilt image is published, precisely because this
+value is baked in — a shared one would ship the original build's canonical URL,
+`og:url`, JSON-LD and emailed links to your instance, which is a failure you
+would only notice in someone else's inbox.
 
 The landing, the legal pages and the sign-in screen are the pages where this
 matters, and they are handled deliberately: the landing is prerendered but

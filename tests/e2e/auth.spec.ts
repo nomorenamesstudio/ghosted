@@ -32,6 +32,30 @@ test("unauthenticated users are redirected to login", async ({ page }) => {
 });
 
 /**
+ * The one-line legal notice under the auth box, with both documents reachable
+ * from it. It is what points at the terms where an account is created — a footer
+ * link alone does not incorporate them (OLG Frankfurt, 6 U 121/21) — and the
+ * OAuth buttons create accounts from this same screen.
+ */
+test("the auth pages say what signing up agrees to", async ({ page }) => {
+  for (const path of ["/login", "/register"]) {
+    await page.goto(path);
+    // Scoped to `main`: the footer carries its own links to the same documents,
+    // and the notice is the one under the form.
+    const main = page.getByRole("main");
+    await expect(
+      main.getByText("By creating an account or signing in you agree to the"),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("link", { name: "Terms of Service" }),
+    ).toHaveAttribute("href", "/terms");
+    await expect(
+      main.getByRole("link", { name: "Privacy Policy" }),
+    ).toHaveAttribute("href", "/privacy");
+  }
+});
+
+/**
  * The flow the owner asked for: the landing stays reachable for someone who is
  * already signed in — a marketing page you can only see while logged out is a
  * page you cannot link to anyone — and "Sign in" is what takes them into the
