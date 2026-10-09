@@ -44,8 +44,10 @@ components/
   Dashboard / DonateBanner
 lib/
   auth.ts                 # Auth.js v5 config (JWT, bcrypt, Google/LinkedIn OAuth)
+  config/oauth-providers.ts# which OAuth providers this deployment offers
   api.ts                  # typed client-side API + error handling
   db/                     # Drizzle schema + client
+  services/oauth-accounts.ts# linking rules: link / adopt / create
   services/applications.ts# transactional business logic (the core)
   services/company-logos.ts# logo cache-aside (DB + favicon services)
   services/gravatar.ts    # gravatar lookup, asked once at sign-in
@@ -122,6 +124,37 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   surfaced in the UI via a banner + modal.
 - **Email verification**: email accounts start unverified; changing the email
   resets verification. OAuth accounts are verified by their provider.
+- **OAuth identities are rows, not columns**: `oauth_accounts` holds one row per
+  `(provider, provider_id)`, so one account can carry Google *and* LinkedIn. The
+  `users.provider`/`provider_id` columns only record how the account was
+  *created* and are never rewritten by a later link — that overwrite is what used
+  to lose the first provider. Linking is by email and only for an account that
+  already proved it owns the address; an *unverified* account with the same email
+  is adopted instead, with its password dropped, so an email squatter cannot keep
+  a way in after the real owner signs in with a provider. Settings shows the
+  links; a provider whose credentials the operator removed keeps its row. That
+  dropped password is not a dead end: an account without one sets its first
+  through `POST /api/auth/set-password`, which is also the only way an
+  OAuth-created account can sign in with email. The person is told as well — the
+  adopt path stamps `users.password_dropped_at`, and the dashboard shows a
+  one-time notice (`components/PasswordNoticeBanner.tsx`) until they dismiss it,
+  which clears the stamp.
+- **The provider buttons follow the credentials, not the registration flag**:
+  `configuredOAuthProviders()` decides what the login page, the register page and
+  Settings offer, so an instance that ran with sign-ups open and closed them
+  later keeps provider sign-in for the accounts it already has (some of which
+  have no password). What `ALLOW_REGISTRATION=false` enforces is the account:
+  `oauthSignInDecision` refuses a sign-in with no account behind it, with a
+  message pointing at the operator. Login and register render the same
+  `ProviderButtons` in the same position for the same reason — one button both
+  signs in and signs up.
+- **The identity key is `account.providerAccountId`, never `user.id`**: @auth/core
+  fills `user.id` with a fresh `crypto.randomUUID()` on every sign-in (its
+  `getUserAndAccount`), so keying an identity on it matches nothing next time and
+  writes another row. `ALLOW_REGISTRATION=false` is enforced in the `signIn`
+  callback, which classifies the sign-in read-only first (`classifyOAuthSignIn`)
+  and only then allows or refuses it — the writing happens later, in the `jwt`
+  callback, through `resolveOAuthUser`.
 - **Rate limiting**: in-memory sliding window per IP + per account, with
   per-endpoint scopes and success-reset. Fine for a single-user app; back it
   with Redis for horizontal scaling.
@@ -219,6 +252,13 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   and re-validates the upstream body (status, raster-only content type, 512KB
   cap) rather than trusting the status code, since an HTML error page cached as
   an image is worse than no avatar at all.
+
+- **US spelling throughout, identifiers included**: project text, UI copy, code
+  identifiers and API names use US English — color, gray, center, favorite,
+  behavior, normalize, and with it `normalizeDomain` — even though the author
+  mixes UK and US forms elsewhere. Exception: `docs/reviews/raw/*` are verbatim
+  third-party review transcripts and stay exactly as received; the synthesized
+  `docs/reviews/design-review-*.md` is ours and gets aligned.
 
 ## Performance notes
 

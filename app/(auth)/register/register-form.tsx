@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { ProviderButtons } from "@/components/ProviderButtons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,8 +15,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { type OAuthProvider } from "@/lib/config/oauth-providers";
 
-export function RegisterForm() {
+export function RegisterForm({ providers }: { providers: OAuthProvider[] }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
@@ -57,7 +59,12 @@ export function RegisterForm() {
         <CardTitle>Create account</CardTitle>
         <CardDescription>Start your job hunt with Ghosted.</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Same buttons, same order as the login page: the one that registers
+            is also the one that signs in, and people who only ever meet it here
+            should not have to guess that. */}
+        <ProviderButtons providers={providers} />
+
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>

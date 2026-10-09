@@ -14,6 +14,8 @@ vi.mock("@/lib/auth", () => ({
 
 import { PATCH as PROFILE } from "@/app/api/auth/profile/route";
 import { POST as CHANGE_PASSWORD } from "@/app/api/auth/change-password/route";
+import { POST as SET_PASSWORD } from "@/app/api/auth/set-password/route";
+import { POST as DISMISS_NOTICE } from "@/app/api/auth/dismiss-password-notice/route";
 import { DELETE as DELETE_ACCOUNT } from "@/app/api/auth/account/route";
 import { GET as EXPORT } from "@/app/api/auth/export/route";
 import { POST as CREATE_APP } from "@/app/api/applications/route";
@@ -184,6 +186,79 @@ describe("POST /api/auth/change-password", () => {
     expect(String(JSON.stringify(json.details ?? ""))).toContain(
       "Passwords do not match",
     );
+  });
+});
+
+describe("POST /api/auth/set-password", () => {
+  it("gives an account that has no password its first one", async () => {
+    // The state a Google/LinkedIn sign-up leaves behind, and the state the
+    // adopt rule leaves behind when it drops an unverified account's password.
+    const user = await createUser("oauth-only@test.dev");
+    await db
+      .update(users)
+      .set({ passwordHash: null, provider: "linkedin" })
+      .where(eq(users.id, user.id));
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    const res = await SET_PASSWORD(
+      req(`${base}/set-password`, "POST", {
+        newPassword: "brand-new-password1",
+        confirmPassword: "brand-new-password1",
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id));
+    expect(await bcrypt.compare("brand-new-password1", row.passwordHash!)).toBe(
+      true,
+    );
+  });
+
+  it("refuses an account that already has one", async () => {
+    const user = await createUser("has-password@test.dev", "User", "existing1");
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    const res = await SET_PASSWORD(
+      req(`${base}/set-password`, "POST", {
+        newPassword: "replacement1",
+        confirmPassword: "replacement1",
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await readJson(res)).code).toBe("PASSWORD_EXISTS");
+
+    const [row] = await db.select().from(users).where(eq(users.id, user.id));
+    expect(await bcrypt.compare("existing1", row.passwordHash!)).toBe(true);
+  });
+});
+
+describe("POST /api/auth/dismiss-password-notice", () => {
+  it("clears the notice for the caller and nobody else", async () => {
+    const mine = await createUser("notice@test.dev");
+    const theirs = await createUser("other-notice@test.dev");
+    await db
+      .update(users)
+      .set({ passwordDroppedAt: new Date() })
+      .where(eq(users.id, mine.id));
+    await db
+      .update(users)
+      .set({ passwordDroppedAt: new Date() })
+      .where(eq(users.id, theirs.id));
+    authMock.mockResolvedValueOnce(mockSession(mine.id));
+
+    const res = await DISMISS_NOTICE();
+    expect(res.status).toBe(200);
+
+    const [myRow] = await db.select().from(users).where(eq(users.id, mine.id));
+    const [theirRow] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, theirs.id));
+    expect(myRow.passwordDroppedAt).toBeNull();
+    expect(theirRow.passwordDroppedAt).not.toBeNull();
   });
 });
 

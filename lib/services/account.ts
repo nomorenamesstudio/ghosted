@@ -106,9 +106,60 @@ export async function changePassword(
     .where(eq(users.id, userId));
 }
 
+/**
+ * Set the *first* password on an account that has none.
+ *
+ * Accounts created by Google or LinkedIn have no password, and an account whose
+ * email was unverified when a provider adopted it has its old one dropped (see
+ * the adopt rule in lib/services/oauth-accounts.ts). Without this, both states
+ * are dead ends: `changePassword` needs a password to compare, and the reset
+ * flow only issues a token for an account that has one — so such a user could
+ * never sign in with email again.
+ *
+ * Refuses an account that already has a password, so this can never be used to
+ * overwrite one without proving it.
+ */
+export async function setPassword(
+  userId: string,
+  newPassword: string,
+): Promise<void> {
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) throw new ApiError(404, "User not found", "NOT_FOUND");
+  if (user.passwordHash) {
+    throw new ApiError(
+      400,
+      "This account already has a password — change it instead",
+      "PASSWORD_EXISTS",
+    );
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  await db
+    .update(users)
+    .set({ passwordHash, mustChangePassword: false })
+    .where(eq(users.id, userId));
+}
+
 /** GDPR erasure: delete the account (cascades to applications, milestones, tokens). */
 export async function deleteAccount(userId: string): Promise<void> {
   await db.delete(users).where(eq(users.id, userId));
+}
+
+/**
+ * Acknowledge the one-time notice that a provider sign-in cleared the account's
+ * password: it has been told, so the dashboard stops showing it. Deliberately
+ * just a marker — the password itself is already gone, and Settings offers to
+ * set a new one for as long as there is none.
+ */
+export async function acknowledgePasswordDrop(userId: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ passwordDroppedAt: null })
+    .where(eq(users.id, userId));
 }
 
 /**

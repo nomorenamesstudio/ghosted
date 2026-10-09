@@ -183,6 +183,8 @@ application.
 | POST | /auth/resend-verification | Resend the verification email (signed-in, per-user rate limited) |
 | PATCH | /auth/profile | Update name / email / `patienceLevel` (changing email resets verification; 409 on duplicate) |
 | POST | /auth/change-password | Change password (current password required, rate limited) |
+| POST | /auth/set-password | Set the first password on an account that has none (session only; 400 `PASSWORD_EXISTS` if one is already set) |
+| POST | /auth/dismiss-password-notice | Acknowledge the "we cleared your password" notice on the dashboard (session; clears the marker) |
 | DELETE | /auth/account | GDPR erasure - permanently delete account + all data |
 | GET | /auth/export | GDPR portability - download all data as JSON |
 

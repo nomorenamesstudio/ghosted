@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getStats } from "@/lib/api";
 import type { DisplayStatus } from "@/lib/utils/status";
 import { DonateBanner } from "./DonateBanner";
+import { PasswordNoticeBanner } from "./PasswordNoticeBanner";
 import { VerificationBanner } from "./VerificationBanner";
 import { ApplicationList, type ViewMode } from "./ApplicationList";
 import { ScrollTopButton } from "./ScrollTopButton";
@@ -23,11 +24,14 @@ const VIEW_KEY = "ghosted-view";
  */
 export function Dashboard({
   emailVerified,
+  passwordDropped,
   applicationCount,
   unverifiedAppLimit,
   patienceDays,
 }: {
   emailVerified: boolean;
+  /** True while the account still owes the "we cleared your password" notice. */
+  passwordDropped: boolean;
   applicationCount: number;
   unverifiedAppLimit: number;
   /** Ghosted threshold from the user's patience level (Settings). */
@@ -107,6 +111,10 @@ export function Dashboard({
           banner down (space-y applies margin to every sibling after the first). */}
       <h1 className="sr-only">Applications</h1>
       <div className="space-y-6 pt-4">
+        {/* About the account, not about applications, so it does not wait for
+            the totals and shows on an empty dashboard too. Dismissing it is a
+            write to the server, so it does not come back. */}
+        <PasswordNoticeBanner show={passwordDropped} />
         {/* Nothing above or below the header renders until the totals are in.
             The banner's own reason to exist depends on them (an account with no
             applications never shows it) - and that is the same "we do not know

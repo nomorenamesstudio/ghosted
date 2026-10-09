@@ -43,7 +43,24 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
    - Authorized redirect URI: `https://<APP_URL-host>/api/auth/callback/google`
 4. Copy the Client ID → `AUTH_GOOGLE_ID`, Client secret →
    `AUTH_GOOGLE_SECRET`.
-5. (Optional) Same for LinkedIn if you want the LinkedIn button later.
+5. (Optional) LinkedIn sign-in — a separate app, not a Google setting:
+   1. https://www.linkedin.com/developers/apps → **Create app**. Pick the
+      LinkedIn Page that owns it (the studio/company page). The association is
+      **permanent** — an app cannot be moved to another Page later — so choose
+      the entity that outlives a single product. The form also wants a privacy
+      policy URL (`https://<APP_URL-host>/privacy`) and a logo.
+   2. **Products** → request **Sign in with LinkedIn using OpenID Connect**. It is
+      self-service (no partner review) and grants `openid`, `profile`, `email`.
+   3. **Auth** → **Authorized redirect URLs**, exact string, no trailing slash and
+      no query string:
+      - `https://<APP_URL-host>/api/auth/callback/linkedin`
+      - `http://localhost:3000/api/auth/callback/linkedin` for local dev
+   4. Copy the Client ID → `AUTH_LINKEDIN_ID`, Primary Client Secret →
+      `AUTH_LINKEDIN_SECRET`. Ignore the portal's token generator (the "OAuth
+      2.0 2-month access token"): the app exchanges its own codes. Ignore the
+      Secondary client secret unless rotating.
+   5. Settings shows both providers with a `Connect` button, so a signed-in user
+      can attach either one without going through the login page.
 
 ## 4. Railway
 

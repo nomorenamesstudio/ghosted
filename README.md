@@ -115,7 +115,7 @@ Full walkthrough, environment reference, email options, backups and upgrades:
 | Framework    | Next.js 15 (App Router) + React 19                                  |
 | ORM          | Drizzle + drizzle-kit (SQL migrations, no auto-sync in prod)        |
 | Database     | PostgreSQL 16 (local Docker; Neon/Supabase-ready)                   |
-| Auth         | Auth.js v5 (email/password + Google OAuth; LinkedIn when configured) |
+| Auth         | Auth.js v5 (email/password + Google/LinkedIn when configured)        |
 | UI           | shadcn/ui-style components + Tailwind CSS                           |
 | Client state | TanStack Query (caching + optimistic updates)                       |
 | Validation   | Zod v4                                                              |

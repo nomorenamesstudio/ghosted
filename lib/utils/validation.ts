@@ -198,6 +198,24 @@ export const changePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+/**
+ * The first password on an account that has none (signed up with Google or
+ * LinkedIn, or adopted by one). No `currentPassword`: there is nothing to prove
+ * beyond the session that carries the request.
+ */
+export const setPasswordSchema = z
+  .object({
+    newPassword: passwordSchema,
+    confirmPassword: z
+      .string()
+      .min(1, "Please confirm the new password")
+      .max(200),
+  })
+  .refine((v) => v.newPassword === v.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 export const resetPasswordSchema = z.object({
   token: z.string().trim().min(20, "Invalid reset token").max(300),
   password: passwordSchema,
