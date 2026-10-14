@@ -2,6 +2,198 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-14
+
+### Security audit
+- **The first autonomous pentest, run against a disposable local production
+  build, with every finding replayed by hand afterward.** Strix 1.7.0 (the
+  open-source CLI, GLM-5.3 over OpenRouter) ran a `quick` and a `standard` pass
+  against an instance of its own — separate Postgres, a Mailpit SMTP sink, two
+  seeded accounts — with a `git archive` copy of the source mounted next to the
+  live origin. $4.74 of LLM spend, and both passes stopped at `--max-budget`
+  rather than by finishing. Four findings survived replay: **a password change
+  does not revoke other sessions** (JWT sessions carry no revocation claim, so a
+  stolen session stays usable up to the 7-day absolute cap); **the documented
+  login throttle is bypassable twice**, because Auth.js's
+  `/api/auth/callback/credentials` enforces neither counter and `getClientIp()`
+  trusts the client's own `X-Forwarded-For`; **account deletion takes nothing but
+  the session cookie**, which the tool rated HIGH as CSRF and replay did not
+  support — the cookie is `HttpOnly; SameSite=Lax` and a cross-origin `DELETE`
+  never clears preflight, so it is recorded as defense in depth rather than an
+  exploit; and `/api/health` publishes the app version. Account isolation, the
+  middleware gate, the import remapping and the cache headers all held clean
+  under both passes. The tool's severities need replaying: one was two bands too
+  high, and one attributed a port to the wrong project. OAuth was not exercised —
+  no client is configured locally, and that path, not another sweep of the REST
+  surface, is the next target. Report:
+  [docs/reviews/pentest-local-2026-10-14.md](reviews/pentest-local-2026-10-14.md).
+  The one HIGH outside the app — the workstation's dev Postgres published to the
+  LAN on the compose default password — was closed by recreating `ghosted-db` on
+  loopback, data intact.
+
+
+- **A second, static audit of the same revision, with every claim independently
+  verified before it was reported.** 30 agent invocations across reconnaissance,
+  eight coverage-led hunters, a coverage critic and seventeen verifiers whose
+  instruction was to disprove the candidate they were given. Result: **14
+  `needs_validation` leads, 3 rejected, 0 confirmed** — nothing was called a
+  vulnerability on source inspection alone. The three rejections are the useful
+  part: the logo cache is unowned but serves only the public favicon of a domain
+  the reader derived itself; the account-delete body read is capped at 10 MiB by
+  Next's middleware body clone; and migration `0014`'s zero seed cannot regress a
+  revocation mechanism HEAD did not have. The leads that matter are concentrated
+  in one place — **import is a second write path that lost the API's controls**
+  (no `emailVerified` check, a re-declared field schema without
+  `isSafeHttpUrl`/`normalizeDomain`/`sanitizeText`, and a `?mode=replace` hard
+  delete behind a client checkbox) — plus a measured zod behaviour: the
+  array-level `.max(5000)` cannot bound parse work, so a 5 MiB body of `{}` rows
+  reaches ~1.75M elements, 11.1 s of CPU and ~3.2 GB of heap before the cap
+  reports. Coverage is partial and says so: eight ledger units are deferred with
+  reasons, and `lib/utils/csrf.ts` was never reviewed by a unit. Reports:
+  [docs/reviews/security-audit-2026-10-14.md](reviews/security-audit-2026-10-14.md)
+  and its [findings detail](reviews/security-audit-2026-10-14-findings.md).
+
+### Fixed
+- **Every finding in the report above, at the root rather than at the symptom.**
+  - **A credential change now revokes the sessions that came before it.**
+    `users.session_epoch` (migration `0014`) moves on a password change, a
+    password reset, a first password, and a provider sign-in that clears one; the
+    `jwt` callback refuses a token whose claim no longer matches, and a deleted
+    account has no row to match. Tokens minted before the column existed keep
+    working while nothing has been revoked — so the deploy signs nobody out — and
+    stop the moment something is. One indexed lookup per session read.
+  - **The login throttle moved into the Credentials `authorize()` callback**,
+    where both entry points reach it. `POST /api/auth/callback/credentials`
+    bypassed the counters completely (measured: 20 failures through the callback
+    while the route was answering `429`). The route keeps the per-IP limit and now
+    answers `429` with the wait when a counter is what refused the attempt, by
+    peeking instead of counting the attempt a second time.
+  - **The client IP no longer comes from a header the client controls.**
+    `getClientIp()` prefers `CF-Connecting-IP`, then `X-Real-IP`, and only then the
+    last `X-Forwarded-For` entry — measured on the production origin, that last
+    value is exactly what the attacker sent. Because that key cannot be defended
+    on an origin reachable without Cloudflare, a new process-wide failure cap
+    (`RATE_LIMIT_LOGIN_FAILURES_MAX`, 100 per 15 minutes) bounds spraying one
+    password across many accounts. It deliberately refuses correct passwords for
+    the rest of the window once hit: a cap that only refused wrong ones would cap
+    nothing. `forgot-password` already had a per-recipient counter, contrary to
+    the report, which now says so.
+  - **`DELETE /api/auth/account` asks for proof, not just a cookie.** It requires
+    the Auth.js CSRF token and, for an account that has a password, the password —
+    typed in the confirm dialog, which now has a field for it. Provider-only
+    accounts have no password and are still deletable.
+  - **`/api/health` no longer publishes the version.** It is public and
+    unauthenticated, so it was free fingerprinting; `docs/SELFHOST.md` and
+    `docs/RELEASING.md` say where to read the running version instead.
+- **Changing or setting a password signs the browser out** and hands it to the
+  login screen with a note. The change revokes the session that made it, so this
+  is what revocation looks like from the UI; the forced first-run flow already
+  ended the same way.
+
+- **Verified afterwards by hand, on a rebuilt throwaway instance of this
+  revision**: 19 checks, no LLM spend, driven by
+  `tools/strix-pentest/verify-fixes.sh` — which takes a base URL, so the same
+  suite runs against production after the deploy. Deletion with only the session
+  cookie answers `403`; the other session answers `401` after a password change;
+  the credentials callback refuses a correct password once the account's window
+  is spent, and a fresh forged `X-Forwarded-For` still gets `429`; `/api/health`
+  no longer names the build; the isolation matrix is unchanged. The process-wide
+  failure cap was measured by tightening it to 3: four failures against one
+  account left an untouched account's correct password refused. Residuals are in
+  the report — the per-IP key stays best-effort and header-derived, and the global
+  cap also refuses correct sign-ins once it trips. (The third residual named here
+  — that nothing asserted an OAuth adoption surviving its own epoch bump — is
+  closed by the second pass below.)
+
+### Changed
+- **The login, `forgot-password`, `change-password`, `set-password` and
+  `reset-password` limits are documented per account as well as per IP**, and
+  `SECURITY.md` now states the honest limits of them: the counters live in
+  process memory, production was measured running more than one replica, and the
+  per-IP key is attacker-chosen on an origin that Cloudflare does not front.
+
+### Fixed — second pass, what the static audit found in the first one
+- **The audit's leads were worked in the order it ranked them, and each fix is
+  pinned by a test that was watched to fail without it.** Reports:
+  [the audit](reviews/security-audit-2026-10-14.md) (now carrying a
+  verification table) and its [findings detail](reviews/security-audit-2026-10-14-findings.md).
+  - **The account throttle counted the wrong things, twice.** A successful
+    sign-in cleared a bucket key nothing writes (`login:` where the counter
+    writes `acct:login:`), and every attempt was spent *before* the password was
+    proven — so one person signing in correctly six times was refused entry to
+    their own account, and an anonymous party could hold a named address out.
+    Nothing is counted now until a compare fails, the check is a peek, and a
+    success clears the key the counter actually writes. What remains is
+    documented rather than hidden: five anonymous attempts against a known
+    address still hold its owner out for the window.
+  - **The revocation counter could be pinned after the change it was meant to
+    catch.** A password change committing during a sign-in — the window is up to
+    three seconds, because an awaited Gravatar lookup sits inside it — was
+    absorbed by the token being minted. The credentials path now pins the value
+    the credential was *checked against*; the OAuth path keeps the post-bump pin
+    that adoption needs, and now has the test that says so.
+  - **A session minted before the `authTime` claim existed had no absolute
+    lifetime**: `@auth/core` re-signs it with a fresh 30-day window on every use,
+    so an actively used pre-upgrade cookie never expired. It is stamped on first
+    read, which bounds it to seven more days.
+  - **An email-verification token now proves the address it was issued for**
+    (`0015` adds the column; redemption compares it), and issuing a new token
+    deletes the outstanding ones — which that function's docstring had always
+    claimed while the query only removed used and expired rows.
+  - **Import is no longer a second write contract.** Its row schema is built from
+    the field schemas the create/update routes use — URL scheme check, domain
+    normalization, email validation, the same caps — and text goes through the
+    sanitizer. It enforces the unverified-account application cap through one
+    shared rule, checked inside the transaction behind a lock on the account row
+    (which also closes the check-then-act race on the API path), and
+    `?mode=replace` now requires the CSRF token, the way account deletion does.
+  - **Two resource ceilings are real.** A file's application count is checked
+    before Zod parses its elements (a 5 MB file of empty rows reached ~1.7M
+    element parses, 11 s of CPU and ~3 GB of heap), and the streamed body reader
+    caps how many reads one body may take (one retained object per read let a
+    peer framing bytes as tiny writes inflate memory). The rate-limit bucket map
+    now drops its oldest tenth when full instead of only ever removing expired
+    entries.
+  - **A provider that reports the email as unverified is refused** at the
+    sign-in gate instead of being treated as proof of the address — `=== false`
+    only, so a provider that omits the claim (LinkedIn) is unaffected.
+  - **Account deletion was broken in a real browser, and neither the unit test
+    nor the integration test could see it.** Next's cookie serializer
+    percent-encodes the `|` inside the CSRF cookie (`…%7C…`), so splitting the
+    raw header value found no separator and every browser delete answered `403
+    INVALID_CSRF_TOKEN` — while the tests passed, because both built the cookie
+    by hand in exactly the shape the parser expected. The value is decoded
+    before it is split now, and the tests build it the way the framework writes
+    it.
+- **The deploy gate ran end to end, from a throwaway copy of the tree** so the
+  dev server's `.next` (one per repository, shared by every build) was never
+  touched: `next build` in production mode succeeds, and the full Playwright
+  suite — **49 tests, axe included — passes**. That is what caught the CSRF
+  cookie above; the unit and integration suites were both green while account
+  deletion could not work in a browser at all.
+
+### Feature
+- **Deleting an account ends on a farewell page, not the login screen.** Landing
+  on a sign-in form right after asking to be forgotten reads like the deletion
+  failed, and there is nothing left to sign into. `/account-deleted` says what
+  happened, offers the one thing that is useful to whoever runs the instance — a
+  sentence about why you left, addressed to the operator's own address when one
+  is configured, and hidden on a self-hosted instance that has not published
+  one — and offers a way back in if the hunt resumes. `noindex`, and out of the
+  sitemap.
+
+### Fixed — found by hand, on a phone
+- **Changing a password no longer bounces the browser to another origin.**
+  `signOut({ callbackUrl })` resolves that URL against Auth.js's base, which a
+  dev server pinned to `localhost` answers with — so a phone on the LAN was sent
+  to an address that only exists on the dev machine. Both password flows now
+  sign out without a redirect and navigate in-app, which stays on whatever
+  origin the person is actually using; the delete flow navigates to the
+  farewell page the same way. Verified through the LAN origin
+  (`10.10.10.20:3100`), which the CI suite cannot exercise because it runs on
+  localhost: change the password, land on `/login?passwordChanged=1` on the same
+  host; delete, land on `/account-deleted` on the same host.
+
 ## 1.3.1 — 2026-10-09
 
 ### Fixed

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Label } from "@/components/ui/label";
  * credential is gone from every layer. The login screen explains what happened.
  */
 export function ChangePasswordForm() {
+  const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +43,13 @@ export function ChangePasswordForm() {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? "Failed to change password");
       }
-      await signOut({ callbackUrl: "/login?passwordChanged=1" });
+      // Sign out, then navigate in-app: signOut's own callbackUrl is resolved
+      // against Auth.js's base URL, so a dev server pinned to `localhost`
+      // sends a phone on the LAN to an address that only exists on the dev
+      // machine. The push stays on the origin the person is using.
+      await signOut({ redirect: false });
+      router.push("/login?passwordChanged=1");
+      router.refresh();
     } catch (err) {
       setError((err as Error).message);
       setBusy(false);

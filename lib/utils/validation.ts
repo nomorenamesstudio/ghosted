@@ -32,17 +32,16 @@ export const optionalUrlSchema = z
   .optional()
   .nullable();
 
-const optionalLongText = (max: number) =>
+export const optionalLongText = (max: number) =>
   z.string().trim().max(max).optional().nullable();
 
-const optionalEmailText = z
+export const optionalEmailText = z
   .email("Enter a valid email address")
   .trim()
   .toLowerCase()
   .max(254)
   .optional()
   .nullable();
-
 /** ISO-8601 date string → Date (or null). */
 const optionalDateSchema = z
   .string()
@@ -62,8 +61,14 @@ const optionalDateSchema = z
  * The employer's own website, used for the company logo. Accepts a full URL or
  * a bare domain (`stripe.com`) and stores the normalized domain either way;
  * empty string / null clears it.
+ *
+ * Exported, like the field schemas above it, so the import path can build its
+ * row schema out of the same pieces instead of re-declaring them with weaker
+ * caps — the divergence a static audit found on 2026-10-14, where an imported
+ * `companyWebsite` never passed through `normalizeDomain` and an imported `url`
+ * never met `isSafeHttpUrl`.
  */
-const optionalCompanyWebsiteSchema = z
+export const optionalCompanyWebsiteSchema = z
   .union([
     z.literal(""),
     z.null(),

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db/client";
@@ -13,6 +13,7 @@ import {
   type User,
 } from "@/lib/db/schema";
 import { ApiError } from "@/lib/utils/api";
+import { logger } from "@/lib/utils/logger";
 import { BCRYPT_ROUNDS } from "@/lib/auth";
 
 const hashToken = (t: string) =>
@@ -74,14 +75,19 @@ export async function updateProfile(
   return { user, emailChanged: input.email !== undefined && input.email !== current.email };
 }
 
-/** Verify the current password and set a new one. */
-export async function changePassword(
+/**
+ * Verify the account's current password, or throw.
+ *
+ * Shared by the two places a password is *proved* before something destructive
+ * happens: changing it, and deleting the account. Both need the same answer to
+ * "is this really the account holder", and both need the same error shape.
+ */
+export async function verifyPassword(
   userId: string,
-  currentPassword: string,
-  newPassword: string,
+  password: string,
 ): Promise<void> {
   const [user] = await db
-    .select()
+    .select({ passwordHash: users.passwordHash })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -94,15 +100,51 @@ export async function changePassword(
     );
   }
 
-  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
     throw new ApiError(401, "Current password is incorrect", "INVALID_PASSWORD");
   }
+}
+
+/** Whether the account has a password at all — false for provider-only ones. */
+export async function hasPassword(userId: string): Promise<boolean> {
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) throw new ApiError(404, "User not found", "NOT_FOUND");
+  return user.passwordHash !== null;
+}
+
+/**
+ * Move the account's session counter on, which is what revokes the sessions
+ * that came before it (see the `jwt` callback in lib/auth.ts).
+ *
+ * Called from every path that changes how the account can be entered —
+ * change, reset, first password, a provider sign-in clearing one. A credential
+ * change that leaves older tokens working is the finding this closes.
+ */
+function bumpedSessionEpoch() {
+  return sql`${users.sessionEpoch} + 1`;
+}
+
+/** Verify the current password and set a new one. */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await verifyPassword(userId, currentPassword);
 
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await db
     .update(users)
-    .set({ passwordHash, mustChangePassword: false })
+    .set({
+      passwordHash,
+      mustChangePassword: false,
+      sessionEpoch: bumpedSessionEpoch(),
+    })
     .where(eq(users.id, userId));
 }
 
@@ -140,12 +182,18 @@ export async function setPassword(
   const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
   await db
     .update(users)
-    .set({ passwordHash, mustChangePassword: false })
+    .set({
+      passwordHash,
+      mustChangePassword: false,
+      sessionEpoch: bumpedSessionEpoch(),
+    })
     .where(eq(users.id, userId));
 }
 
 /** GDPR erasure: delete the account (cascades to applications, milestones, tokens). */
 export async function deleteAccount(userId: string): Promise<void> {
+  // No session bump needed: the row is gone, and the `jwt` callback refuses a
+  // token whose account no longer exists.
   await db.delete(users).where(eq(users.id, userId));
 }
 
@@ -164,46 +212,56 @@ export async function acknowledgePasswordDrop(userId: string): Promise<void> {
 
 /**
  * Create a fresh email-verification token for the user (invalidating any
- * previous one) and return the raw token (only ever shown once, emailed).
+ * previous one) and return the raw token together with the address it was
+ * issued for (only ever shown once, emailed).
+ *
+ * "Invalidating any previous one" is literal: every outstanding token for the
+ * account is deleted, not just the used and expired ones, so a superseded link
+ * in an old inbox cannot be redeemed later.
  */
-export async function createEmailVerification(userId: string): Promise<string> {
+export async function createEmailVerification(
+  userId: string,
+): Promise<{ raw: string; email: string }> {
   const ttlMinutes = Number(process.env.EMAIL_VERIFICATION_TTL_MINUTES ?? 60 * 24);
-  // Purge this user's stale tokens (used or expired) so the table never
-  // grows unbounded, then issue a fresh one.
-  const now = new Date();
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  if (!user) throw new ApiError(404, "User not found", "NOT_FOUND");
+
   await db
     .delete(emailVerificationTokens)
-    .where(
-      and(
-        eq(emailVerificationTokens.userId, userId),
-        or(
-          isNotNull(emailVerificationTokens.usedAt),
-          lt(emailVerificationTokens.expiresAt, now),
-        ),
-      ),
-    );
+    .where(eq(emailVerificationTokens.userId, userId));
+
   const raw = randomBytes(32).toString("hex");
   await db.insert(emailVerificationTokens).values({
     userId,
+    // The address is part of what the token proves. Changing the account's
+    // email therefore invalidates this token, instead of letting it verify an
+    // address it was never sent to (static audit 2026-10-14).
+    email: user.email,
     tokenHash: hashToken(raw),
     expiresAt: new Date(Date.now() + ttlMinutes * 60_000),
   });
-  return raw;
+  return { raw, email: user.email };
 }
 
 /** Issue a verification token and return it together with the user's email. */
 export async function issueEmailVerification(
   userId: string,
 ): Promise<{ raw: string; email: string }> {
-  const raw = await createEmailVerification(userId);
-  const [u] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, userId));
-  return { raw, email: u?.email ?? "" };
+  return createEmailVerification(userId);
 }
 
-/** Redeem a verification token; marks the user verified and the token used. */
+/**
+ * Redeem a verification token; marks the user verified and the token used.
+ *
+ * Refuses when the account's address is no longer the one the token was issued
+ * for: the token says "this mailbox is mine", and an address change since then
+ * makes that claim stale. Failing closed is the safe direction — the user asks
+ * for a new link, which is one click.
+ */
 export async function verifyEmail(
   rawToken: string,
 ): Promise<{ email: string } | null> {
@@ -219,6 +277,18 @@ export async function verifyEmail(
     .limit(1);
   if (!row || row.expiresAt.getTime() <= Date.now()) return null;
 
+  const [user] = await db
+    .select({ email: users.email })
+    .from(users)
+    .where(eq(users.id, row.userId));
+  if (!user || user.email !== row.email) {
+    logger.warn(
+      { userId: row.userId },
+      "verification token refused: the account's address changed after it was issued",
+    );
+    return null;
+  }
+
   const now = new Date();
   await db
     .update(users)
@@ -229,11 +299,7 @@ export async function verifyEmail(
     .set({ usedAt: now })
     .where(eq(emailVerificationTokens.id, row.id));
 
-  const [user] = await db
-    .select({ email: users.email })
-    .from(users)
-    .where(eq(users.id, row.userId));
-  return user ?? null;
+  return user;
 }
 
 /**

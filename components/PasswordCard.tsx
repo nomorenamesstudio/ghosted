@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { KeyRound, Save, X } from "lucide-react";
 import { Message, type Msg } from "@/components/FormMessage";
 import { Button } from "@/components/ui/button";
@@ -31,15 +33,19 @@ import {
  * ends — `change-password` needs a current password to compare, and the reset
  * flow only issues a token for an account that has one — so the card offers to
  * *set* the first password instead, which routes to `/api/auth/set-password`.
+ *
+ * Both routes move the account's session counter on, which revokes every
+ * session that came before them — so a successful save ends in a sign-out and
+ * the login screen, the same way the forced first-run change does.
  */
 export function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [msg, setMsg] = useState<Msg>(null);
   const [busy, setBusy] = useState(false);
-  const [updated, setUpdated] = useState(false);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -76,14 +82,21 @@ export function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
             (hasPassword ? "Failed to change password" : "Failed to set password"),
         );
       }
-      setOpen(false);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setUpdated(true);
+      // Every session for this account is revoked by the change — including
+      // this one, which authenticated with the password that no longer exists.
+      // So this is where the card ends, exactly as the forced first-run change
+      // does it: sign out, and let the login screen say what happened.
+      //
+      // `redirect: false` plus an in-app push, rather than signOut's own
+      // callbackUrl: that callback is resolved against Auth.js's base URL, which
+      // a dev server pinned to one origin answers with — a phone on the LAN got
+      // bounced to `localhost` because of it. A router push keeps whatever
+      // origin the person is actually using.
+      await signOut({ redirect: false });
+      router.push("/login?passwordChanged=1");
+      router.refresh();
     } catch (err) {
       setMsg({ type: "error", text: (err as Error).message });
-    } finally {
       setBusy(false);
     }
   }
@@ -106,16 +119,6 @@ export function PasswordCard({ hasPassword }: { hasPassword: boolean }) {
           <KeyRound />
           {hasPassword ? "Change password" : "Set a password"}
         </Button>
-        {updated && (
-          <Message
-            state={{
-              type: "ok",
-              text: hasPassword
-                ? "Password updated."
-                : "Password saved — you can sign in with email now.",
-            }}
-          />
-        )}
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>

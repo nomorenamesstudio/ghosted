@@ -33,6 +33,7 @@ import { issueEmailVerification } from "@/lib/services/account";
 import {
   authMock,
   createUser,
+  csrfRequest,
   jsonRequest,
   mockSession,
   readJson,
@@ -274,12 +275,95 @@ describe("DELETE /api/auth/account", () => {
     );
 
     authMock.mockResolvedValueOnce(mockSession(user.id));
-    const res = await DELETE_ACCOUNT();
+    const res = await DELETE_ACCOUNT(
+      csrfRequest("http://localhost/api/auth/account", "DELETE", {
+        password: user.password,
+      }),
+    );
     expect(res.status).toBe(200);
 
     expect(await db.select().from(users)).toHaveLength(0);
     expect(await db.select().from(applications)).toHaveLength(0);
     expect(await db.select().from(milestones)).toHaveLength(0);
+  });
+
+  it("refuses a request without a CSRF token, however valid the session", async () => {
+    // The session cookie is ambient: it rides along on any request the page can
+    // make, so it is not evidence that the account holder asked for this.
+    const user = await createUser();
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    const res = await DELETE_ACCOUNT(
+      jsonRequest(
+        "http://localhost/api/auth/account",
+        "DELETE",
+        { password: user.password },
+      ),
+    );
+    expect(res.status).toBe(403);
+    expect((await readJson(res)).code).toBe("INVALID_CSRF_TOKEN");
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+
+  it("refuses a forged CSRF token", async () => {
+    const user = await createUser();
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    // A token that was never minted by this server: the cookie's hash does not
+    // match it, so the pair proves nothing.
+    const res = await DELETE_ACCOUNT(
+      jsonRequest(
+        "http://localhost/api/auth/account",
+        "DELETE",
+        { csrfToken: "f".repeat(64), password: user.password },
+        { cookie: `authjs.csrf-token=${"f".repeat(64)}|${"0".repeat(64)}` },
+      ),
+    );
+    expect(res.status).toBe(403);
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+
+  it("refuses without the account password", async () => {
+    const user = await createUser();
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    const res = await DELETE_ACCOUNT(
+      csrfRequest("http://localhost/api/auth/account", "DELETE"),
+    );
+    expect(res.status).toBe(400);
+    expect((await readJson(res)).code).toBe("PASSWORD_REQUIRED");
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+
+  it("refuses a wrong password", async () => {
+    const user = await createUser();
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+
+    const res = await DELETE_ACCOUNT(
+      csrfRequest("http://localhost/api/auth/account", "DELETE", {
+        password: "not-the-password",
+      }),
+    );
+    expect(res.status).toBe(401);
+    expect((await readJson(res)).code).toBe("INVALID_PASSWORD");
+    expect(await db.select().from(users)).toHaveLength(1);
+  });
+
+  it("deletes a provider-only account with the CSRF token alone", async () => {
+    // No password to prove, so the token is the whole check — and the account
+    // must not become undeletable.
+    const user = await createUser();
+    await db
+      .update(users)
+      .set({ passwordHash: null, provider: "google" })
+      .where(eq(users.id, user.id));
+
+    authMock.mockResolvedValueOnce(mockSession(user.id));
+    const res = await DELETE_ACCOUNT(
+      csrfRequest("http://localhost/api/auth/account", "DELETE"),
+    );
+    expect(res.status).toBe(200);
+    expect(await db.select().from(users)).toHaveLength(0);
   });
 
   it("refuses to delete the only account on a closed-registration instance", async () => {
@@ -291,7 +375,11 @@ describe("DELETE /api/auth/account", () => {
     process.env.GHOSTED_USER_EMAIL = user.email;
     try {
       authMock.mockResolvedValueOnce(mockSession(user.id));
-      const res = await DELETE_ACCOUNT();
+      const res = await DELETE_ACCOUNT(
+        csrfRequest("http://localhost/api/auth/account", "DELETE", {
+          password: user.password,
+        }),
+      );
       expect(res.status).toBe(403);
       expect((await readJson(res)).code).toBe("ACCOUNT_DELETION_DISABLED");
       expect(await db.select().from(users)).toHaveLength(1);
@@ -424,6 +512,58 @@ describe("email verification", () => {
     // Missing token.
     const missing = await VERIFY_EMAIL(new Request(`${base}/verify-email`));
     expect(missing.status).toBe(400);
+  });
+
+  it("refuses a token issued for an address the account no longer has", async () => {
+    // The squatting path a static audit found: register with a mailbox you
+    // control, change the address to a target that has no account, redeem the
+    // OLD token, and arrive verified at the target address — which flips the
+    // OAuth decision from "adopt" to "attach" and leaves the squatter's password
+    // working on the account the target's real owner signs into.
+    const user = await createUser("squatter@test.dev", "User", "password123", {
+      emailVerified: false,
+    });
+    const { raw } = await issueEmailVerification(user.id);
+
+    // The address change, without going through the route: the profile route
+    // also issues a fresh token, and the point here is the binding on its own.
+    await db
+      .update(users)
+      .set({ email: "victim@test.dev" })
+      .where(eq(users.id, user.id));
+
+    const res = await VERIFY_EMAIL(
+      new Request(`${base}/verify-email?token=${raw}`),
+    );
+    expect(res.status).toBe(400);
+    expect((await readJson(res)).code).toBe("INVALID_VERIFICATION_TOKEN");
+
+    const [row] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.id));
+    expect(row.emailVerified).toBe(false);
+  });
+
+  it("invalidates the previous token when a new one is issued", async () => {
+    // The docstring promised "invalidating any previous one" while the query
+    // only removed used and expired rows, so an old link stayed live
+    // (static audit 2026-10-14).
+    const user = await createUser("two-tokens@test.dev", "User", "password123", {
+      emailVerified: false,
+    });
+    const first = await issueEmailVerification(user.id);
+    const second = await issueEmailVerification(user.id);
+
+    const stale = await VERIFY_EMAIL(
+      new Request(`${base}/verify-email?token=${first.raw}`),
+    );
+    expect(stale.status).toBe(400);
+
+    const current = await VERIFY_EMAIL(
+      new Request(`${base}/verify-email?token=${second.raw}`),
+    );
+    expect(current.status).toBe(200);
   });
 
   it("changing the email resets verification and issues a new token", async () => {

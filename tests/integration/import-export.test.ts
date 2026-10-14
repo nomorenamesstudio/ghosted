@@ -24,6 +24,7 @@ import { applications, milestones } from "@/lib/db/schema";
 import {
   authMock,
   createUser,
+  csrfPair,
   jsonRequest,
   mockSession,
   readJson,
@@ -289,5 +290,125 @@ describe("POST /api/auth/import", () => {
       jsonRequest("http://localhost/api/auth/import", "POST", { applications: [] }),
     );
     expect(res.status).toBe(401);
+  });
+
+  it("refuses a replace import without the CSRF token, and accepts it with one", async () => {
+    // Replace is the only hard delete of application history a page can reach
+    // without proving anything (static audit 2026-10-14): the account route asks
+    // for a token and a password for its delete, and this one asked for neither.
+    const target = await createUser("replace-target@test.dev");
+    await createApplication(target.id, {
+      company: "Kept",
+      role: "Engineer",
+    } as never);
+
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    const refused = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import?mode=replace", "POST", {
+        applications: [],
+      }),
+    );
+    expect(refused.status).toBe(403);
+    expect((await readJson(refused)).code).toBe("INVALID_CSRF_TOKEN");
+    expect(await db.select().from(applications)).toHaveLength(1);
+
+    const { csrfToken, cookie } = csrfPair();
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    const accepted = await IMPORT(
+      jsonRequest(
+        "http://localhost/api/auth/import?mode=replace",
+        "POST",
+        { applications: [] },
+        { cookie, "x-csrf-token": csrfToken },
+      ),
+    );
+    expect(accepted.status).toBe(200);
+    expect(await db.select().from(applications)).toHaveLength(0);
+  });
+
+  it("holds a file to the same field rules the API applies", async () => {
+    // The importer re-declared the row shape with weaker caps and no
+    // isSafeHttpUrl / normalizeDomain / email checks, which made it the
+    // effective write contract for those columns (static audit 2026-10-14).
+    const target = await createUser("parity@test.dev");
+
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    const badUrl = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import", "POST", {
+        applications: [{ company: "Acme", role: "Engineer", url: "javascript:alert(1)" }],
+      }),
+    );
+    expect(badUrl.status).toBe(400);
+    expect((await readJson(badUrl)).code).toBe("INVALID_IMPORT");
+    expect(await db.select().from(applications)).toHaveLength(0);
+
+    // Same file, safe URL, bare domain: the value is normalized on the way in,
+    // exactly as the create path would store it.
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    const good = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import", "POST", {
+        applications: [
+          {
+            company: "Acme",
+            role: "Engineer",
+            url: "https://acme.example/jobs/1",
+            companyWebsite: "https://Acme.example/careers",
+          },
+        ],
+      }),
+    );
+    expect(good.status).toBe(200);
+    const [row] = await db.select().from(applications);
+    expect(row.companyWebsite).toBe("acme.example");
+  });
+
+  it("holds an unverified account to the application cap", async () => {
+    // The cap lived inline in the applications route, so the importer wrote the
+    // same table without asking: an unverified account could import thousands
+    // instead of three. Same rule now, checked before anything is written.
+    const unverified = await createUser(
+      "unverified-import@test.dev",
+      "Test User",
+      "password123",
+      { emailVerified: false },
+    );
+    const file = {
+      applications: [1, 2, 3, 4].map((n) => ({
+        company: `Company ${n}`,
+        role: "Engineer",
+      })),
+    };
+
+    authMock.mockResolvedValueOnce(mockSession(unverified.id));
+    const refused = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import", "POST", file),
+    );
+    expect(refused.status).toBe(403);
+    expect((await readJson(refused)).code).toBe("EMAIL_UNVERIFIED_LIMIT");
+    expect(await db.select().from(applications)).toHaveLength(0);
+
+    const verified = await createUser("verified-import@test.dev");
+    authMock.mockResolvedValueOnce(mockSession(verified.id));
+    const accepted = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import", "POST", file),
+    );
+    expect(accepted.status).toBe(200);
+    expect(await db.select().from(applications)).toHaveLength(4);
+  });
+
+  it("refuses an over-long file by row count before parsing its rows", async () => {
+    // Zod parses every element before an array-level `.max()`, so a 5 MB
+    // document of minimal rows forced ~1.7M element parses and gigabytes of
+    // heap before the cap reported (static audit 2026-10-14). The count is
+    // checked on the parsed JSON, before the schema sees it.
+    const target = await createUser("toomany@test.dev");
+    const rows = Array.from({ length: 5_001 }, () => ({}));
+
+    authMock.mockResolvedValueOnce(mockSession(target.id));
+    const res = await IMPORT(
+      jsonRequest("http://localhost/api/auth/import", "POST", { applications: rows }),
+    );
+    expect(res.status).toBe(413);
+    expect((await readJson(res)).code).toBe("TOO_MANY_APPLICATIONS");
   });
 });

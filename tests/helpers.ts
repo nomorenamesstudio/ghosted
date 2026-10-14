@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db, createRawClient } from "@/lib/db/client";
 import { users, type User } from "@/lib/db/schema";
@@ -86,6 +87,36 @@ export function jsonRequest(
     headers: { "Content-Type": "application/json", ...headers },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+}
+
+/**
+ * A CSRF pair as Auth.js mints it: the cookie carries `token|sha256(token +
+ * AUTH_SECRET)`, and the request carries the bare token.
+ *
+ * Built here rather than by calling `/api/auth/csrf`, because a route test
+ * drives the handler directly and never runs the Auth.js handler that would set
+ * the cookie.
+ */
+export function csrfPair(secret = process.env.AUTH_SECRET ?? ""): {
+  csrfToken: string;
+  cookie: string;
+} {
+  const csrfToken = randomBytes(32).toString("hex");
+  const hash = createHash("sha256").update(`${csrfToken}${secret}`).digest("hex");
+  // Percent-encoded, as Next's cookie serializer writes it: the value contains a
+  // `|`, and a parser that splits the raw header value finds nothing to split on.
+  const value = encodeURIComponent(`${csrfToken}|${hash}`);
+  return { csrfToken, cookie: `authjs.csrf-token=${value}` };
+}
+
+/** A request carrying a freshly minted, valid CSRF pair in body and cookie. */
+export function csrfRequest(
+  url: string,
+  method: string,
+  body: Record<string, unknown> = {},
+): Request {
+  const { csrfToken, cookie } = csrfPair();
+  return jsonRequest(url, method, { ...body, csrfToken }, { cookie });
 }
 
 /** Read a NextResponse as JSON. */

@@ -32,6 +32,84 @@ timelines, per account. That shapes the threat model:
 - **The operator sees everything on their own instance** — it is their database.
   Encryption at rest is the host's job, not the app's.
 
+## Sessions and sign-in throttling
+
+Two things a JWT session strategy does not give you for free, and what this app
+does about them. Both were findings of the [2026-10-14 pentest](docs/reviews/pentest-local-2026-10-14.md),
+and the details of both were corrected by the [static
+audit](docs/reviews/security-audit-2026-10-14.md) the same day.
+
+**A credential change ends the sessions that came before it.** `users.session_epoch`
+moves on a password change, a password reset, a first password, and a provider
+sign-in that clears one; the `jwt` callback refuses a token whose claim no
+longer matches, and a deleted account has no row to match at all. Without it, a
+copied session stayed usable until the 7-day absolute cap. The cost is one
+indexed lookup per session read, and the session that makes the change is
+revoked with the others — the UI signs out and says so. The credentials path
+pins the counter the password was *checked against*, so a change committing
+during that same sign-in revokes it rather than being absorbed.
+
+**Sign-in attempts are counted server-side, never from a request header.** The
+per-account counter is enforced inside Auth.js's Credentials `authorize()`
+callback, which both `/api/auth/login` and `/api/auth/callback/credentials`
+reach, so there is no route to walk around it. `getClientIp()` prefers
+`CF-Connecting-IP`, then `X-Real-IP`, and only then the last `X-Forwarded-For`
+entry — which is client-supplied and therefore not a security boundary.
+
+**Only failures are counted, and a success clears the account's window.** The
+check is a peek; the counters move when a compare fails. That distinction is not
+cosmetic: the first version spent a slot before proving the password and cleared
+a key nothing wrote, so six *correct* sign-ins by one person ended with that
+person refused entry to their own account.
+
+What that means in practice, measured rather than assumed:
+
+- **A per-IP limit on the production origin is attacker-chosen.** `X-Forwarded-For`
+  arrives exactly as the client sent it, and the Railway origin is reachable
+  without Cloudflare, so the per-IP bucket can be reset with one header. The
+  account-keyed counter and the process-wide failure cap do not depend on it.
+- **The counters are per process, and production runs more than one replica**
+  (identical consecutive requests answering `401 429 401 429` is the signature).
+  They reset on restart and do not span replicas, so an attacker's real budget is
+  the configured limit times the replica count. Redis (or any shared store) is
+  the fix; the account-keyed counter scales with replicas but is never useless.
+- **Refusing an attempt is the only thing that bounds guessing, so a named
+  address can be locked out on purpose.** Five failed attempts hold an account's
+  next sign-in out for the rest of the window — a legitimate password included,
+  because the alternative is evaluating every guess. Shortening
+  `RATE_LIMIT_WINDOW_MINUTES` narrows the window; the process-wide cap below
+  bounds how many addresses one attacker can hold at once.
+- **`RATE_LIMIT_LOGIN_FAILURES_MAX` (100 per 15 minutes) refuses every sign-in
+  once hit, including a correct password.** That is the point — a cap that only
+  refused wrong passwords would cap nothing — and it is also a lockout an
+  attacker can trigger deliberately. Raise it, or move the counters to a shared
+  store, if that trade is wrong for an instance.
+
+**Deleting an account takes proof, not a cookie.** The session cookie is
+ambient: it rides along on any request the page can make, so
+`DELETE /api/auth/account` also requires the Auth.js CSRF token and, for an
+account that has a password, that password. Provider-only accounts have no
+password to prove, so the token is their whole check. A `?mode=replace` import —
+the only other action that hard-deletes a user's data — asks for the same token.
+
+**One write contract, whichever door the data comes through.** The importer's row
+schema is built from the field schemas the create/update routes use, so a file
+cannot carry a URL scheme, a domain, an email or a text length that the API would
+refuse, and imported text goes through the same sanitizer. The
+unverified-account application cap is one function used by both write paths, and
+it is checked inside the transaction that writes — not in the route that fronts
+it, which is how the importer missed it and how two parallel creates could both
+see the same stale count.
+
+**Verification tokens are bound to the address they were issued for.** Changing
+the account's email invalidates outstanding links, so a token minted for one
+address cannot verify another: without that, an attacker could register with a
+mailbox they control, move the account to a target address that has no account,
+redeem the old token, and arrive verified — which flips provider sign-in from
+"adopt" to "attach" and leaves their password working. A provider sign-in that
+reports the email as *unverified* is refused outright; a provider that omits the
+claim (LinkedIn) is not treated as a denial.
+
 ## Dependency advisories
 
 `pnpm audit --prod` reports **one** finding, and it is explicitly accepted in

@@ -93,6 +93,17 @@ export const users = pgTable(
      * be a working credential for long.
      */
     mustChangePassword: boolean("must_change_password").notNull().default(false),
+    /**
+     * Revocation counter for JWT sessions. Bumped whenever the account's
+     * credential changes — a password change, a password reset, a first
+     * password, or a provider sign-in that clears one — so a token minted
+     * before the change stops being accepted. Without it, a stolen session
+     * stays usable until the 7-day absolute cap (see the `jwt` callback in
+     * lib/auth.ts). An integer rather than a timestamp: tokens are minted and
+     * credentials changed inside the same second often enough that a
+     * second-granularity comparison would let a session through.
+     */
+    sessionEpoch: integer("session_epoch").notNull().default(0),
     /** Threshold for the automatic "ghosted" status; every user has one. */
     patienceLevel: patienceLevelEnum("patience_level")
       .notNull()
@@ -252,6 +263,18 @@ export const emailVerificationTokens = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     // SHA-256 hash of the raw token; the raw value is only ever shown once.
     tokenHash: text("token_hash").notNull().unique(),
+    /**
+     * The address this token was issued *for*, which is not always the address
+     * the account still has: changing the email resets verification, and a token
+     * minted before the change must not be able to verify the new address.
+     * Without this column a token was bound to the account alone, so an attacker
+     * could register with a mailbox they control, change the address to a target
+     * that has no account, redeem the OLD token, and arrive verified at the
+     * address's real owner's account (static audit 2026-10-14). Compared at
+     * redemption; the empty default is what pre-existing rows get, and an empty
+     * value matches no real address, so those tokens fail closed.
+     */
+    email: text("email").notNull().default(""),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true })

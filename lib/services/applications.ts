@@ -594,6 +594,35 @@ export const UNVERIFIED_APP_LIMIT = Math.max(
 );
 
 /**
+ * How many applications an account may hold, given what it already has.
+ *
+ * One rule, two callers — the create path and the importer — because this was
+ * the second write path's blind spot: the cap lived inline in
+ * `POST /api/applications`, so `POST /api/auth/import` wrote the same table
+ * without ever asking, and an unverified account could import 5,000
+ * applications instead of being held to three (static audit 2026-10-14).
+ *
+ * `Infinity` for a verified account, so a caller can compare it against the
+ * number of rows it means to write without a second branch.
+ */
+export function applicationAllowance(
+  emailVerified: boolean,
+  existingCount: number,
+): number {
+  if (emailVerified) return Number.POSITIVE_INFINITY;
+  return Math.max(0, UNVERIFIED_APP_LIMIT - existingCount);
+}
+
+/** The refusal both callers share, so the wording and code stay one contract. */
+export function unverifiedLimitError(): ApiError {
+  return new ApiError(
+    403,
+    `Verify your email to add more applications — unverified accounts are limited to ${UNVERIFIED_APP_LIMIT}.`,
+    "EMAIL_UNVERIFIED_LIMIT",
+  );
+}
+
+/**
  * Total number of applications owned by the user (including archived ones).
  * Used to enforce the "unverified email ⇒ max 3 applications" cap — archived
  * applications still count so the cap cannot be gamed by archiving.
@@ -638,6 +667,28 @@ export async function createApplication(
   today.setHours(0, 0, 0, 0);
 
   return db.transaction(async (tx) => {
+    // The unverified-email ceiling is checked here, inside the transaction and
+    // behind a lock on the account row, rather than in the route. Two reasons:
+    // the rule then covers every write path (the importer was the one that
+    // missed it), and parallel creates serialize instead of each reading the
+    // same stale count — the check-then-act race the same audit found. The lock
+    // is per account, and it is released when this transaction ends.
+    const [account] = await tx
+      .select({ emailVerified: users.emailVerified })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .for("update");
+    if (!account) throw new ApiError(404, "User not found", "NOT_FOUND");
+
+    const [counted] = await tx
+      .select({ count: sql<number>`count(*)::int` })
+      .from(applications)
+      .where(eq(applications.userId, userId));
+    if (applicationAllowance(account.emailVerified, counted?.count ?? 0) < 1) {
+      throw unverifiedLimitError();
+    }
+
     const titles = defaultMilestones("00000000-0000-4000-8000-000000000000").map(
       (m) => m.title,
     );

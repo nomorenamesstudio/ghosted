@@ -14,6 +14,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import { signIn } from "@/lib/auth";
+import { rateLimitAccount } from "@/lib/utils/rate-limit";
 import { POST as LOGIN } from "@/app/api/auth/login/route";
 import { POST as REGISTER } from "@/app/api/auth/register/route";
 import { POST as FORGOT } from "@/app/api/auth/forgot-password/route";
@@ -172,6 +173,27 @@ describe("POST /api/auth/login", () => {
       lastStatus = res.status;
     }
     expect(lastStatus).toBe(429);
+  });
+
+  it("answers 429, not 401, when the account's own counter refused the attempt", async () => {
+    // The counter is consumed inside the Credentials callback now, so the route
+    // only ever sees a refused sign-in. It still has to report *why*: an
+    // attacker who is being throttled should not be told "wrong password", and
+    // a legitimate user should get a wait rather than a dead end.
+    vi.mocked(signIn).mockRejectedValue(new AuthError("CredentialsSignin"));
+    const email = "throttled-route@test.dev";
+    for (let i = 0; i < 6; i++) rateLimitAccount(email, "login");
+
+    const res = await LOGIN(
+      jsonRequest(
+        `${base}/login`,
+        "POST",
+        { email, password: "bad" },
+        ip(7),
+      ),
+    );
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBeTruthy();
   });
 
   it("allows a different IP after another is limited", async () => {

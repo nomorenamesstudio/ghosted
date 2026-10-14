@@ -38,13 +38,13 @@ test("settings: change password and sign in with it", async ({ page }) => {
     .fill("newpassword456");
   await dialog.getByRole("button", { name: "Update password" }).click();
 
-  // Success message shown in the card after the modal closes.
-  await expect(page.getByText("Password updated.")).toBeVisible();
-
-  // Sign out and sign back in with the new password.
-  await page.getByRole("button", { name: "User menu" }).click();
-  await page.getByRole("menuitem", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  // Changing the password revokes every session, including this one, so the card
+  // ends by signing out and handing over to the login screen — which is the
+  // sign-out this spec used to do by hand through the user menu.
+  await expect(page).toHaveURL(/\/login\?passwordChanged=1/);
+  await expect(
+    page.getByText("Password saved — sign in with your new one."),
+  ).toBeVisible();
 
   await loginViaUi(page, email, "newpassword456");
   await expect(page).toHaveURL(/\/app$/);
@@ -80,10 +80,16 @@ test("settings: delete account erases everything", async ({ page }) => {
   await page.goto("/settings");
   await page.getByRole("button", { name: "Delete account" }).click();
   const dialog = page.getByRole("dialog");
+  // The session cookie alone is not proof the account holder asked for this:
+  // the dialog now takes the password, and the request carries the CSRF token
+  // the page fetched.
+  await dialog.getByLabel("Your password").fill("password123");
   await dialog.getByRole("button", { name: "Delete account" }).click();
 
-  // Redirected to the login page…
-  await expect(page).toHaveURL(/\/login/);
+  // …and landed on the farewell page rather than the login screen: deleting an
+  // account on purpose should not read like the deletion failed.
+  await expect(page).toHaveURL(/\/account-deleted/);
+  await expect(page.getByText("It’s gone.")).toBeVisible();
 
   // …and the account is gone.
   await loginViaUi(page, email, "password123");

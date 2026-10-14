@@ -22,8 +22,8 @@ body:
     id: version
     attributes:
       label: Version
-      description: "`curl -s <your instance>/api/health` prints it, along with the database and config status."
-      placeholder: '{"ok":true,"version":"1.0.0",...}'
+      description: "From `package.json` in the checkout or tag you built (`node -p \"require('./package.json').version\"`). `/api/health` deliberately reports state only — `{\"ok\":true,\"database\":\"up\",\"config\":\"ok\"}` — and no version."
+      placeholder: "1.3.1"
     validations:
       required: true
   - type: textarea
