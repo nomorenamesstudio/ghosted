@@ -2,7 +2,7 @@
 
 All notable changes, by date and type.
 
-## Unreleased — 2026-10-14
+## 1.4.0 — 2026-10-14
 
 ### Security audit
 - **The first autonomous pentest, run against a disposable local production
