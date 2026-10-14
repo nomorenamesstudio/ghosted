@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { oauthAccounts, users } from "@/lib/db/schema";
 import {
@@ -223,6 +223,10 @@ export async function resolveOAuthUser(
             // Stamped so the dashboard can tell the person what happened to
             // their password, and cleared when they acknowledge it.
             passwordDroppedAt: new Date(),
+            // A credential was removed here, not chosen by the account holder:
+            // every session that could have used it is revoked, and the
+            // provider sign-in that just happened mints the one that survives.
+            sessionEpoch: sql`${users.sessionEpoch} + 1`,
           })
           .where(eq(users.id, outcome.userId));
         await attach(outcome.userId);

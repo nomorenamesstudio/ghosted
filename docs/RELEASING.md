@@ -1,9 +1,10 @@
 # Releasing
 
-The version lives in `package.json` and is reported by `/api/health`, so an
-operator can always answer "what am I running". The release process is short on
-purpose: this is a solo project, and a process nobody follows is worse than a
-short one.
+The version lives in `package.json` and in the tag you cut from it. `/api/health`
+deliberately no longer reports it — that endpoint is public and unauthenticated,
+and the version told anyone who asked which advisories applied to the build. The
+release process is short on purpose: this is a solo project, and a process nobody
+follows is worse than a short one.
 
 ## Cutting a release
 
@@ -14,7 +15,7 @@ short one.
    a sign-in, and one application round-trip. `main` is production; the merge is
    not the first time the code should ever run in the cloud.
 2. **Bump the version** in `package.json` (`1.0.0`, `1.0.1`, `1.1.0` …). No tag
-   without a bump: `/api/health` reads the same field.
+   without a bump: the version and the tag have to be the same number.
 3. **Add the changelog entry.** `docs/CHANGELOG.md`, newest first, under a dated
    `### Feature` / `### Fix` / `### Break` heading. Say what a *user* sees.
 4. **Commit and tag**:

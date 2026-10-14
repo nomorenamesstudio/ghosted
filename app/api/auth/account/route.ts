@@ -1,14 +1,47 @@
 import { NextResponse } from "next/server";
-import { deleteAccount } from "@/lib/services/account";
+import {
+  deleteAccount,
+  hasPassword,
+  verifyPassword,
+} from "@/lib/services/account";
 import { registrationOpen } from "@/lib/config/flags";
 import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
+import { verifyCsrfToken } from "@/lib/utils/csrf";
 
 export const dynamic = "force-dynamic";
 
-/** GDPR erasure: permanently delete the account and all of its data. */
-export async function DELETE() {
+/**
+ * GDPR erasure: permanently delete the account and all of its data.
+ *
+ * The session cookie is not proof that the account holder asked for this. It
+ * is ambient — every request carries it, including one a script on another
+ * origin could not make but a script *inside* the page (XSS) can. So this
+ * route asks for two things Auth.js's own `signOut` asks for one of: the CSRF
+ * token that proves the request came from a page that could read our cookie,
+ * and, for an account that has a password, the password itself — the one
+ * credential that a stolen session does not carry.
+ *
+ * Not exploitable as cross-site CSRF when this was found (the cookie is
+ * `HttpOnly; SameSite=Lax`, a cross-origin `DELETE` never clears preflight and
+ * an HTML form cannot issue one), but the mechanism was already there to use
+ * and the day an XSS or a same-site foothold exists is the day it matters.
+ */
+export async function DELETE(req: Request) {
   try {
     const userId = await requireSessionForWrite("account");
+
+    const body = (await req.json().catch(() => null)) as {
+      csrfToken?: unknown;
+      password?: unknown;
+    } | null;
+
+    if (!verifyCsrfToken(req, body?.csrfToken)) {
+      return jsonError(
+        403,
+        "Missing or invalid CSRF token — reload the page and try again",
+        "INVALID_CSRF_TOKEN",
+      );
+    }
 
     // A closed-registration instance has exactly one account, so deleting it
     // would leave nobody able to sign in — the instance would be bricked with no
@@ -30,6 +63,19 @@ export async function DELETE() {
         "This instance has a single account — deleting it would lock everyone out. Export your data instead.",
         "ACCOUNT_DELETION_DISABLED",
       );
+    }
+
+    // Provider-only accounts have no password to prove; the CSRF token above is
+    // the whole check for them.
+    if (await hasPassword(userId)) {
+      if (typeof body?.password !== "string" || body.password.length === 0) {
+        return jsonError(
+          400,
+          "Enter your password to delete this account",
+          "PASSWORD_REQUIRED",
+        );
+      }
+      await verifyPassword(userId, body.password);
     }
 
     await deleteAccount(userId);

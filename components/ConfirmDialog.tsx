@@ -20,6 +20,7 @@ export function ConfirmDialog({
   destructive = false,
   loading = false,
   onConfirm,
+  children,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -29,6 +30,12 @@ export function ConfirmDialog({
   destructive?: boolean;
   loading?: boolean;
   onConfirm: () => void;
+  /**
+   * Extra content between the question and the buttons, for the confirmations
+   * that need something proved rather than just clicked (the account-deletion
+   * password). Optional, so every existing caller is unchanged.
+   */
+  children?: React.ReactNode;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -41,6 +48,7 @@ export function ConfirmDialog({
             </DialogDescription>
           )}
         </DialogHeader>
+        {children}
         <DialogFooter>
           <Button
             variant="outline"

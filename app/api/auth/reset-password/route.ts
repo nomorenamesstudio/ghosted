@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { BCRYPT_ROUNDS } from "@/lib/auth";
 import { db } from "@/lib/db/client";
@@ -61,7 +61,13 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await db
       .update(users)
-      .set({ passwordHash })
+      .set({
+        passwordHash,
+        // A reset is a credential change and has to end the sessions that
+        // existed before it: otherwise a stolen session outlives the very
+        // action taken to evict it (see the `jwt` callback in lib/auth.ts).
+        sessionEpoch: sql`${users.sessionEpoch} + 1`,
+      })
       .where(eq(users.id, resetRow.userId));
 
     // Invalidate this and any other outstanding tokens for the user.

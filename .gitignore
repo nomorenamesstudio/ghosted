@@ -60,6 +60,8 @@ next-env.d.ts
 
 # Local review scratch files
 .tmp-review/
+# Screenshots taken for a chat reply (disposable)
+.tmp-shots/
 
 # Local pnpm store (the sandbox store is read-only, so the repo carries its own)
 .pnpm-store/

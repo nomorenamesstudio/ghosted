@@ -37,7 +37,7 @@ export function LoginForm({
   const registered = params.get("registered") === "1";
   const passwordChanged = params.get("passwordChanged") === "1";
 
-  // Auth.js sends a refused provider sign-in back here as `?error=`. The two the
+  // Auth.js sends a refused provider sign-in back here as `?error=`. The ones the
   // sign-in gate produces get the operator's meaning; anything else stays silent
   // rather than showing a user an internal error code.
   const providerError = params.get("error");
@@ -46,7 +46,9 @@ export function LoginForm({
       ? "This instance is not accepting new accounts. Sign in with the email address you registered with, or ask the operator for one."
       : providerError === "OAuthEmailRequired"
         ? "That provider shared no email address, so it cannot be matched to a Ghosted account. Add a verified email there, or sign in with email and password."
-        : null;
+        : providerError === "ProviderEmailUnverified"
+          ? "That provider has not verified the email address on the account, so it cannot be used to sign in here. Verify it there, or sign in with email and password."
+          : null;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();

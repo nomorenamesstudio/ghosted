@@ -66,6 +66,8 @@ cp .env.example .env
 | -------- | ------- | ----------- |
 | `RATE_LIMIT_MAX` | 5 | Max attempts per IP per window |
 | `RATE_LIMIT_WINDOW_MINUTES` | 15 | Rate-limit window |
+| `RATE_LIMIT_LOGIN_FAILURES_MAX` | 100 | Failed sign-ins allowed process-wide per window, across all accounts. A spray backstop for the case where the per-IP key cannot be trusted; once hit it refuses *any* sign-in, including a correct one, for the rest of the window |
+| `RATE_LIMIT_LOGIN_FAILURES_WINDOW_MINUTES` | 15 | Window for the line above |
 | `RATE_LIMIT_WRITES_MAX` | 300 | Max authenticated writes per user per window |
 | `RATE_LIMIT_WRITES_WINDOW_MINUTES` | 60 | Write-limit window |
 | `UNVERIFIED_APP_LIMIT` | 3 | Max applications for unverified accounts (server-enforced) |

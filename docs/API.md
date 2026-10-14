@@ -18,7 +18,10 @@
 
 - State-changing endpoints are rate limited per IP and per user (see
   SETUP.md for defaults). Exceeding a limit returns 429 with a
-  `Retry-After` header.
+  `Retry-After` header. Sign-in is additionally limited per account and, in
+  total, per process — those counters are enforced inside Auth.js's credential
+  check, so they apply to `/auth/callback/credentials` as well, and they do not
+  depend on any request header.
 - API responses are never cached: `Cache-Control: no-store` is applied to
   all `/api/*` responses (middleware).
 
@@ -175,18 +178,20 @@ application.
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
-| POST | /auth/login | Email + password sign-in (rate limited per IP and per account) |
+| POST | /auth/login | Email + password sign-in (rate limited per IP, per account and per process; 429 with `Retry-After`) |
 | POST | /auth/register | Create account (rate limited, auto sign-in, 409 on duplicate email) |
-| POST | /auth/forgot-password | Issue a 1h reset token (no account enumeration) |
-| POST | /auth/reset-password | Redeem token, change password (invalidates all outstanding tokens) |
-| GET | /auth/verify-email?token= | Confirm an email via the emailed token |
+| POST | /auth/forgot-password | Issue a 1h reset token (no account enumeration; rate limited per IP and per address) |
+| POST | /auth/reset-password | Redeem token, change password (invalidates all outstanding tokens and every session) |
+| GET | /auth/verify-email?token= | Confirm the address the token was issued *for* (changing the email invalidates outstanding tokens), rate limited per IP |
+| POST | /auth/import?mode=merge\|replace | Import an export; the row shape is the create/update schema, so the same caps, URL/domain/email checks and sanitizing apply, and an unverified account is held to `UNVERIFIED_APP_LIMIT` (403 `EMAIL_UNVERIFIED_LIMIT`). `replace` deletes first and therefore needs `X-CSRF-Token` (403 `INVALID_CSRF_TOKEN`). 413 `FILE_TOO_LARGE` / `TOO_MANY_APPLICATIONS` |
 | POST | /auth/resend-verification | Resend the verification email (signed-in, per-user rate limited) |
 | PATCH | /auth/profile | Update name / email / `patienceLevel` (changing email resets verification; 409 on duplicate) |
-| POST | /auth/change-password | Change password (current password required, rate limited) |
-| POST | /auth/set-password | Set the first password on an account that has none (session only; 400 `PASSWORD_EXISTS` if one is already set) |
+| POST | /auth/change-password | Change password (current password required, rate limited; revokes every session) |
+| POST | /auth/set-password | Set the first password on an account that has none (session only; 400 `PASSWORD_EXISTS` if one is already set; revokes every session) |
 | POST | /auth/dismiss-password-notice | Acknowledge the "we cleared your password" notice on the dashboard (session; clears the marker) |
-| DELETE | /auth/account | GDPR erasure - permanently delete account + all data |
+| DELETE | /auth/account | GDPR erasure - permanently delete account + all data. Body: `{"csrfToken":"…","password":"…"}` — the token from `GET /auth/csrf` and, for an account that has a password, the password. 403 `INVALID_CSRF_TOKEN`, 400 `PASSWORD_REQUIRED`, 401 `INVALID_PASSWORD` |
 | GET | /auth/export | GDPR portability - download all data as JSON |
+| GET | /health | Liveness/readiness for a container probe: `ok`, `database`, `config`, `uptimeSeconds`. Public, and deliberately reports no version |
 
 ## Examples
 

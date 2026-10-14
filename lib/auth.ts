@@ -1,4 +1,4 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import Linkedin from "next-auth/providers/linkedin";
@@ -17,6 +17,12 @@ import {
   resolveOAuthUser,
 } from "@/lib/services/oauth-accounts";
 import { resolveGravatarPath } from "@/lib/services/gravatar";
+import {
+  accountThrottle,
+  clearLoginFailures,
+  globalThrottle,
+  recordLoginFailure,
+} from "@/lib/auth/login-throttle";
 import { logger } from "@/lib/utils/logger";
 
 export const SESSION_IDLE_SECONDS = 30 * 24 * 60 * 60; // 30 days idle
@@ -75,9 +81,14 @@ if (
  * - JWT sessions: 30-day idle TTL (session.maxAge) hard-capped at 7 days
  *   absolute, enforced via the `authTime` claim in the jwt callback (an
  *   `exp`/`iat` pin alone is useless because @auth/core re-signs the JWT
- *   with now + maxAge on every request).
+ *   with now + maxAge on every request). The `sessionEpoch` claim revokes a
+ *   token the moment the account's credential changes.
+ *
+ * The config object is exported so tests can drive a callback directly instead
+ * of re-implementing what it does — the revocation and throttle rules are the
+ * kind that must be exercised as they run, not as they are described.
  */
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const authConfig: NextAuthConfig = {
   session: { strategy: "jwt", maxAge: SESSION_IDLE_SECONDS },
   pages: { signIn: "/login" },
   trustHost: true,
@@ -97,15 +108,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           typeof credentials?.password === "string" ? credentials.password : "";
         if (!email || !password) return null;
 
+        // The per-account throttle is checked *here* rather than in the route
+        // handler that usually fronts this callback: Auth.js serves the same
+        // credential check from `/api/auth/callback/credentials`, which never
+        // runs `/api/auth/login`, so a limit that lives only in the route is a
+        // limit an attacker walks around (measured — see
+        // lib/auth/login-throttle.ts).
+        //
+        // A peek, not a spend: both counters move only when a password turns out
+        // to be wrong, so an account's own successful sign-ins can neither use
+        // up its budget nor be refused by it.
+        if (!accountThrottle(email).ok) return null;
+
+        // The process-wide failure cap is checked before any database or
+        // bcrypt work, which is the only way it bounds guessing: it has to
+        // refuse attempts it has not looked at, including correct ones for the
+        // rest of the window. See the trade-off in login-throttle.ts.
+        if (!globalThrottle().ok) return null;
+
         const [user] = await db
           .select()
           .from(users)
           .where(eq(users.email, email))
           .limit(1);
-        if (!user?.passwordHash) return null;
+        if (!user?.passwordHash) {
+          // An address that cannot sign in this way is still a failed attempt.
+          recordLoginFailure(email);
+          return null;
+        }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+        if (!valid) {
+          recordLoginFailure(email);
+          return null;
+        }
+
+        // Only failures accumulate: a successful sign-in starts the account's
+        // window over. The global counter is deliberately not cleared here —
+        // one valid sign-in must not erase an attacker's accumulated failures.
+        clearLoginFailures(email);
 
         return {
           id: user.id,
@@ -114,6 +155,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           image: user.image ?? undefined,
           emailVerified: user.emailVerified,
           mustChangePassword: user.mustChangePassword,
+          sessionEpoch: user.sessionEpoch,
         };
       },
     }),
@@ -134,8 +176,25 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Returning a string redirects (see handleAuthorized in @auth/core); the
      * default `redirect` callback keeps it to same-origin paths.
      */
-    async signIn({ user, account }) {
+    async signIn({ user, account, profile }) {
       if (!account || !isOAuthProvider(account.provider)) return true;
+
+      // A provider that says the address is *not* verified has not proved the
+      // mailbox, and that is exactly what the adopt-or-attach rule below turns
+      // on: an unverified address that matches a local account would attach a
+      // provider identity to somebody else's account and mark it verified.
+      // `!== false` is deliberate — LinkedIn's OIDC response omits the claim,
+      // and a missing claim is not a denial, an explicit false is.
+      if (
+        (profile as { email_verified?: unknown } | undefined)?.email_verified ===
+        false
+      ) {
+        logger.info(
+          { provider: account.provider },
+          "oauth: refused sign-in, provider reported the email as unverified",
+        );
+        return "/login?error=ProviderEmailUnverified";
+      }
 
       const outcome = await classifyOAuthSignIn({
         provider: account.provider,
@@ -238,6 +297,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.mustChangePassword =
           (user as { mustChangePassword?: unknown }).mustChangePassword === true;
 
+        // Pin the revocation counter to the value the credential was *checked
+        // against*, not to whatever the row says later in this callback. The
+        // Gravatar probe below is an awaited network call, so a password change
+        // committing in that window would otherwise be absorbed: the token would
+        // be stamped with the new counter and survive the very change it should
+        // have died with. Read here, the later comparison in the revocation
+        // block fails and the race resolves the safe way. (The OAuth path has no
+        // such value to use — adoption bumps the counter *during* this callback
+        // — so it is pinned from the row there, which is correct for it.)
+        if (typeof (user as { sessionEpoch?: unknown }).sessionEpoch === "number") {
+          token.sessionEpoch = (user as { sessionEpoch: number }).sessionEpoch;
+        }
+
         // A stored avatar — the demo account's app icon, or anything a user
         // sets later — beats the anonymous Gravatar probe below.
         if (!token.picture && typeof user.image === "string") {
@@ -260,13 +332,59 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      // Revocation. A JWT carries no server-side session record, so nothing
+      // stops a token from working forever (up to the absolute cap below) once
+      // it has been copied out of a browser. The `session_epoch` column is the
+      // record: it moves whenever the account's credential changes — a
+      // password change or reset, a first password, a provider sign-in that
+      // clears one — and a token whose claim does not match the row is
+      // refused. Deleting the account removes the row, which refuses every
+      // token for it here.
+      //
+      // One indexed lookup per session read, on the same path that already
+      // loads the user for the page being rendered.
+      if (typeof token.sub === "string") {
+        const [row] = await db
+          .select({ sessionEpoch: users.sessionEpoch })
+          .from(users)
+          .where(eq(users.id, token.sub))
+          .limit(1);
+
+        if (!row) return null; // account deleted
+
+        if (typeof token.sessionEpoch === "number") {
+          if (token.sessionEpoch !== row.sessionEpoch) return null;
+        } else if (user) {
+          // No claim, and a sign-in in flight: the OAuth path, where adoption
+          // bumps the counter during this callback and the session that just
+          // proved the provider identity is the one it must not revoke. The
+          // credentials path pinned its own (verification-time) value above.
+          token.sessionEpoch = row.sessionEpoch;
+        } else {
+          // No claim and no sign-in in flight: a token minted before this
+          // check existed. Nothing has been revoked yet on an account whose
+          // counter is still 0, so it is allowed to keep working and is pinned
+          // from here on; once any credential has changed, it is exactly the
+          // token that has to stop.
+          if (row.sessionEpoch > 0) return null;
+          token.sessionEpoch = row.sessionEpoch;
+        }
+      }
+
       // Absolute session cap: 7 days from sign-in. Enforced here because
       // @auth/core's encode() re-signs the JWT on every request and
       // overwrites `iat`/`exp` (setIssuedAt/setExpirationTime), so an
       // iat-based check would never fire. We stamp a custom `authTime`
-      // claim at sign-in that encode() does not touch, and return null
-      // (Auth.js then clears the cookie) once it exceeds the cap.
-      if (user && !token.authTime) {
+      // claim that encode() does not touch, and return null (Auth.js then
+      // clears the cookie) once it exceeds the cap.
+      //
+      // Also stamped for a token that arrives *without* the claim — a session
+      // minted before the claim shipped, which otherwise had no absolute bound
+      // at all: encode() re-signs it with a fresh 30-day window on every use, so
+      // an actively used pre-upgrade cookie never expired. Stamping on the first
+      // read gives it at most seven more days instead of indefinitely, and costs
+      // nobody a sign-out at deploy.
+      if (!token.authTime) {
         token.authTime = Math.floor(Date.now() / 1000);
       }
       if (typeof token.authTime === "number") {
@@ -292,6 +410,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
-});
+};
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
 
 export type { Provider }; // re-exported for route handlers

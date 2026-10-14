@@ -11,7 +11,7 @@ import { GET } from "@/app/api/health/route";
  * not" — which is the failure a process check cannot see.
  */
 describe("GET /api/health", () => {
-  it("reports the version and a reachable database", async () => {
+  it("reports a reachable database", async () => {
     (db.execute as Mock).mockResolvedValueOnce([{ "?column?": 1 }]);
 
     const res = await GET();
@@ -20,8 +20,16 @@ describe("GET /api/health", () => {
     expect(await res.json()).toMatchObject({
       ok: true,
       database: "up",
-      version: expect.any(String),
     });
+  });
+
+  it("does not publish the running version", async () => {
+    // This endpoint is public and unauthenticated, so the version was a free
+    // answer to "which advisories apply to you?" (2026-10-14 pentest, finding 5).
+    (db.execute as Mock).mockResolvedValueOnce([{ "?column?": 1 }]);
+
+    const body = (await (await GET()).json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("version");
   });
 
   it("answers 503 when the deployment configuration is invalid", async () => {

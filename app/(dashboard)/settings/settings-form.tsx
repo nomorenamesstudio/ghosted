@@ -119,6 +119,7 @@ export function SettingsForm({
   const [importMsg, setImportMsg] = useState<Msg>(null);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -222,9 +223,25 @@ export function SettingsForm({
     setImportMsg(null);
     try {
       const text = await importFile.text();
+      // A replace import deletes every application first, so the route asks for
+      // the CSRF token the same way account deletion does — the export file is
+      // the whole body, so the token rides in a header.
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (importReplace) {
+        const csrfRes = await fetch("/api/auth/csrf");
+        const csrf = csrfRes.ok
+          ? ((await csrfRes.json()) as { csrfToken?: string })
+          : null;
+        if (!csrf?.csrfToken) {
+          throw new Error("Could not verify this request — reload and try again");
+        }
+        headers["X-CSRF-Token"] = csrf.csrfToken;
+      }
       const res = await fetch(
         `/api/auth/import?mode=${importReplace ? "replace" : "merge"}`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: text },
+        { method: "POST", headers, body: text },
       );
       const body = (await res.json().catch(() => null)) as
         | { error?: string; applications?: number; milestones?: number; skipped?: number }
@@ -253,13 +270,42 @@ export function SettingsForm({
     setDeleteBusy(true);
     setDeleteError(null);
     try {
-      const res = await fetch("/api/auth/account", { method: "DELETE" });
+      // The session cookie is ambient — it rides along on any request the page
+      // can make, including one an injected script makes. The route wants the
+      // CSRF token Auth.js minted for this browser plus, for an account that
+      // has one, the password. Fetching the token here is the same first step
+      // next-auth's own `signOut` takes.
+      const csrfRes = await fetch("/api/auth/csrf");
+      const csrf = csrfRes.ok
+        ? ((await csrfRes.json()) as { csrfToken?: string })
+        : null;
+      if (!csrf?.csrfToken) {
+        throw new Error("Could not verify this request — reload and try again");
+      }
+
+      const res = await fetch("/api/auth/account", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          csrfToken: csrf.csrfToken,
+          password: deletePassword,
+        }),
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? "Failed to delete account");
       }
-      await signOut({ redirect: false });
-      router.push("/login");
+      // The account row is gone, so the session is already dead and signOut is
+      // only clearing the cookie — a failure there must not swallow the news.
+      try {
+        await signOut({ redirect: false });
+      } catch {
+        // Nothing left to do about it: the next request is unauthenticated
+        // either way.
+      }
+      // Not the login screen: the person deleted their account on purpose, and
+      // handing them a sign-in form reads like the deletion failed.
+      router.push("/account-deleted");
       router.refresh();
     } catch (err) {
       setDeleteBusy(false);
@@ -475,11 +521,6 @@ export function SettingsForm({
 
           {canDeleteAccount ? (
             <div className="border-t pt-4">
-              {deleteError && (
-                <p role="alert" className="mb-2 text-sm text-destructive">
-                  {deleteError}
-                </p>
-              )}
               <Button
                 variant="destructive"
                 onClick={() => setConfirmDelete(true)}
@@ -556,14 +597,38 @@ export function SettingsForm({
 
       <ConfirmDialog
         open={confirmDelete}
-        onOpenChange={setConfirmDelete}
+        onOpenChange={(open) => {
+          setConfirmDelete(open);
+          if (!open) {
+            setDeletePassword("");
+            setDeleteError(null);
+          }
+        }}
         title="Delete account permanently?"
-        description="All of your applications, milestones and notes will be erased. This cannot be undone."
+        description={
+          hasPassword
+            ? "All of your applications, milestones and notes will be erased. This cannot be undone. Enter your password to confirm."
+            : "All of your applications, milestones and notes will be erased. This cannot be undone."
+        }
         confirmLabel="Delete account"
         destructive
         loading={deleteBusy}
         onConfirm={confirmDeleteAccount}
-      />
+      >
+        {hasPassword && (
+          <div className="space-y-2">
+            <Label htmlFor="delete-password">Your password</Label>
+            <Input
+              id="delete-password"
+              type="password"
+              autoComplete="current-password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+            />
+          </div>
+        )}
+        {deleteError && <Message state={{ type: "error", text: deleteError }} />}
+      </ConfirmDialog>
     </div>
   );
 }

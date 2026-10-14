@@ -209,11 +209,16 @@ request. If one fails, the container exits with the SQL error in
 `docker compose logs app` — take a `pg_dump` first, and read the
 [changelog](CHANGELOG.md) for anything tagged **Break**.
 
-The running version is on `/api/health`:
+The running version is not published anywhere: `/api/health` is public and
+unauthenticated, so it reports state and not identity (it used to answer with the
+version, which told anyone who asked which advisories applied). Read it from the
+checkout or the image you built:
 
 ```bash
-curl -s localhost:8080/api/health
-{"ok":true,"version":"0.1.0","database":"up","uptimeSeconds":42}
+node -p "require('./package.json').version"          # the checkout you built from
+docker inspect ghosted-app --format '{{.Config.Image}}'  # or the tag you gave it
+curl -s localhost:8080/api/health                    # state only: ok, database, config
+{"ok":true,"database":"up","config":"ok","uptimeSeconds":42}
 ```
 
 A `503` there means the app is up but the database is not — the usual cause of a

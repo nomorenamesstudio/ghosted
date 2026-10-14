@@ -1,7 +1,19 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
-import { applications, milestones } from "@/lib/db/schema";
+import { applications, milestones, users } from "@/lib/db/schema";
+import { sanitizeText } from "@/lib/utils/sanitize";
+import {
+  applicationAllowance,
+  unverifiedLimitError,
+} from "@/lib/services/applications";
+import { ApiError } from "@/lib/utils/api";
+import {
+  optionalCompanyWebsiteSchema,
+  optionalEmailText,
+  optionalLongText,
+  optionalUrlSchema,
+} from "@/lib/utils/validation";
 
 /**
  * Import a Ghosted export, so an account can move between instances.
@@ -43,23 +55,36 @@ const isoDate = z
 const milestoneSchema = z.object({
   id: z.string().min(1).optional(),
   stepOrder: z.number().int().min(0).max(200),
-  title: z.string().min(1).max(200),
+  title: z.string().trim().min(1).max(200),
   status: z.enum(MILESTONE_STATUSES).default("pending"),
-  comment: z.string().max(10_000).nullish(),
+  comment: optionalLongText(5_000),
   date: isoDate.nullish(),
   createdAt: isoDate.optional(),
 });
 
+/**
+ * The row schema, built out of the same field schemas the create/update routes
+ * use — deliberately, not by coincidence.
+ *
+ * This file used to re-declare the shape with its own caps, which made it the
+ * effective write contract for those columns: an imported `url` never met
+ * `isSafeHttpUrl`, an imported `companyWebsite` never went through
+ * `normalizeDomain`, an imported `contactEmail` was never checked to be an
+ * email, and the caps disagreed with the form (contact phone 100 vs 40, notes
+ * 20,000 vs 10,000). A file that the API would refuse could be written straight
+ * into the database through the import (static audit 2026-10-14). Sharing the
+ * pieces is the fix; a second declaration is the bug.
+ */
 const applicationSchema = z.object({
   id: z.string().min(1).optional(),
-  company: z.string().min(1).max(200),
-  role: z.string().min(1).max(200),
-  url: z.string().max(2_000).nullish(),
-  companyWebsite: z.string().max(500).nullish(),
-  contactName: z.string().max(200).nullish(),
-  contactEmail: z.string().max(320).nullish(),
-  contactPhone: z.string().max(100).nullish(),
-  notes: z.string().max(20_000).nullish(),
+  company: z.string().trim().min(1).max(200),
+  role: z.string().trim().min(1).max(200),
+  url: optionalUrlSchema,
+  companyWebsite: optionalCompanyWebsiteSchema,
+  contactName: optionalLongText(200),
+  contactEmail: optionalEmailText,
+  contactPhone: optionalLongText(40),
+  notes: optionalLongText(10_000),
   status: z.enum(APPLICATION_STATUSES).default("applied"),
   isFavorite: z.boolean().default(false),
   archivedFromStatus: z.enum(APPLICATION_STATUSES).nullish(),
@@ -69,12 +94,24 @@ const applicationSchema = z.object({
   milestones: z.array(milestoneSchema).max(200).default([]),
 });
 
+/**
+ * The most applications one file may carry.
+ *
+ * Enforced twice on purpose. The schema's `.max()` is the contract, but Zod 4
+ * parses every element before it runs an array-level check, so a 5 MB document
+ * of `{}` rows reaches ~1.7 million element parses and several GB of heap before
+ * the cap is reported (measured in the 2026-10-14 static audit). The route checks
+ * the array length *before* handing anything to Zod; this constant is what both
+ * checks read.
+ */
+export const MAX_IMPORTED_APPLICATIONS = 5_000;
+
 export const importFileSchema = z.object({
   version: z.number().int().positive().optional(),
   exportedAt: isoDate.optional(),
   // The importer's own identity wins; a stray user block is ignored on purpose.
   user: z.unknown().optional(),
-  applications: z.array(applicationSchema).max(5_000),
+  applications: z.array(applicationSchema).max(MAX_IMPORTED_APPLICATIONS),
 });
 
 export type ImportFile = z.infer<typeof importFileSchema>;
@@ -117,6 +154,17 @@ export async function importUserData(
   }
 
   return db.transaction(async (tx) => {
+    // Lock the account row first: the unverified-email ceiling below is a
+    // count-then-write, and two imports arriving together would otherwise each
+    // read the same count and each be allowed the whole allowance.
+    const [account] = await tx
+      .select({ emailVerified: users.emailVerified })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+      .for("update");
+    if (!account) throw new ApiError(404, "User not found", "NOT_FOUND");
+
     if (mode === "replace") {
       // Cascades to milestones, and to nothing else: the account stays.
       await tx.delete(applications).where(eq(applications.userId, userId));
@@ -136,6 +184,15 @@ export async function importUserData(
       })
       .from(applications)
       .where(eq(applications.userId, userId));
+
+    // The same ceiling the API enforces, from the same rule. Checked against the
+    // file's length rather than the rows that survive dedupe: a partial import
+    // would drop data silently, and "verify your email first" is a better answer
+    // than "we imported three of your five thousand". After a `replace` delete
+    // the account is empty, so the full allowance applies without a special case.
+    const allowance = applicationAllowance(account.emailVerified, existing.length);
+    if (file.applications.length > allowance) throw unverifiedLimitError();
+
     const seenTimed = new Set(
       existing.map((row) => identityKey(row.company, row.role, row.createdAt)),
     );
@@ -169,14 +226,18 @@ export async function importUserData(
         .insert(applications)
         .values({
           userId,
-          company: app.company,
-          role: app.role,
+          // Same treatment as the create path: text the account did not type
+          // itself still goes through the sanitizer before it is stored, so an
+          // export is not a way to plant markup that every future render has to
+          // defend against on its own.
+          company: sanitizeText(app.company) ?? app.company,
+          role: sanitizeText(app.role) ?? app.role,
           url: app.url ?? null,
           companyWebsite: app.companyWebsite ?? null,
-          contactName: app.contactName ?? null,
-          contactEmail: app.contactEmail ?? null,
-          contactPhone: app.contactPhone ?? null,
-          notes: app.notes ?? null,
+          contactName: sanitizeText(app.contactName),
+          contactEmail: sanitizeText(app.contactEmail),
+          contactPhone: sanitizeText(app.contactPhone),
+          notes: sanitizeText(app.notes),
           status: app.status,
           isFavorite: app.isFavorite,
           archivedFromStatus: app.archivedFromStatus ?? null,
@@ -195,9 +256,9 @@ export async function importUserData(
           app.milestones.map((milestone) => ({
             applicationId: inserted.id,
             stepOrder: milestone.stepOrder,
-            title: milestone.title,
+            title: sanitizeText(milestone.title) ?? milestone.title,
             status: milestone.status,
-            comment: milestone.comment ?? null,
+            comment: sanitizeText(milestone.comment),
             date: milestone.date ? new Date(milestone.date) : null,
             ...(milestone.createdAt
               ? { createdAt: new Date(milestone.createdAt) }

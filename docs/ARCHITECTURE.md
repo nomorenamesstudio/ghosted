@@ -66,8 +66,9 @@ middleware.ts             # Cache-Control: no-store on all /api/*
 ## Data Flow
 
 1. **Auth**: login/register issue a JWT session cookie (30-day idle TTL,
-   hard-capped at 7 days absolute via an `authTime` claim). The session
-   exposes `id`, `email`, `emailVerified`.
+   hard-capped at 7 days absolute via an `authTime` claim, and revocable at any
+   time via the `sessionEpoch` claim). The session exposes `id`, `email`,
+   `emailVerified`.
 2. **Requests**: every API route calls `requireSession()`, reads
    `session.user.id`, and scopes every query by `user_id`. Server pages
    (`/app`, `/settings`) read `emailVerified` straight from the DB so the
@@ -119,6 +120,18 @@ middleware.ts             # Cache-Control: no-store on all /api/*
 - **Session cap enforced in the jwt callback**: `@auth/core` re-signs the JWT
   on every request and overwrites `iat`/`exp`, so a custom `authTime` claim
   (checked in the callback) enforces the 7-day absolute cap instead.
+- **Session revocation is a claim, not a table**: `users.session_epoch` moves on
+  every credential change and the `jwt` callback refuses a token whose
+  `sessionEpoch` claim no longer matches (or whose account is gone). A JWT
+  session strategy has no server-side record to delete, so this is the record —
+  and the reason a password change evicts a copied session today rather than at
+  the 7-day cap. One indexed lookup per session read.
+- **The sign-in throttle lives in `authorize()`**, not in the route that fronts
+  it: `/api/auth/login` and `/api/auth/callback/credentials` both reach the
+  callback, and only the second one used to be unthrottled. The per-IP key is
+  best-effort (`CF-Connecting-IP`, then `X-Real-IP`, then `X-Forwarded-For`,
+  which is client-controlled); the account-keyed and process-wide counters carry
+  the weight. See `lib/auth/login-throttle.ts`.
 - **Unverified accounts are capped**: `UNVERIFIED_APP_LIMIT` (default 3)
   applications, enforced server-side (403 `EMAIL_UNVERIFIED_LIMIT`) and
   surfaced in the UI via a banner + modal.
