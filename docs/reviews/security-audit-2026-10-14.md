@@ -187,9 +187,10 @@ questions where it could not:
   `/api/auth/login` answered `401 429 401 429`, which is two independent
   in-memory buckets, not a rate limit. Every counter in this pass is per process,
   so a limit's real budget is `max × replicas`.
-- **The Railway origin is still reachable around Cloudflare**: `GET
-  https://<service>.up.railway.app/api/health` answers `200`
-  without the edge, which is what makes any header-derived key forgeable there.
+- **The Railway origin is still reachable around Cloudflare**: `GET` on the
+  service's own `<service>.up.railway.app` hostname answers `200` without the
+  edge, which is what makes any header-derived key forgeable there. (The exact
+  hostname is withheld here on purpose: it is the bypass.)
 - **`ALLOW_REGISTRATION` is live and open** — the production probe earlier today
   got a `201` from `POST /api/auth/register`, and the operator confirmed that is
   intended — so the unverified-cap findings are reachable in production.
