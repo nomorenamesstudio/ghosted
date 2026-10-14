@@ -101,8 +101,9 @@ public `<service>.up.railway.app` hostname by default, and that hostname is a wa
 straight past Cloudflare: no bot rules, no header rewriting, and whatever the
 client sends arrives intact. The production service had its generated domain
 removed on 2026-10-14 for exactly that reason (the pentest report's origin
-finding). Staging keeps its own on purpose — it is how a staging deploy is
-verified — and that is a deliberate, test-data-only exception, not a default.
+finding). Staging follows the same rule: give it its own Cloudflare-fronted
+subdomain (so a staging deploy can still be verified from outside) and delete the
+generated hostname. Both services were edge-only by 2026-10-14.
 
 The staging environment deploys from the **`staging`** branch, runs the same
 Dockerfile, and is where a change is verified before `main` carries it. The
