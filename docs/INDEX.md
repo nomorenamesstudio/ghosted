@@ -13,6 +13,4 @@
 - [Security audit findings detail 2026-10-14](reviews/security-audit-2026-10-14-findings.md) - every verified record: trace, evidence, blockers and the check that would settle it
 - [Releasing](RELEASING.md) - version bumps, tags, publishing an image
 - [Release notes: 1.0.0](releases/v1.0.0.md) - what the first release contains and what it promises
-- [Blog: Ghosted 1.0, and the day I nearly pointed staging at production](blog/2026-10-04-shipping-ghosted-1-0.md) - the release, the near-miss, and what it cost
-- [Blog: The LinkedIn button was the easy part](blog/2026-10-09-shipping-ghosted-1-3.md) - OAuth, the identity key that changed every sign-in, and two arguments I lost
 - [What building this costs](COSTS.md) - tokens, the estimate, and the provider balance
