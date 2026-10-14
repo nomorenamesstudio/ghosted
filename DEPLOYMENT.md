@@ -96,6 +96,14 @@ Replace `<APP_URL>` below with your final app subdomain, e.g.
 
 ## 4b. A staging environment on Railway (and the traps)
 
+**Remove the generated domain, or front it with Cloudflare.** Railway attaches a
+public `<service>.up.railway.app` hostname by default, and that hostname is a way
+straight past Cloudflare: no bot rules, no header rewriting, and whatever the
+client sends arrives intact. The production service had its generated domain
+removed on 2026-10-14 for exactly that reason (the pentest report's origin
+finding). Staging keeps its own on purpose — it is how a staging deploy is
+verified — and that is a deliberate, test-data-only exception, not a default.
+
 The staging environment deploys from the **`staging`** branch, runs the same
 Dockerfile, and is where a change is verified before `main` carries it. The
 checks that count are in [docs/RELEASING.md](docs/RELEASING.md).

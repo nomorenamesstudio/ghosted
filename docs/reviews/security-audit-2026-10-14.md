@@ -187,10 +187,13 @@ questions where it could not:
   `/api/auth/login` answered `401 429 401 429`, which is two independent
   in-memory buckets, not a rate limit. Every counter in this pass is per process,
   so a limit's real budget is `max × replicas`.
-- **The Railway origin is still reachable around Cloudflare**: `GET` on the
-  service's own `<service>.up.railway.app` hostname answers `200` without the
-  edge, which is what makes any header-derived key forgeable there. (The exact
-  hostname is withheld here on purpose: it is the bypass.)
+- **The Railway origin is no longer reachable around Cloudflare** (closed
+  2026-10-14): production's generated domain was removed, `ghosted.boo` is the
+  only hostname attached, and it goes through the edge. Re-probed with the fix in
+  place: a forged `X-Forwarded-For` rotated per attempt is refused at the sixth
+  attempt instead of starting a fresh bucket. The **staging** service still
+  answers on its generated hostname (`server: railway-hikari`) — the same class
+  of exposure, test data only, and it is the deploy-verification path.
 - **`ALLOW_REGISTRATION` is live and open** — the production probe earlier today
   got a `201` from `POST /api/auth/register`, and the operator confirmed that is
   intended — so the unverified-cap findings are reachable in production.

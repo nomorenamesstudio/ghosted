@@ -64,10 +64,14 @@ person refused entry to their own account.
 
 What that means in practice, measured rather than assumed:
 
-- **A per-IP limit on the production origin is attacker-chosen.** `X-Forwarded-For`
-  arrives exactly as the client sent it, and the Railway origin is reachable
-  without Cloudflare, so the per-IP bucket can be reset with one header. The
-  account-keyed counter and the process-wide failure cap do not depend on it.
+- **A per-IP limit is attacker-chosen wherever an origin is directly
+  reachable.** On `ghosted.boo` that is settled: the service's generated Railway
+  domain was removed on 2026-10-14, Cloudflare is the only way in, and a probe
+  that rotates a forged `X-Forwarded-For` per attempt is refused at the sixth
+  instead of starting a fresh bucket. A self-hosted instance whose origin can be
+  reached around its proxy is the case this bullet still describes — there
+  `x-forwarded-for` is the client's own string. The account-keyed counter and the
+  process-wide failure cap do not depend on it.
 - **The counters are per process, and production runs more than one replica**
   (identical consecutive requests answering `401 429 401 429` is the signature).
   They reset on restart and do not span replicas, so an attacker's real budget is
