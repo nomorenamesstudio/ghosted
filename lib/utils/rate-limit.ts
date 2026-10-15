@@ -14,6 +14,11 @@
 interface Bucket {
   count: number;
   resetAt: number;
+  /**
+   * The limit this window opened with, kept so the prune can tell a spent
+   * window from one that is still refusing. Without it, eviction is blind.
+   */
+  max: number;
 }
 
 const buckets = new Map<string, Bucket>();
@@ -23,9 +28,18 @@ const buckets = new Map<string, Bucket>();
  *
  * Identities are attacker-chosen — an email address, an IP, an account id — so
  * "the map only grows as large as the traffic" is not a bound. Expired buckets
- * go first. If the map is *still* full, the oldest windows are dropped in one
- * batch rather than one per insert: a full map plus a sort per request would
- * make every new identity cost O(n log n), which is its own denial of service.
+ * go first. If the map is *still* full, spent windows are dropped in one batch
+ * rather than one per insert: a full map plus a sort per request would make
+ * every new identity cost O(n log n), which is its own denial of service.
+ *
+ * What the batch deliberately will not drop is a window that is **still
+ * refusing** (`count > max`). Eviction by age alone made the process-wide
+ * sign-in cap the easiest thing to evict: it is written first and therefore
+ * oldest, so an attacker minting ten thousand identities could hand back the
+ * budget that was holding them off. The cost of protecting them is that a
+ * flood of *tripped* identities can push the map past `MAX_BUCKETS` — memory
+ * bounded by how much work an attacker is willing to spend tripping limits,
+ * which is the cheaper thing to give up.
  */
 const MAX_BUCKETS = 10_000;
 function pruneIfNeeded(): void {
@@ -37,12 +51,9 @@ function pruneIfNeeded(): void {
   }
   if (buckets.size < MAX_BUCKETS) return;
 
-  // Drop the oldest tenth. Losing a live window is the cost of an attacker
-  // filling the map; it can only ever make a limit more permissive for
-  // identities that were closest to expiry anyway.
-  const byExpiry = Array.from(buckets.entries()).sort(
-    (a, b) => a[1].resetAt - b[1].resetAt,
-  );
+  const byExpiry = Array.from(buckets.entries())
+    .filter(([, b]) => b.count <= b.max)
+    .sort((a, b) => a[1].resetAt - b[1].resetAt);
   const drop = Math.max(1, Math.floor(MAX_BUCKETS / 10));
   for (let i = 0; i < drop && i < byExpiry.length; i++) {
     buckets.delete(byExpiry[i][0]);
@@ -54,17 +65,25 @@ export interface RateLimitResult {
   retryAfterSeconds: number;
 }
 
+/**
+ * The limits a call runs under.
+ *
+ * **`windowMs` is milliseconds wherever it is handed to this module**; the only
+ * minutes-valued input is `RATE_LIMIT_WINDOW_MINUTES`, converted here and only
+ * here. The first version of this function multiplied the override too, and both
+ * app callers already pass milliseconds — which turned the documented "100
+ * failures per 15 minutes" into 625 days and the write throttle into 300 writes
+ * per 2,500 days (static audit, third pass, 2026-10-14). Treating the two
+ * branches as different units is what made a real control unshippable.
+ */
 function limits(overrides?: { max?: number; windowMs?: number }) {
   const max = Math.max(
     1,
     overrides?.max ?? Number(process.env.RATE_LIMIT_MAX ?? 5),
   );
-  const windowMs =
-    Math.max(
-      1,
-      (overrides?.windowMs ??
-        Number(process.env.RATE_LIMIT_WINDOW_MINUTES ?? 15)) * 60_000,
-    );
+  const envWindowMs =
+    Number(process.env.RATE_LIMIT_WINDOW_MINUTES ?? 15) * 60_000;
+  const windowMs = Math.max(1, overrides?.windowMs ?? envWindowMs);
   return { max, windowMs };
 }
 
@@ -81,7 +100,7 @@ export function rateLimit(
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
     pruneIfNeeded();
-    buckets.set(key, { count: 1, resetAt: now + windowMs });
+    buckets.set(key, { count: 1, resetAt: now + windowMs, max });
     return { ok: true, retryAfterSeconds: 0 };
   }
 
@@ -103,6 +122,11 @@ export function rateLimit(
  * login route checks the IP, the Credentials callback checks the account)
  * needs a read that does not add a second count. Counting twice would halve
  * the configured allowance without anyone changing it.
+ *
+ * `overrides.windowMs` is accepted and used only for its `max`-side arithmetic:
+ * a peek never opens a window, and the one it reports is the bucket's own. That
+ * is deliberate, not an oversight — a peek that created a window would let a
+ * separate reader reset an attacker's clock.
  */
 export function rateLimitStatus(
   identity: string,

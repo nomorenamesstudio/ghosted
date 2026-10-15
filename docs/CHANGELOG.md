@@ -2,6 +2,27 @@
 
 All notable changes, by date and type.
 
+## Unreleased
+
+### Fixed
+- **A doubled unit conversion made two limits 60,000× longer than documented.**
+  `limits()` multiplied *whatever* it was handed by 60,000, but both callers that
+  pass a window already pass milliseconds — so the process-wide sign-in failure
+  cap ("100 per 15 minutes") held its refusal for **625 days** and the
+  authenticated write throttle ("300 writes per hour") for **2,500 days**. About
+  101 unauthenticated failures would have disabled password sign-in on a replica
+  until its next restart, correct passwords included; nothing in the suite could
+  see it, because no test in it ever advanced a clock. `windowMs` is milliseconds
+  everywhere now, the env default is the only minutes-valued input, and the new
+  tests move the clock (`tests/unit/rate-limit.test.ts`).
+- **Protecting the caps from their own housekeeping.** The bucket map's overflow
+  prune dropped the oldest tenth by age, and the process-wide cap is written
+  first — so it was the easiest thing for an identity-minting attacker to evict,
+  which would have handed back exactly the budget holding them off. A window that
+  is still refusing (`count > max`) is never evicted now, which is the condition
+  the third audit pass attached to the window fix; spent windows are still
+  dropped, so the map does not grow without bound.
+
 ## 1.4.0 — 2026-10-14
 
 ### Security audit
@@ -52,6 +73,60 @@ All notable changes, by date and type.
   reasons, and `lib/utils/csrf.ts` was never reviewed by a unit. Reports:
   [docs/reviews/security-audit-2026-10-14.md](reviews/security-audit-2026-10-14.md)
   and its [findings detail](reviews/security-audit-2026-10-14-findings.md).
+
+- **The static audit's fixes were verified against the deployed instance, not
+  just against the source.** Ten observed checks pass on the Cloudflare-fronted
+  staging host: an unverified account's 10-application import answers `403
+  EMAIL_UNVERIFIED_LIMIT` and writes nothing, one row over the per-file cap
+  answers `413 TOO_MANY_APPLICATIONS` in 0.30 s, a ~5 MB document of minimal rows
+  answers `413` in 0.80 s (pre-fix: ~11 s of CPU and ~3.2 GB of heap),
+  `?mode=replace` without a CSRF token answers `403 INVALID_CSRF_TOKEN` without
+  deleting, six consecutive correct sign-ins all succeed (pre-fix the sixth was
+  refused), and the throwaway account deletes cleanly. Separately measured: the
+  `X-Forwarded-For` throttle bypass is dead — the sixth attempt on one address
+  now answers `429` even with a fresh forged header per request — and the old
+  `*.up.railway.app` origins answer Railway's `404 Application not found`, so the
+  services are reached only through the edge. One recommendation remains open:
+  `company_logos` still has no per-account budget or eviction. See
+  [docs/reviews/security-audit-2026-10-14.md](reviews/security-audit-2026-10-14.md),
+  "Post-deploy verification".
+
+- **The four audit units the first pass deferred were hunted and independently
+  verified.** 10 records, 7 rejected and 3 needs-validation, 0 confirmed. The
+  survivors are all race or timing defects in our own code, and each has a one-line
+  or one-transaction fix: `verifyEmail`'s binding check needs its email predicate on
+  the write, `POST /api/auth/login` needs a `Content-Type` assertion (or the token
+  the framework's own credentials callback requires) because a cross-site form POST
+  can currently plant a session, and `forgot-password` should defer its mail send
+  with `after()` instead of answering on the provider's clock. The seven rejections
+  died on controls outside app code — Next's server-action origin check, the
+  framework's own no-store on dynamic pages, the middleware body clone, `@auth/core`
+  cookie defaults, the CORS preflight boundary, RFC 5321 — which is itself the
+  lesson: on this stack, check the installed dependency before believing a finding.
+  Coverage is explicitly incomplete: the post-wave critic returned `stop`, and the
+  next unit to fund is the shared in-memory limiter map, whose eviction path may
+  reset the sign-in caps.
+
+- **A third audit pass over the four units the second pass's critic proposed, and it
+  found the sharpest defect of the three passes: a units bug in the limiter.** `limits()`
+  multiplies a caller-supplied `windowMs` by `60_000` while both callers already pass
+  milliseconds, so the process-wide sign-in failure cap is **100 failures per 625 days**
+  instead of 100 per 15 minutes — an unauthenticated attacker needs one source IP and
+  ~101 failures (17 addresses is enough) to make every account's correct password
+  unusable, silently on the callback path, until a restart. The same line makes the
+  per-user write throttle 300 writes per 2,500 days, which is 60,000× *tighter* and
+  locks heavy legitimate users out of a write scope. Both are fixed by moving the
+  `* 60_000` off the override — **and that fix must not ship alone**: the 625-day
+  window is currently what shields the process-wide cap from the bucket-map prune's
+  oldest-tenth drop, so the prune needs the same review in the same change. Also confirmed: an email change revokes no session and
+  proves no password, which — with `forgot-password` mailing to the address on file —
+  makes the current-password gate on deletion effectively optional; and the log
+  transport writes **live** reset and verification tokens to stdout at `info` with the
+  database holding only their hash. Two corrections to the earlier record: the session
+  cookie is host-only, so a sibling subdomain never receives it (the CSRF residual
+  needs XSS), and `login-failures:all` cannot be evicted by the bucket-map flood.
+  The critic's named lead — the bucket map's eviction path — is settled and is not a
+  finding.
 
 ### Fixed
 - **Every finding in the report above, at the root rather than at the symptom.**

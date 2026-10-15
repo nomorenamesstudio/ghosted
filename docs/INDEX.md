@@ -11,6 +11,8 @@
 - [Pentest, local instance 2026-10-14](reviews/pentest-local-2026-10-14.md) - an autonomous pentest (Strix) of a disposable production build: session revocation, a bypassable login throttle, and what held clean
 - [Security audit 2026-10-14](reviews/security-audit-2026-10-14.md) - a static, source-only audit with independently verified records: 14 needs-validation leads, 3 rejected, 0 confirmed, and the coverage gaps stated
 - [Security audit findings detail 2026-10-14](reviews/security-audit-2026-10-14-findings.md) - every verified record: trace, evidence, blockers and the check that would settle it
+- [Security audit second-pass findings 2026-10-14](reviews/security-audit-2026-10-14-pass2-findings.md) - the four deferred units, hunted and independently verified: 7 rejected, 3 needs-validation, 0 confirmed
+- [Security audit third-pass findings 2026-10-14](reviews/security-audit-2026-10-14-pass3-findings.md) - the limiter map, the units bug in the sign-in cap and write throttle, the email-change revocation gap and the logged live tokens: 3 needs-validation, 7 rejected, 0 confirmed
 - [Releasing](RELEASING.md) - version bumps, tags, publishing an image
 - [Release notes: 1.0.0](releases/v1.0.0.md) - what the first release contains and what it promises
 - [What building this costs](COSTS.md) - tokens, the estimate, and the provider balance
