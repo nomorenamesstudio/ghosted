@@ -2,6 +2,24 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-15
+
+### Changed
+- **The repository moved to `nomorenamesstudio/ghosted`.** The GitHub account was
+  renamed, so the clone commands, the README badge, the issue-template links and the
+  JSON-LD `codeRepository` / `license` all point at the new owner. GitHub redirects
+  the old paths, but it releases the old handle immediately and something else
+  registered it the same day — so nothing here is left relying on that redirect.
+- **Railway needed re-pointing at the repository.** After the rename its stored
+  source string stopped resolving and the deploy went silent: no deploy status on
+  the commit, no new process for 25 minutes, while its runtime kept serving the
+  previous build. Reconnecting the repo in the dashboard fixed it and both
+  environments deploy again. GitHub Actions was never affected.
+
+### Added
+- [The story](STORY.md) — why Ghosted exists, in the author's words, linked from the
+  README and the docs index.
+
 ## 1.4.3 — 2026-10-15
 
 ### Security
