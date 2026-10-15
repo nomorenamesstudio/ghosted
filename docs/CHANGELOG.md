@@ -2,7 +2,7 @@
 
 All notable changes, by date and type.
 
-## Unreleased — 2026-10-15
+## 1.4.2 — 2026-10-15
 
 ### Fixed
 - **The audit's remaining leads, in its ranked order.**
