@@ -83,7 +83,11 @@ services:
       GHOSTED_USER_EMAIL: ${GHOSTED_USER_EMAIL:-}
       GHOSTED_USER_NAME: ${GHOSTED_USER_NAME:-}
       GHOSTED_USER_PASSWORD: ${GHOSTED_USER_PASSWORD:-}
-      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-log}
+      # Empty, not "log": an unset value must fall through to the same
+      # auto-detection the other deployment shapes use (resend when
+      # RESEND_API_KEY is set, otherwise the log stub). `:-log` made the
+      # self-host compose the one shape that ignored a configured key.
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       SMTP_URL: ${SMTP_URL:-}
       EMAIL_FROM: ${EMAIL_FROM:-}

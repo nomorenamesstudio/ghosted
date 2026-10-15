@@ -10,6 +10,7 @@ import {
 import {
   getClientIp,
   rateLimit,
+  rateLimitAccount,
   rateLimitSuccess,
 } from "@/lib/utils/rate-limit";
 
@@ -27,6 +28,13 @@ export async function POST(req: Request) {
     const rl = rateLimit(getClientIp(req), "set-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
+    // Beside the per-IP window, one keyed to the account. The IP window is per
+    // address, so an attacker holding a session and a pool of addresses walks
+    // past it; the account is what is actually being guessed at. `docs/API.md`
+    // promised "per IP and per user" here and only the IP half existed.
+    const account = rateLimitAccount(userId, "set-password");
+    if (!account.ok) return rateLimited(account.retryAfterSeconds);
+
     const body = await req.json().catch(() => null);
     const parsed = setPasswordSchema.safeParse(body);
     if (!parsed.success) {
@@ -38,7 +46,10 @@ export async function POST(req: Request) {
       );
     }
     await setPassword(userId, parsed.data.newPassword);
-    rateLimitSuccess(getClientIp(req), "set-password");
+    // Only the account's own window resets on success. Clearing the per-IP
+    // bucket here would hand the allowance back to everyone behind that address
+    // — a shared NAT, an office, an attacker with several accounts on one host.
+    rateLimitSuccess(userId, "acct:set-password");
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleRouteError(err);

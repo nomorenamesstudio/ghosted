@@ -63,16 +63,13 @@ describe("credentials authorize() throttle", () => {
   it("refuses the address once its failures reach the limit", async () => {
     const user = await createUser("throttled@test.dev");
 
-    // Three guesses are allowed at this boundary; the fourth is refused.
+    // Three guesses are the whole allowance, and three is where the window is
+    // spent: the next attempt is refused, the correct password included. (`>`
+    // in the peek would have admitted a fourth, which is how the documented
+    // five-per-window was really six.)
     for (let i = 0; i < 3; i++) {
       expect(await attempt("throttled@test.dev", "wrong-password")).toBeNull();
     }
-    expect(accountThrottle("throttled@test.dev").ok).toBe(true);
-    expect(await attempt("throttled@test.dev", "wrong-password")).toBeNull();
-
-    // The window is per account and header-independent, so the attempt that
-    // would otherwise succeed is refused too — that is what makes guessing
-    // bounded rather than merely slowed.
     expect(accountThrottle("throttled@test.dev").ok).toBe(false);
     expect(await attempt("throttled@test.dev", user.password)).toBeNull();
   });
@@ -99,7 +96,7 @@ describe("credentials authorize() throttle", () => {
     // this a test rather than a restatement.
     const user = await createUser("resets@test.dev");
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       await attempt("resets@test.dev", "wrong-password");
     }
     expect(await attempt("resets@test.dev", user.password)).toMatchObject({
@@ -107,7 +104,9 @@ describe("credentials authorize() throttle", () => {
     });
     expect(accountThrottle("resets@test.dev").ok).toBe(true);
 
-    for (let i = 0; i < 3; i++) {
+    // Two more failures after the success would be the fifth and sixth of one
+    // window; a cleared window means they are the first two.
+    for (let i = 0; i < 2; i++) {
       await attempt("resets@test.dev", "wrong-password");
     }
     expect(await attempt("resets@test.dev", user.password)).toMatchObject({

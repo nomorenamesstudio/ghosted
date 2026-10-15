@@ -16,12 +16,46 @@ test("settings: update profile name", async ({ page }) => {
   // Save only appears after a change (details-page pattern).
   await page.getByRole("button", { name: "Save" }).click();
   await expect(page.getByText("Profile updated.")).toBeVisible();
-  // Let the server layout re-render with the updated session JWT.
-  await page.waitForTimeout(500);
 
-  // The user menu reflects the new name.
+  // Poll the session itself rather than waiting a fixed 500 ms and hoping: the
+  // contract is that the new name reaches the session, and an arbitrary delay
+  // turns a cold dev server (first compile) into a flaky suite.
+  await expect
+    .poll(
+      async () => {
+        const res = await page.request.get("/api/auth/session");
+        return (await res.json())?.user?.name;
+      },
+      { timeout: 10_000 },
+    )
+    .toBe("New Name");
+
+  // The user menu reflects it.
   await page.getByRole("button", { name: "User menu" }).click();
   await expect(page.getByText("New Name")).toBeVisible();
+});
+
+test("settings: changing the email asks for the password", async ({ page }) => {
+  const email = uniqueEmail("mailmove");
+  await registerUser(page, email);
+  await page.goto("/settings");
+
+  // The field appears only once the address differs from the saved one — no
+  // password prompt for the people who never touch it.
+  await expect(page.getByLabel("Current password")).toBeHidden();
+  await page.getByLabel("Email").fill(`moved-${email}`);
+  await expect(page.getByLabel("Current password")).toBeVisible();
+
+  // A session without the password cannot move the address.
+  await page.getByLabel("Current password").fill("not-the-password");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Current password is incorrect")).toBeVisible();
+
+  // With it, the address moves and the card says what happens next.
+  await page.getByLabel("Current password").fill("password123");
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Not verified yet")).toBeVisible();
+  await expect(page.getByLabel("Email")).toHaveValue(`moved-${email}`);
 });
 
 test("settings: change password and sign in with it", async ({ page }) => {

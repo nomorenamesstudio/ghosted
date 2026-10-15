@@ -89,6 +89,20 @@ What that means in practice, measured rather than assumed:
   attacker can trigger deliberately. Raise it, or move the counters to a shared
   store, if that trade is wrong for an instance.
 
+**Moving the sign-in address takes proof too.** The address is also the
+recovery address: a session that could change it could ask for a reset at a
+mailbox it controls, choose a password, and delete the account through a door
+that asks for one. Changing it therefore requires the current password, and the
+address that loses the claim is sent a notice — including which address took it
+and what to do if it was not you. An account that signs in through a provider has
+no password to prove and moves with the session alone; the notice is the control
+there.
+
+**A session is only ever minted for a request that carried JSON.** `login` and
+`register` refuse any other media type, because a cross-site form can post
+form-encoded data without a preflight and needs no response to be read — which is
+how a visitor ends up signed into an account they do not own.
+
 **Deleting an account takes proof, not a cookie.** The session cookie is
 ambient: it rides along on any request the page can make, so
 `DELETE /api/auth/account` also requires the Auth.js CSRF token and, for an
@@ -158,6 +172,19 @@ here first.
   runtime image is built from Next's standalone output.
 - SMTP credentials are never logged; a malformed `SMTP_URL` reports the variable
   name, not the value.
+- **Upstream image bodies are read through a byte cap, and an SMTP conversation
+  is bounded** (64 KB per reply, 100 continuation lines, a wall-clock deadline).
+  Both are read paths that would otherwise hold whatever a third party chose to
+  send — measured 2026-10-15: `arrayBuffer()` against an endless body never
+  returned, and the request's own timeout did not end it.
+- **The company-logo cache holds at most 5,000 domains**, evicting the oldest
+  first, so a client-supplied domain cannot grow the table without bound. It is a
+  pure cache: an evicted row costs one re-fetch.
+- **Verification and reset tokens are redacted from the log transport's output
+  outside development.** Development keeps the link clickable on purpose (the
+  log is the mailbox there); anywhere else the platform retains the log, and the
+  token in it is a working credential. Log retention itself is the host's job —
+  this only keeps the credential out of it.
 - **One generated secret is logged on purpose**: a boot-seeded owner's first
   password, printed once so the operator can sign in. That account cannot write
   anything until the password is replaced (`403 PASSWORD_CHANGE_REQUIRED`), which

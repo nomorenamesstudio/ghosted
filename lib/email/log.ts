@@ -1,6 +1,21 @@
 import { logger } from "@/lib/utils/logger";
 import type { EmailTransport } from "./types";
 
+/**
+ * Token-bearing links are live credentials: the database keeps only the hash,
+ * so a logged body is the one place a reset or verification token is readable
+ * in the clear (static audit, third pass).
+ *
+ * Development keeps the link — the log *is* the mailbox there, and the docs send
+ * a developer to the terminal to click it. Anywhere else the platform retains
+ * the log, so the token is redacted and only the shape of the link survives.
+ */
+const TOKEN_IN_URL = /([?&]token=)[^\s&"'>]+/gi;
+function forLog(body: string): string {
+  if (process.env.NODE_ENV !== "production") return body;
+  return body.replace(TOKEN_IN_URL, "$1<redacted>");
+}
+
 /** Where a logged message goes; injectable so a test can assert on it. */
 export type EmailLogSink = (
   context: Record<string, unknown>,
@@ -25,7 +40,7 @@ export function createLogTransport(
     async send(message, from) {
       log(
         { to: message.to, from, subject: message.subject },
-        `[email — log transport, nothing sent] ${message.subject}\n\n${message.text}`,
+        `[email — log transport, nothing sent] ${message.subject}\n\n${forLog(message.text)}`,
       );
       return null;
     },

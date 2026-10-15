@@ -273,6 +273,24 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   third-party review transcripts and stay exactly as received; the synthesized
   `docs/reviews/design-review-*.md` is ours and gets aligned.
 
+## Shared caches and their budgets
+
+`company_logos` is keyed by **domain** and has no user or application column, so
+it is one cache shared by every account: two people tracking the same employer
+cost one upstream lookup per 14–90 days, not two, and a cached "no logo" is
+shared the same way. `/logos/:id` still only ever resolves a logo for the
+requesting user's own application, so the shared table is not an enumeration
+surface — the only cross-account signal is timing (a cached domain answers from
+the database, an uncached one pays the upstream round trip).
+
+That sharing is why the row cap (5,000 domains, oldest evicted first) is a shared
+budget rather than a per-account one: an account that imports thousands of
+invented domains evicts rows other people's views rely on, and their next view
+re-fetches. Nothing is incorrect — it is a cache, and a miss costs one request —
+but it is the reason the audit's per-account lookup budget is worth adding if the
+upstreams ever start refusing us. Full reasoning: `SECURITY.md` and
+`docs/reviews/security-audit-2026-10-14.md`.
+
 ## Performance notes
 
 Measured on a production build (`next build` + `next start` in a throwaway copy —

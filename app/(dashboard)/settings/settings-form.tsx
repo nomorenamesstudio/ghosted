@@ -107,7 +107,10 @@ export function SettingsForm({
   const [email, setEmail] = useState(initialEmail);
   const [savedName, setSavedName] = useState(initialName);
   const [savedEmail, setSavedEmail] = useState(initialEmail);
-  const dirty = name !== savedName || email !== savedEmail;
+  // Only needed when the address actually moves; the server asks for it then.
+  const [emailPassword, setEmailPassword] = useState("");
+  const changingEmail = email !== savedEmail;
+  const dirty = name !== savedName || changingEmail;
   const [profileMsg, setProfileMsg] = useState<Msg>(null);
   const [profileBusy, setProfileBusy] = useState(false);
 
@@ -190,7 +193,8 @@ export function SettingsForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name === savedName ? undefined : name,
-          email: email === savedEmail ? undefined : email,
+          email: changingEmail ? email : undefined,
+          currentPassword: changingEmail ? emailPassword : undefined,
         }),
       });
       if (!res.ok) {
@@ -198,6 +202,7 @@ export function SettingsForm({
         throw new Error(body?.error ?? "Failed to update profile");
       }
       setSavedName(name);
+      setEmailPassword("");
       setSavedEmail(email);
       // Keep the session cookie in sync, then re-render the server layout.
       await updateSession({ name, email } as never);
@@ -213,6 +218,7 @@ export function SettingsForm({
   function cancelProfile() {
     setName(savedName);
     setEmail(savedEmail);
+    setEmailPassword("");
     setProfileMsg(null);
   }
 
@@ -426,6 +432,26 @@ export function SettingsForm({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              {changingEmail && (
+                <div className="space-y-2 pt-2">
+                  <Label htmlFor="settings-email-password">
+                    Current password
+                  </Label>
+                  <Input
+                    id="settings-email-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={emailPassword}
+                    onChange={(e) => setEmailPassword(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your sign-in address is also where a password reset would
+                    go, so changing it needs your password. The old address gets
+                    a notice.
+                  </p>
+                </div>
+              )}
               {emailVerified ? (
                 <p
                   role="status"

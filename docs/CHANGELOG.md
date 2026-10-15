@@ -2,6 +2,78 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-15
+
+### Fixed
+- **The audit's remaining leads, in its ranked order.**
+  - **Changing the sign-in address now proves the password.** A session on its own
+    was enough to move the account's email, and the email is also where a reset
+    link goes — so a stolen session could hand itself a password it never knew and
+    then delete the account through the front door. The current password is
+    required when the address actually changes (the gate runs before the
+    duplicate-address check, so a passwordless session cannot probe which
+    addresses are taken either), the old address is sent a notice saying the
+    address moved and what to do if it was not you, and an account that signs in
+    through a provider — with no password to ask for — still moves with the
+    session alone. Settings asks for the password only when the field differs
+    from the saved address.
+  - **The per-account sign-in window is five, not six.** The peek that guards the
+    Credentials callback refused while `count > max`, and it runs before the
+    increment consuming callers rely on, so a documented limit of five admitted a
+    sixth attempt. It refuses at a spent window now, which is what
+    `SECURITY.md` said all along.
+  - **The two routes that mint a session require `application/json`.** A
+    cross-site form cannot send that media type without a preflight, so
+    `POST /api/auth/login` and `/api/auth/register` no longer accept a
+    form-encoded body — which closed a login-CSRF route that needed no response
+    to be read. Anything else gets `415 UNSUPPORTED_MEDIA_TYPE`.
+  - **A verification token's address check and its write are one statement.**
+    They were separate, and the update matched only the account — so an email
+    change committing in between verified an address the token was never issued
+    for. The write now carries the address it was checked against.
+  - **`forgot-password` no longer waits for the mail round trip.** The hit path
+    awaited the transport and the miss path did not, which is a membership oracle
+    the docs promise does not exist; the send is deferred to `after()` now.
+  - **The two password routes are limited per account as well as per address,
+    and a success clears only the account's own window.** `change-password` and
+    `set-password` had the per-IP half of the limit `docs/API.md` promised:
+    an attacker holding a session and a pool of addresses walked past it.
+    Clearing the shared per-IP bucket on one account's success also handed the
+    allowance back to everyone else behind that address.
+  - **The logo cache is bounded in rows and in bytes.** `company_logos` is keyed
+    by a domain someone typed, so it grew monotonically from client input; it now
+    holds at most 5,000 domains and evicts the oldest first (a pure cache:
+    dropping a row costs one re-fetch). Upstream bodies are read through a byte
+    cap instead of `arrayBuffer()`, which took whatever an upstream sent before
+    the size check ran — measured against an endless body, the read never
+    returned and the request's own timeout did not end it. The same bounded
+    reader now covers the Gravatar lookup.
+  - **An SMTP conversation is bounded.** 64 KB per reply, 100 continuation
+    lines, and a wall-clock deadline of `SMTP_DEADLINE_MS` (default 30 s) for the
+    whole exchange — `socket.setTimeout` is an inactivity timer, and a peer that
+    sends one byte before each boundary resets it forever. `SMTP_ALLOW_INSECURE`
+    now warns at boot when it is combined with credentials or a host that is not
+    loopback, which was previously invisible in the logs.
+  - **The documents no longer promise a boot refusal that does not exist.**
+    `assertDeployable` was dead code with no caller and there is no
+    `instrumentation.ts`: an instance with registration open in production and no
+    transport that actually sends has always been *reported* (`/api/health`
+    answers 503 with `config: invalid`, which the compose healthcheck turns into
+    an unhealthy container) and sign-ups refused with 503 `MAIL_NOT_CONFIGURED`,
+    deliberately, rather than crash-looped. `.env.example` and `SELFHOST.md` now
+    say that; a malformed flag *value* such as a typo in `ALLOW_REGISTRATION`
+    does still stop the boot. `docker-compose.yml` passes
+    `EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}`, so an unset value falls through to
+    the auto-detection three documents describe instead of forcing the log stub
+    over a configured `RESEND_API_KEY`. Two stale comments (the CSRF helper's
+    claim about sign-out, the deletion route's) were corrected.
+  - **Verification and reset links are redacted from the log outside
+    development.** The log transport is the mailbox in development — the docs
+    send a developer to the terminal to click the link — but anywhere else the
+    platform retains that log, and the token in it is a live credential whose
+    only other copy is a hash in the database. Log retention itself stays the
+    host's job.
+
 ## 1.4.1 — 2026-10-14
 
 ### Fixed

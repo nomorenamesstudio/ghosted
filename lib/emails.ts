@@ -3,6 +3,21 @@ import { emailTransport, type EmailMessage } from "@/lib/email/transport";
 
 const IS_PROD = process.env.NODE_ENV === "production";
 
+/** Minimal HTML escaping for values that reach a template from user input. */
+function escapeHtml(value: string): string {
+  return value.replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char] ?? char,
+  );
+}
+
 export type { EmailMessage };
 
 /**
@@ -190,6 +205,34 @@ export function sendVerificationEmail(to: string, token: string): Promise<boolea
       ctaUrl: url,
       fallbackUrl: url,
       footerNote: "If you didn't create an account with Ghosted, you can safely ignore this email.",
+    }),
+  });
+}
+
+/**
+ * A notice to the address that just stopped being the sign-in address.
+ *
+ * The new address gets a verification link; this one gets the news, because it
+ * is the mailbox an attacker would have moved the account away from. The new
+ * address is user-supplied text, so it is escaped before it reaches HTML.
+ */
+export function sendEmailChangedEmail(
+  to: string,
+  newEmail: string,
+): Promise<boolean> {
+  const imprint = `${appUrl()}/imprint`;
+  const safeNewEmail = escapeHtml(newEmail);
+  return sendEmail({
+    to,
+    subject: "Your Ghosted sign-in address changed",
+    text: `The email address on your Ghosted account was changed to ${newEmail}.\n\nSign in with that address from now on. This is the only notice the old address gets.\n\nIf you did not make this change, someone else has access to your account: sign in with your password and change the address back, or write to the contact address on ${imprint}.`,
+    html: renderEmailShell({
+      title: "Your sign-in address changed",
+      body: `<p style="margin:0 0 4px;">The email address on your Ghosted account was changed to <strong>${safeNewEmail}</strong>.</p><p style="margin:0;">Sign in with that address from now on.</p>`,
+      ctaLabel: "Open Ghosted",
+      ctaUrl: appUrl(),
+      fallbackUrl: appUrl(),
+      footerNote: `If you did not make this change, sign in with your password and change the address back, or write to the contact address on <a href="${imprint}" style="color:#7c3aed;">the imprint page</a>.`,
     }),
   });
 }

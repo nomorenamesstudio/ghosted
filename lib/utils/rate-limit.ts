@@ -139,7 +139,11 @@ export function rateLimitStatus(
   if (!bucket || bucket.resetAt <= now) {
     return { ok: true, retryAfterSeconds: 0 };
   }
-  if (bucket.count > max) {
+  // `>=`, not `>`: a window that has spent its whole allowance is over. With
+  // `>`, a limit of five admitted a sixth attempt — the peek runs before the
+  // increment that consuming callers rely on, so the two disagreed by one and
+  // the documented "5 per 15 minutes" was really six.
+  if (bucket.count >= max) {
     return {
       ok: false,
       retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000),

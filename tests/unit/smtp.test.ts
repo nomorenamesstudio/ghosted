@@ -1,16 +1,19 @@
 import { createServer, type Server, type Socket } from "node:net";
+import type { AddressInfo } from "node:net";
 import { TLSSocket, createSecureContext } from "node:tls";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   bareAddress,
   buildMessage,
+  createSmtpTransport,
   encodeHeaderValue,
   parseSmtpUrl,
   sendSmtpMessage,
 } from "@/lib/email/smtp";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * The SMTP client is the one piece of this app that speaks a wire protocol, so
@@ -270,6 +273,51 @@ afterEach(async () => {
   await running?.close();
   running = null;
 });
+
+/**
+ * A server that does exactly what the test says and nothing else.
+ *
+ * The three cases below are all "the peer is broken or hostile", where the
+ * point is that this client gives up in bounded time and bounded memory rather
+ * than waiting or buffering forever.
+ */
+async function hostileSmtp(
+  onConnect: (socket: Socket) => void,
+): Promise<FakeServer> {
+  const sockets: Socket[] = [];
+  const server = createServer((socket) => {
+    sockets.push(socket);
+    socket.setEncoding("utf8");
+    onConnect(socket);
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  return {
+    port,
+    sockets,
+    dialogue: [],
+    body: () => "",
+    close: () =>
+      new Promise<void>((resolve) => {
+        for (const socket of sockets) socket.destroy();
+        server.close(() => resolve());
+      }),
+  };
+}
+
+const plainConfig = (port: number) => ({
+  host: "127.0.0.1",
+  port,
+  secure: false,
+  allowInsecure: true,
+});
+
+const aMessage = {
+  from: "hi@example.com",
+  to: "you@example.com",
+  subject: "Hi",
+  text: "body",
+};
 
 describe("parseSmtpUrl", () => {
   it("reads the implicit-TLS and STARTTLS shapes with their default ports", () => {
@@ -532,5 +580,83 @@ describe("sendSmtpMessage", () => {
         { from: "hi@example.com", to: "nobody@example.com", subject: "Hi", text: "body" },
       ),
     ).rejects.toThrow(/RCPT TO failed: 550 5\.1\.1 no such user/);
+  });
+});
+
+describe("the bounds on a conversation with a hostile server", () => {
+  it("gives up on a reply that never ends instead of buffering it", async () => {
+    running = await hostileSmtp((socket) => {
+      socket.write("220 fake ESMTP\r\n");
+      // One continuation line that never ends: 200 KB and no CRLF.
+      socket.write("250-" + "x".repeat(200_000));
+    });
+
+    await expect(
+      sendSmtpMessage(plainConfig(running.port), aMessage),
+    ).rejects.toThrow(/exceeded 65536 bytes/);
+  });
+
+  it("gives up on a reply with endless continuation lines", async () => {
+    running = await hostileSmtp((socket) => {
+      socket.write("220 fake ESMTP\r\n");
+      // `250-` forever, never a final `250 `.
+      socket.write("250-x\r\n".repeat(400));
+    });
+
+    await expect(
+      sendSmtpMessage(plainConfig(running.port), aMessage),
+    ).rejects.toThrow(/exceeded 100 lines/);
+  });
+
+  it("bounds the whole conversation by wall clock, not by idleness", async () => {
+    // A byte before every idle boundary resets `socket.setTimeout` forever, so
+    // only a deadline over the whole conversation can end this.
+    vi.stubEnv("SMTP_DEADLINE_MS", "250");
+    try {
+      running = await hostileSmtp((socket) => {
+        socket.write("220 fake ESMTP\r\n");
+        const drip = setInterval(() => socket.write("-"), 40);
+        socket.on("close", () => clearInterval(drip));
+      });
+
+      const started = Date.now();
+      await expect(
+        sendSmtpMessage(plainConfig(running.port), aMessage),
+      ).rejects.toThrow(/exceeded 250ms/);
+      expect(Date.now() - started).toBeLessThan(5_000);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+describe("the insecure escape hatch", () => {
+  it("warns where the flag can expose credentials or mail", () => {
+    const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
+    try {
+      createSmtpTransport({
+        host: "smtp.example.com",
+        port: 587,
+        secure: false,
+        allowInsecure: true,
+        user: "apikey",
+        password: "hunter2",
+      });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0][1]).toMatch(/SMTP_ALLOW_INSECURE/);
+
+      // The flag's documented purpose — a relay on this machine, no credentials
+      // — stays quiet.
+      warn.mockClear();
+      createSmtpTransport({
+        host: "127.0.0.1",
+        port: 25,
+        secure: false,
+        allowInsecure: true,
+      });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

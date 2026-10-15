@@ -21,10 +21,10 @@ export const dynamic = "force-dynamic";
  * and, for an account that has a password, the password itself — the one
  * credential that a stolen session does not carry.
  *
- * Not exploitable as cross-site CSRF when this was found (the cookie is
- * `HttpOnly; SameSite=Lax`, a cross-origin `DELETE` never clears preflight and
- * an HTML form cannot issue one), but the mechanism was already there to use
- * and the day an XSS or a same-site foothold exists is the day it matters.
+ * Both are enforced on every call, which is why the token and the password are
+ * asked for even though the cookie is `HttpOnly; SameSite=Lax` and a cross-site
+ * `DELETE` could not have issued the request in the first place: an XSS or a
+ * same-site foothold would change that, and the control costs one extra field.
  */
 export async function DELETE(req: Request) {
   try {

@@ -4,8 +4,8 @@ import { logger } from "./logger";
 /**
  * Auth.js's CSRF check, for our own route handlers.
  *
- * Auth.js guards every action it owns (`signOut` among them) with a
- * double-submit token: `GET /api/auth/csrf` sets a cookie whose value is
+ * Auth.js guards the actions it owns with a double-submit token: `GET
+ * /api/auth/csrf` sets a cookie whose value is
  * `token|sha256(token + AUTH_SECRET)`, and the action must send the bare
  * `token` back. The cookie proves the token was minted by this server (the
  * client cannot forge the hash without the secret), and matching it against
@@ -13,8 +13,11 @@ import { logger } from "./logger";
  * that cookie — which a hostile origin cannot, because cookies are sent per
  * origin and `SameSite=Lax` withholds them from a cross-site `fetch`.
  *
- * The account-deletion route is ours rather than Auth.js's, so it has to ask
- * the same question itself. Verified against @auth/core 0.41.3's
+ * The one action in this app that does not use it is the sign-out server action
+ * (`lib/actions/auth.ts`), which skips the check and leans on Next's framework
+ * origin check and `SameSite` instead — recorded here because this comment used
+ * to claim the opposite. The account-deletion route is ours rather than
+ * Auth.js's, so it has to ask the question itself. Verified against @auth/core 0.41.3's
  * `createCSRFToken`, including the cookie names and the hash: the digest is
  * SHA-256 over `token + secret`, hex-encoded, and the cookie may carry the
  * `__Host-`/`__Secure-` prefix when the deployment runs on https.

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readTransportChoice } from "@/lib/email/transport";
 import { createLogTransport } from "@/lib/email/log";
+import type { EmailMessage } from "@/lib/email/types";
 import { ConfigError, deploymentProblems, readConfig } from "@/lib/config/flags";
 
 /**
@@ -117,5 +118,46 @@ describe("the log transport", () => {
     expect(written).toHaveLength(1);
     expect(written[0].context).toMatchObject({ to: "you@example.com" });
     expect(written[0].message).toContain("http://localhost:3100/verify?token=abc123");
+  });
+});
+
+/**
+ * The log transport is the mailbox in development and the platform's retained
+ * log anywhere else — and a reset or verification token is a live credential,
+ * with only its hash in the database (static audit, third pass). Development
+ * keeps the link clickable; production keeps the shape and drops the secret.
+ */
+describe("the log transport's token redaction", () => {
+  const message: EmailMessage = {
+    to: "user@test.dev",
+    subject: "Reset your password — Ghosted",
+    text: "Open this link:\nhttps://ghosted.boo/reset-password?token=9f2c1ab4d5e6789012345678abcdef019f2c1ab4d5e6789012345678abcdef01\n",
+    html: "<p>link</p>",
+  };
+
+  function captured(nodeEnv: string): string {
+    const seen: string[] = [];
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    try {
+      void createLogTransport((_context, body) => seen.push(body)).send(
+        message,
+        "Ghosted <ghosted@test.dev>",
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    return seen.join("\n");
+  }
+
+  it("redacts the token where the log is retained", () => {
+    const logged = captured("production");
+    expect(logged).toContain("token=<redacted>");
+    expect(logged).not.toContain("9f2c1ab4d5e6789012345678abcdef019f2c1ab4d5e6789012345678abcdef01");
+  });
+
+  it("keeps the link clickable in development", () => {
+    expect(captured("development")).toContain(
+      "token=9f2c1ab4d5e6789012345678abcdef019f2c1ab4d5e6789012345678abcdef01",
+    );
   });
 });

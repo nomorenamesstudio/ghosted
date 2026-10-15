@@ -1,6 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db/client";
 import { companyLogos } from "@/lib/db/schema";
+import { readCapped } from "@/lib/utils/bounded-body";
 import { logoDomainCandidates } from "@/lib/utils/company-domain";
 import { logger } from "@/lib/utils/logger";
 
@@ -89,7 +90,8 @@ async function fetchFrom(
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { "user-agent": "Ghosted/0.1 (company logo lookup)" },
     });
-    const bytes = Buffer.from(await res.arrayBuffer());
+    const bytes = await readCapped(res, MAX_BYTES);
+    if (!bytes) return null;
     const contentType = acceptUpstream(
       res.status,
       res.headers.get("content-type"),
@@ -166,6 +168,31 @@ async function store(
         attempts: sql`${companyLogos.attempts} + 1`,
       },
     });
+  await pruneLogoCache();
+}
+
+/**
+ * How many domains the cache may remember. The key is a client-supplied domain
+ * from an application row, so "as many as people type" is not a bound — an
+ * account can fill the table with invented hostnames, each one a row that will
+ * never be looked up again (static audit, first pass). The cache is a pure
+ * optimisation: dropping a row costs one re-fetch, never correctness, so the
+ * oldest rows go first.
+ */
+const MAX_CACHED_DOMAINS = 5_000;
+
+async function pruneLogoCache(): Promise<void> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(companyLogos);
+  const overflow = (row?.count ?? 0) - MAX_CACHED_DOMAINS;
+  if (overflow <= 0) return;
+  await db.execute(sql`
+    delete from company_logos
+    where domain in (
+      select domain from company_logos order by fetched_at asc limit ${overflow}
+    )
+  `);
 }
 
 function isFresh(fetchedAt: Date, status: "ok" | "none"): boolean {

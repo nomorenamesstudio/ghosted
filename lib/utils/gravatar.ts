@@ -25,7 +25,8 @@ export const GRAVATAR_SIZE = 160;
 export const GRAVATAR_HASH_RE = /^[0-9a-f]{32}$/;
 
 /** Upper bound on an avatar we are willing to store: well past a 2048px PNG. */
-const MAX_BYTES = 512 * 1024;
+/** Cap on an upstream avatar: anything larger is not an avatar. */
+export const MAX_BYTES = 512 * 1024;
 
 /**
  * Content types we are willing to re-serve from our own origin. SVG is

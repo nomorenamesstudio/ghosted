@@ -176,6 +176,12 @@ export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").max(100).optional(),
     email: emailSchema.optional(),
+    /**
+     * Required by the service — not by this schema — when `email` differs from
+     * the address on the account: a session alone must not be able to move the
+     * sign-in identifier, because that is also where a reset link goes.
+     */
+    currentPassword: z.string().max(200).optional(),
     /** Threshold for the automatic "ghosted" status (Settings). */
     patienceLevel: z.enum(PATIENCE_LEVELS).optional(),
   })

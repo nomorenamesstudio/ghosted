@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { randomBytes, createHash } from "node:crypto";
 import { and, eq, isNotNull, lt, or } from "drizzle-orm";
 import { db } from "@/lib/db/client";
@@ -88,7 +88,17 @@ export async function POST(req: Request) {
           expiresAt,
         });
 
-        await sendPasswordResetEmail(email, rawToken);
+        // The response must not wait on the mail round trip: the hit path took
+        // one and the miss path did not, which is a membership oracle the docs
+        // promise does not exist (static audit, second pass). `after()` hands
+        // the send to the runtime once the response is on its way. Called
+        // outside a request scope — a route handler driven directly by a test —
+        // it throws, and the send still happens, just unawaited.
+        try {
+          after(() => sendPasswordResetEmail(email, rawToken));
+        } catch {
+          void sendPasswordResetEmail(email, rawToken);
+        }
         logAuthEvent("password_reset", { ip, email });
       }
     }

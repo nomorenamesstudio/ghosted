@@ -1,5 +1,6 @@
 import { connect as connectTcp, type Socket } from "node:net";
 import { connect as connectTls, type TLSSocket } from "node:tls";
+import { logger } from "@/lib/utils/logger";
 import type { EmailMessage, EmailTransport } from "./types";
 
 /**
@@ -35,6 +36,31 @@ export interface SmtpConfig {
 }
 
 const REPLY_TIMEOUT_MS = 20_000;
+
+/**
+ * Bounds on one reply, so a hostile or broken server cannot grow this process
+ * without one (static audit, first pass): a peer that never sends a line break,
+ * or that sends continuation lines forever, would otherwise be an unbounded
+ * buffer. Both are failures, not truncations — half a reply is not a reply.
+ */
+const MAX_REPLY_BYTES = 64 * 1024;
+const MAX_REPLY_LINES = 100;
+
+/**
+ * A wall-clock deadline for the whole conversation.
+ *
+ * `socket.setTimeout` is an *inactivity* timer: a peer that sends one byte
+ * before each boundary resets it forever, and a hung send cannot be turned into
+ * a failure by a caller's `catch`. Measured on Node 22 — see the note in
+ * MEMORY.md — so the conversation gets a deadline of its own. Overridable
+ * because the right value depends on the relay.
+ */
+const DEFAULT_SEND_DEADLINE_MS = 30_000;
+
+function sendDeadlineMs(): number {
+  const raw = Number(process.env.SMTP_DEADLINE_MS);
+  return Number.isFinite(raw) && raw > 0 ? raw : DEFAULT_SEND_DEADLINE_MS;
+}
 
 /** `smtps://user:pass@smtp.example.com:465` → the parts. Throws on nonsense. */
 export function parseSmtpUrl(raw: string): SmtpConfig {
@@ -109,6 +135,10 @@ class SmtpSession {
   private fail(error: Error): void {
     if (this.failure) return;
     this.failure = error;
+    // Stop reading and drop the connection: a peer that keeps sending after a
+    // protocol failure must not keep growing the buffer.
+    this.socket.removeListener("data", this.onData);
+    this.socket.destroy();
     for (const waiter of this.waiters.splice(0)) waiter.reject(error);
   }
 
@@ -118,6 +148,12 @@ class SmtpSession {
 
   private onData_(chunk: string): void {
     this.buffer += chunk;
+    if (this.buffer.length > MAX_REPLY_BYTES) {
+      this.fail(
+        new Error(`SMTP: reply exceeded ${MAX_REPLY_BYTES} bytes without ending`),
+      );
+      return;
+    }
     let index = this.buffer.indexOf("\r\n");
     while (index !== -1) {
       const line = this.buffer.slice(0, index);
@@ -125,6 +161,12 @@ class SmtpSession {
       const match = /^(\d{3})([- ])(.*)$/.exec(line);
       if (match) {
         const lineCode = Number(match[1]);
+        if (this.replyLines.length >= MAX_REPLY_LINES) {
+          this.fail(
+            new Error(`SMTP: reply exceeded ${MAX_REPLY_LINES} lines without ending`),
+          );
+          return;
+        }
         if (this.replyLines.length === 0 || lineCode === this.replyCode) {
           this.replyCode = lineCode;
           this.replyLines.push(match[3]);
@@ -229,6 +271,20 @@ function assertSingleLine(value: string, field: string): string {
   return value;
 }
 
+/**
+ * Loopback by name. Deliberately not a DNS lookup: the warning is diagnostic,
+ * and a lookup at transport-construction time could turn a name that resolves
+ * to loopback into a network call on the boot path.
+ *
+ * shortcut: literal hostnames only, which is what `smtp://localhost:25` and its
+ * friends look like; upgrade to a resolver if a deployment needs an alias.
+ */
+function isLoopbackHost(host: string): boolean {
+  return ["localhost", "127.0.0.1", "::1", "[::1]", "host.docker.internal"].includes(
+    host.toLowerCase(),
+  );
+}
+
 /** `Ghosted <hi@example.com>` or `hi@example.com` → `hi@example.com`. */
 export function bareAddress(value: string): string {
   const angled = /<([^>]+)>/.exec(value);
@@ -318,6 +374,11 @@ export async function sendSmtpMessage(
   // on its own.
   let active: Socket | TLSSocket = socket;
   const session = new SmtpSession(socket);
+  const deadline = setTimeout(() => {
+    active.destroy(
+      new Error(`SMTP: conversation exceeded ${sendDeadlineMs()}ms`),
+    );
+  }, sendDeadlineMs());
   try {
     expect(await session.readReply(), [220], "greeting");
 
@@ -351,6 +412,7 @@ export async function sendSmtpMessage(
 
     return await authenticateAndSend(session, capabilities, config, message);
   } finally {
+    clearTimeout(deadline);
     active.end();
   }
 }
@@ -398,6 +460,20 @@ async function authenticateAndSend(
 }
 
 export function createSmtpTransport(config: SmtpConfig): EmailTransport {
+  // The escape hatch is for a relay on this machine. Anywhere else it means mail
+  // and credentials may cross the network in clear text, and nothing else in the
+  // app says so — an operator reading their logs cannot tell the flag is on
+  // (static audit, third pass).
+  if (config.allowInsecure && (config.user || !isLoopbackHost(config.host))) {
+    logger.warn(
+      { host: config.host, authenticated: Boolean(config.user) },
+      "SMTP_ALLOW_INSECURE is set: mail, and any credentials, may cross the network in clear text",
+    );
+  }
+  // The escape hatch is for a relay on this machine. Anywhere else it means mail
+  // and credentials may cross the network in clear text, and nothing else in the
+  // app says so — an operator reading their logs cannot tell the flag is on
+  // (static audit, third pass).
   return {
     name: "smtp",
     delivers: true,
