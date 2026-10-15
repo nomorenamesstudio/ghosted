@@ -8,6 +8,98 @@ traces and, where a verifier could isolate a dependency, a bounded measurement o
 that dependency alone. Every verdict is therefore `needs_validation` or `rejected` —
 nothing here is called `confirmed`, and nothing should be described that way.
 
+## Fix order, across all three passes
+
+Ordered by what unblocks most, not by pass. Every line is reproducible from the
+findings details; each carries the failing behaviour it removes.
+
+**Now**
+
+1. **`lib/utils/rate-limit.ts:62-67` — the doubled unit conversion.** Move the
+   `* 60_000` so it applies only to the minutes-valued env default; a caller-supplied
+   `windowMs` is already milliseconds. This is live and needs no account: today ~101
+   unauthenticated failures put every account's correct password out of action until a
+   restart, and the per-user write throttle is 300 writes per 2,500 days. Pin it with
+   fake timers — the existing cap test never advances a clock, which is why a
+   60,000× window passed CI. **Do not ship it alone** (see the condition below).
+2. **`app/api/auth/profile/route.ts:11` with `lib/services/account.ts:46-74` — prove the
+   password before an email change, and notify the old address.** As shipped, an email
+   change needs only a session, which makes the current-password gate on account
+   deletion effectively optional (email change → `forgot-password` to the new address →
+   reset → delete). Reuse the existing `verifyPassword` helper; add the `sessionEpoch`
+   bump as defence in depth only, since the attacker keeps the mailbox.
+3. **`lib/email/log.ts:26-29` — stop logging live credentials.** The whole message body,
+   reset and verification tokens included, goes to stdout at `info` while the database
+   stores only the hash. Redact the token out of the logged body and bound log
+   retention.
+4. **`lib/services/account.ts:284-296` (`verifyEmail`) — make the write conditional.**
+   The address check and the write are separate statements and the `UPDATE` matches only
+   `id`, so an email change committing between them verifies the new address.
+   `WHERE id = ? AND email = ?`, or one transaction.
+5. **`app/api/auth/login/route.ts:29` — assert `Content-Type: application/json`** (or
+   require the token Auth.js's own credentials callback demands). A cross-site
+   text/plain form post otherwise mints a session in the victim's browser.
+6. **`app/api/auth/forgot-password/route.ts:91` — defer the send with `after()`.** The
+   hit path awaits a mail round trip while the miss path does not, which is a
+   membership oracle the docs promise does not exist.
+
+**Then**
+
+7. **`app/api/auth/change-password/route.ts:22` and `:40`, and
+   `set-password/route.ts:41`** — add a per-user counter beside the per-IP one, and stop
+   clearing a shared per-IP bucket on a per-account success. `docs/API.md:19` promises
+   limits "per IP and per user"; these two routes have only the IP half.
+8. **Documentation honesty sweep** — `API.md:19` and `:185` (limits that do not exist);
+   the boot refusal (`assertDeployable` is dead code, with `.env.example:98`,
+   `SELFHOST.md:81-82` and the changelog all promising the app refuses to boot — either
+   wire `instrumentation.ts` or correct the claim); `docker-compose.yml:86`
+   (`${EMAIL_TRANSPORT:-}`, or fix the three documents that promise auto-detection);
+   `lib/utils/csrf.ts:7-8` on `signOut`; `SECURITY.md:81-84` (the per-account window
+   admits 6 failures, not 5); and the stale comment at
+   `app/api/auth/account/route.ts:27` about a same-site foothold.
+9. **`lib/services/company-logos.ts`** — a row cap or eviction; the table grows
+   monotonically from client-supplied domains.
+10. **`lib/email/smtp.ts`** — a wall-clock deadline on the conversation plus buffer and
+    continuation-line caps, and a warning when `SMTP_ALLOW_INSECURE` is set alongside
+    credentials or a non-loopback host.
+
+## Operator facts still needed
+
+No source read settles these, and every `needs_validation` record on the limiter, the
+log transport and the email change depends on at least one:
+
+- **Replica count and restart cadence** — they decide whether the 625-day lock-in is
+  minutes or days in practice. `railway.json` sets `ON_FAILURE`, so a healthy-but-locked
+  process is never recycled.
+- **Whether `RATE_LIMIT_LOGIN_FAILURES_WINDOW_MINUTES` is set** on the deployed
+  services (it changes the constant, never the 60,000× factor).
+- **Which transport each instance resolves to** — the compose shape defaults to the log
+  stub unless `EMAIL_TRANSPORT` is named, and only that shape exposes a logged token.
+- **The Cloudflare zone's Pseudo IPv4 setting**, and whether any rate-limit rule covers
+  `/api/auth/*`. The workspace records one WAF rule, blocking scanner *paths* only, and
+  no rate-limit rule at all (`cloudflare/ops.md`), and no token in the workspace can
+  read WAF rules.
+- **The container memory limit** (~8 GB, owner-stated) — it decides the impact of the
+  import parse-work record from the first pass.
+
+## Coverage still open after three passes
+
+The third pass's coverage critic returned `stop: false` and proposed four units:
+
+- **unit-9 — the OAuth lifecycle and provider config** (`lib/services/oauth-accounts.ts`
+  is 273 lines, spot-read; `lib/config/oauth-providers.ts` has zero citations in three
+  passes). It carries the reachability of two open findings.
+- **unit-11 — unread pins and route ownership** (the replace-import CSRF pin, the
+  `mustChangePassword` page guard, and the ownership predicate the six uncited
+  mutating routes rely on).
+- **unit-12 — deployment shape from the workspace**: 35 lines of `cloudflare/ops.md`
+  that were skipped, plus `scripts/migrate-on-start.mjs`.
+- **unit-13 — session-claim writers and revocation levers** (who calls the client
+  `update` trigger; `AUTH_SECRET` rotation as the undocumented all-sessions lever).
+
+Still deferred from the second pass: **request bodies and the middleware body clone**
+(13 uncapped `req.json()` call sites).
+
 ## What was reviewed
 
 - Revision: `fc5137c` **plus the dirty worktree** (45 paths) — the remediation that
@@ -108,6 +200,213 @@ is the reason the throttle key mismatch is listed as measured rather than inferr
   rewrites `javascript:` but the app should not depend on that.
 - The account's own sign-ins counting toward its login window is a self-lockout at the
   default threshold; document it or fix the key, but do not leave it undocumented.
+
+## Post-deploy verification, 2026-10-14
+
+Re-checked after the fixes shipped, against the deployed staging instance behind
+Cloudflare. Nothing here is source-only: each line is an observed response.
+
+Ten checks, all passing (`tools/strix-pentest/live-verify.sh <url>` — it creates
+one throwaway account and deletes it):
+
+| Check | Observed |
+| --- | --- |
+| Unverified account imports 10 applications | `403 EMAIL_UNVERIFIED_LIMIT`, **0 rows written** |
+| One row over the per-file cap | `413 TOO_MANY_APPLICATIONS` in 0.30 s |
+| ~5 MB document of minimal rows | `413` in 0.80 s (pre-fix: ~11 s of CPU, ~3.2 GB heap) |
+| `?mode=replace` without a CSRF token | `403 INVALID_CSRF_TOKEN`, nothing deleted |
+| Six consecutive correct sign-ins | 6 of 6 succeed (pre-fix the 6th was refused) |
+| Throwaway account deletion (CSRF + password) | `200`, account gone |
+
+Edge and flag facts, read from outside with no traffic to the app's own logic:
+
+- Both hostnames are Cloudflare-fronted (`server: cloudflare`, `cf-ray …-BKK`);
+  `/api/health` no longer publishes the build version on either.
+- `ALLOW_REGISTRATION`: **open** on production, **closed** on staging (`403
+  REGISTRATION_CLOSED` before validation). Note the asymmetry — staging is
+  the locked-down instance and production is the open one.
+- The `X-Forwarded-For` throttle bypass is dead: five attempts on one address
+  followed by `429` at the sixth **with a fresh forged XFF on every request**,
+  on both hostnames. Before the fix the sixth attempt from a new XFF returned
+  `401`. The account-keyed counter is now authoritative.
+- The old `*.up.railway.app` hostnames answer Railway's own `404 Application not
+  found`, so the services are addressed only by the Cloudflare-fronted names.
+  Narrow fact: the old hostnames are detached; a `Host:`-header request to
+  Railway's edge would still route, so this is not origin-IP secrecy.
+
+Fixed in code, correct by inspection, not live-testable from outside:
+
+- **Verification tokens are bound to the address** — `email_verification_tokens`
+  gained an `address` column, and redemption refuses when the account's current
+  address differs (`lib/services/account.ts:287`), logging the refusal.
+- **The revocation counter is re-checked on every session read**
+  (`lib/auth.ts:346-372`): a token whose claim does not match the row is refused,
+  so a claim pinned from a pre-change read cannot survive.
+- **The create-application cap is inside the insert transaction** with a row
+  lock (`lib/services/applications.ts:681`), and both write paths share
+  `applicationAllowance()` / `unverifiedLimitError()` — the check-then-act race
+  and the "cap written in one handler" cause are both gone.
+- **The import body reader caps reads, not just bytes** (`MAX_READS = 8192`).
+
+Still open (the one recommendation not implemented): `company_logos` has no
+per-account budget and no eviction, so an account can still grow that table
+monotonically through client-supplied domains. It remains a capacity/hygiene
+item, rejected as a boundary crossing by verifier-17.
+
+The container memory limit is ~8 GB (owner, 2026-10-14), which makes the
+unbounded-parse candidate a CPU-cost issue rather than an outage one — and it is
+fixed regardless.
+
+## Second pass, 2026-10-14 — the four deferred units
+
+The first pass listed four units as `deferred`. A scoped second pass hunted and
+independently verified them: **10 records — 7 rejected, 3 needs_validation,
+0 confirmed** (15 invocations on the cheap route). Records:
+[security-audit-2026-10-14-pass2-findings.md](security-audit-2026-10-14-pass2-findings.md).
+
+The three that survived, all in app-authored logic rather than anything a framework
+owns:
+
+1. **`verifyEmail`'s address binding is a read-then-write outside any transaction.**
+   The final `UPDATE ... WHERE id = ?` has no email predicate, so an email change
+   committing between the compare and the write leaves the account verified at the
+   new address — and `attach` (unlike `adopt`) keeps the attacker's password and does
+   not bump `sessionEpoch`. A pre-registration squat, not takeover of a live account.
+   Fix: `WHERE id = ? AND email = ?`, or wrap the compare-and-write in a transaction.
+2. **`POST /api/auth/login` is login-CSRF-able.** No CSRF token, no Origin check, no
+   `Content-Type` assertion, and no session cookie for `SameSite=Lax` to withhold.
+   Measured in Chrome: a cross-site top-level form POST with `enctype="text/plain"`
+   gets the response cookie stored. LOW–MEDIUM: the victim's writes land in the
+   attacker's account, up to the unverified limit. Fix: assert
+   `Content-Type: application/json`, or require the token the framework endpoint
+   requires.
+3. **`forgot-password` leaks existence through response time.** Status and body are
+   equalised; the work is not — the hit path awaits a mail round trip. LOW
+   (CWE-203/208). Note `vitest.setup.ts:7` forces the log transport, so the suite
+   cannot observe the channel. Fix: defer the send with `after()`.
+
+The seven rejections each died on a control the hunter had not looked for, and six of
+those controls live outside app code: Next's server-action Origin check standing in
+for `skipCSRFCheck`, the framework's own `private, no-cache, no-store` on dynamic
+pages (refuted by *executing* a throwaway Next app, not by reading), the middleware
+body clone, `@auth/core`'s cookie defaults, the CORS preflight boundary, and RFC
+5321 §4.2.1. Two survivors are race/timing bugs in our own code — which is where a
+framework cannot save us.
+
+**Coverage is not complete, and the run says so.** The post-wave critic returned
+`stop: true`: every unit has files with zero citations, and in each one that file
+contradicts a sentence in the unit's own summary. The item worth funding next is
+`lib/utils/rate-limit.ts:30-50` — every throttle shares one in-memory map whose prune
+evicts the oldest tenth of *live* windows above 10,000 buckets, so minting 10,000
+identities may reset `login-failures:all` and a victim's `acct:login` bucket
+together. Also unread: `lib/email/log.ts` (logs token-bearing mail bodies at the
+default level), 335 of `lib/auth.ts`'s 417 lines, `session-revocation.test.ts`,
+`lib/api.ts`, the OAuth attach/adopt body, and the body-size posture on the 13
+unbounded `req.json()` call sites.
+
+Method corrections recorded rather than hidden: two verifiers executed against
+isolated non-target surfaces (a throwaway Next app; two throwaway browser origins),
+and the run's own "static only" note was wrong.
+
+## Third pass, 2026-10-14 — the limiter map, and the units bug under it
+
+A third scoped pass took the four units run-2's post-wave critic proposed. **10 records —
+3 needs_validation, 7 rejected, 0 confirmed.** Records:
+[security-audit-2026-10-14-pass3-findings.md](security-audit-2026-10-14-pass3-findings.md).
+
+**The critic's named lead is settled and rejected.** The shared bucket map's overflow
+prune really does drop live windows by age, but it cannot reach the process-wide sign-in
+cap (whose 625-day `resetAt` sorts last), and the only bound it relaxes — a per-account
+15-minute window — is worth 6 guesses per ~10,000 minted identities against 6 for free
+after the window. No boundary, no capability.
+
+**The pass found its headline defect one line away from that lead.** `limits()` in
+`lib/utils/rate-limit.ts` multiplies a caller-supplied `windowMs` by `60_000` as if it
+were minutes, and **both** callers already pass milliseconds:
+
+- the process-wide sign-in failure cap, documented as 100 per 15 minutes in three places,
+  is really **100 per 625 days**. An unauthenticated attacker needs no account; one
+  source IP and ~101 failures render every account's correct password unusable, and the
+  callback path fails **silently** (302 to an error code the login page does not map).
+  Only a process restart recovers it. Fix: move the `* 60_000` off the override.
+- the per-user write throttle becomes 300 writes per **2,500 days** — which is 60,000×
+  *tighter*, so the direction is inverted from the obvious reading: it locks legitimate
+  users out of a write scope for the life of the process (the repo's own stress test
+  creates 220 applications in one session, 73% of the `applications` budget), and it
+  removes no attacker capability.
+
+**Also confirmed this pass:** an email change moves no `sessionEpoch` and proves no
+password, and because `forgot-password` gates only on `passwordHash` and mails the token
+to the address on file, that makes the current-password gate on account deletion
+effectively optional. Re-proving the password before the address may move is the control
+that works; the epoch bump alone is not (the attacker keeps the mailbox). And the log
+transport writes the whole mail body — a **live** reset or verification token included —
+to stdout at `info`, with the database holding only the hash and no retention bound
+anywhere; the re-issue purge leaves earlier unused reset tokens valid, so log lines
+accumulate as independently live credentials.
+
+### Corrections this pass makes to the earlier record
+
+1. **The session cookie is host-only.** Measured in Chrome 154: no `Domain` attribute, so
+   a sibling subdomain never receives it (with a `Domain=`-scoped control proving the hop
+   was same-site). The claim that a same-site sibling subdomain carries the cookie —
+   repeated in this repo's pentest report and in the pass-2 findings — is wrong. The CSRF
+   residual those passes rated LOW needs XSS or a deliberately domain-scoped cookie, not
+   merely a sibling host. The matching code comment at `app/api/auth/account/route.ts:27`
+   should be corrected by the code owner.
+2. **`login-failures:all` cannot be evicted** by the bucket-map flood; the earlier
+   sentence that 10,000 identities "may reset" it is refuted — and refuted *because* of
+   the 625-day inflation above.
+3. **The per-account sign-in window admits 6 failures, not 5**, as `SECURITY.md:81-84`
+   states (the increment precedes the comparison).
+
+### The recurring defect: docs that promise controls the code lacks
+
+Five instances now, and they are worth fixing as one sweep: `API.md:19` and `:185`
+(per-user and per-IP rate limits that do not exist), the boot refusal (`assertDeployable`
+is dead code with no caller and no `instrumentation.ts`, while `.env.example:98`,
+`SELFHOST.md:81-82` and the changelog all promise the app refuses to boot), the compose
+transport resolution, and `lib/utils/csrf.ts:7-8` on `signOut`. Individually small;
+together they mean no claim in this repo can be trusted without checking the code.
+
+### What remains uncovered
+
+This pass's own coverage critic returned `stop: false` and proposed four units, recorded
+with their file lists in the **Fix order** section above: the **OAuth lifecycle**
+(`oauth-accounts.ts` spot-read; `oauth-providers.ts` never cited), **unread test pins and
+route ownership**, the **deployment shape readable from the workspace** (including the
+35 lines of `cloudflare/ops.md` this pass skipped), and the **session-claim writers**
+(`token.email` is client-settable and never reconciled). Deferred from the second pass:
+**request bodies and the middleware body clone**.
+
+### Condition attached to the limiter fix (from the third pass's coverage critic)
+
+The bucket-map eviction lead is rejected **only in the current revision, and only
+because of the bug above**. `login-failures:all` currently carries a 625-day
+`resetAt`, which sorts it last in the prune's oldest-tenth drop. Ship the one-line
+window fix without revisiting `pruneIfNeeded` and that bucket acquires a 15-minute
+window — at which point it becomes the drop's easiest prey and the run-2 critic's
+original hypothesis ("minting 10,000 identities may reset the process-wide cap")
+becomes live. So: **fix the unit bug and the prune together**, or at minimum make the
+prune never drop a live window that is still over its limit.
+
+Also recorded from that critique: `rateLimitStatus` destructures only `{ max }`
+(`lib/utils/rate-limit.ts:112`) and silently discards the `windowMs` it is handed, so
+no status-only caller can ever be time-bounded; and `getClientIp`'s `"unknown"`
+fallback means a proxy-less self-host puts every client in one bucket (documented as
+the deliberate fail-safe direction, but worth knowing before someone removes the edge).
+
+### Provenance note on the third pass's records
+
+Four evidence paths in `security-audit-2026-10-14-pass3-findings.md` are scratch
+artifacts in the audit workspace, not files in this repository
+(`.tmp-ghosted-pentest/verify-limit/probe.mjs`, the run-3 probe
+`agents/hunter-11/probe/rl-orig.ts`, and verifier-17's
+`scratch/cookie-scope/{bcrypt.mjs,probe.stdout.json}`). They were normalised to
+relative paths for the report schema, and the measurements behind them are described
+in each record. One executed observation — a Chrome 154 cookie-scope measurement —
+exists only as that file plus the record's prose, because the assembler globs
+`scratch/*.json` and it is stored as `.stdout.json`'s sibling.
 
 ## Artifacts
 

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { authConfig } from "@/lib/auth";
+import { loginThrottleRetryAfter } from "@/lib/auth/login-throttle";
 import { createUser, resetDb } from "@/tests/helpers";
 
 /**
@@ -76,5 +77,13 @@ describe("process-wide login failure cap", () => {
     expect(
       await authorize({ email: "spray-victim@test.dev", password: victim.password }),
     ).toBeNull();
+
+    // And the refusal lasts the configured window — a minute here, not the
+    // 60,000× of it that a doubled unit conversion used to produce (static
+    // audit, third pass: the cap was 625 days at the default).
+    const wait = loginThrottleRetryAfter("spray-victim@test.dev");
+    expect(wait).not.toBeNull();
+    expect(wait!).toBeGreaterThan(0);
+    expect(wait!).toBeLessThanOrEqual(60);
   });
 });
