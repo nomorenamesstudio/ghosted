@@ -34,6 +34,9 @@ yarn-error.log*
 /.git-credentials
 /.railway-token
 
+# agent instructions stay local — `git add -A` must not sweep them in
+/AGENTS.md
+
 # pnpm sandbox-local dirs (see .npmrc)
 /.npmrc
 /.pnpm-tool
