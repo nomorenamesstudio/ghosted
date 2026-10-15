@@ -5,7 +5,13 @@ import {
   updateApplication,
 } from "@/lib/services/applications";
 import { updateApplicationSchema } from "@/lib/utils/validation";
-import { handleRouteError, jsonError, requireSession, requireSessionForWrite } from "@/lib/utils/api";
+import {
+  handleRouteError,
+  jsonError,
+  readJsonBody,
+  requireSession,
+  requireSessionForWrite,
+} from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +48,7 @@ export async function PATCH(
     if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = updateApplicationSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

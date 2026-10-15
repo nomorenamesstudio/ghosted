@@ -5,6 +5,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  readJsonBody,
   requireSession,
 } from "@/lib/utils/api";
 import {
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     const account = rateLimitAccount(userId, "set-password");
     if (!account.ok) return rateLimited(account.retryAfterSeconds);
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = setPasswordSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

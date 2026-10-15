@@ -10,6 +10,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  readJsonBody,
 } from "@/lib/utils/api";
 import { getClientIp, rateLimit, rateLimitSuccess } from "@/lib/utils/rate-limit";
 import { logAuthEvent } from "@/lib/utils/logger";
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     const rl = rateLimit(ip, "reset-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = resetPasswordSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

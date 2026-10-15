@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import { issueEmailVerification, updateProfile } from "@/lib/services/account";
 import { sendEmailChangedEmail, sendVerificationEmail } from "@/lib/emails";
 import { updateProfileSchema } from "@/lib/utils/validation";
-import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
+import {
+  handleRouteError,
+  jsonError,
+  readJsonBody,
+  requireSessionForWrite,
+} from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
 export async function PATCH(req: Request) {
   try {
     const userId = await requireSessionForWrite("profile");
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = updateProfileSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

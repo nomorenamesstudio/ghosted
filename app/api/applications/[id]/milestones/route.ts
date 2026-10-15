@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { addMilestone } from "@/lib/services/applications";
 import { createMilestoneSchema } from "@/lib/utils/validation";
-import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
+import {
+  handleRouteError,
+  jsonError,
+  readJsonBody,
+  requireSessionForWrite,
+} from "@/lib/utils/api";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +23,7 @@ export async function POST(
     if (!UUID_RE.test(id)) {
       return jsonError(404, "Application not found", "NOT_FOUND");
     }
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = createMilestoneSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

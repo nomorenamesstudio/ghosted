@@ -6,6 +6,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  readJsonBody,
   requireJsonBody,
 } from "@/lib/utils/api";
 import {
@@ -30,7 +31,7 @@ export async function POST(req: Request) {
     const rl = rateLimit(ip, "login");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = loginSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

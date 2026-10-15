@@ -13,6 +13,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  readJsonBody,
   requireJsonBody,
 } from "@/lib/utils/api";
 import {
@@ -63,7 +64,7 @@ export async function POST(req: Request) {
     const notJson = requireJsonBody(req);
     if (notJson) return notJson;
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

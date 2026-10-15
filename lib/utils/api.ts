@@ -127,6 +127,59 @@ export async function requireSessionForWrite(scope: string): Promise<string> {
 }
 
 /**
+ * Read a JSON request body with a cap, because `req.json()` takes whatever the
+ * client sends: a 200 MB body is held in memory before any schema sees it, so
+ * the validation caps downstream only measure something already buffered
+ * (static audit, first pass: thirteen call sites, none of them bounded).
+ *
+ * The cap sits far above the largest legitimate payload — the whole create/update
+ * schema tops out around 15 KB of text — and the import route keeps its own,
+ * larger bound. Over the cap is a 413, not a 400: "too large" is not "malformed",
+ * and the caller's `handleRouteError` already turns an ApiError into its status.
+ * Returns null for an empty or unparseable body, which is what the call sites
+ * did with `req.json().catch(() => null)`.
+ */
+export const MAX_JSON_BYTES = 64 * 1024;
+
+export async function readJsonBody(
+  req: Request,
+  maxBytes = MAX_JSON_BYTES,
+): Promise<unknown | null> {
+  const declared = req.headers.get("content-length");
+  if (declared && Number(declared) > maxBytes) {
+    throw new ApiError(413, "Request body too large", "PAYLOAD_TOO_LARGE");
+  }
+  const reader = req.body?.getReader();
+  if (!reader) return null;
+
+  const decoder = new TextDecoder();
+  let text = "";
+  let size = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw new ApiError(413, "Request body too large", "PAYLOAD_TOO_LARGE");
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+    text += decoder.decode();
+  } finally {
+    if (!reader.closed) reader.releaseLock();
+  }
+
+  if (!text.trim()) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Refuse a body that is not JSON.
  *
  * A cross-site HTML form can post `text/plain` or form-encoded data without a

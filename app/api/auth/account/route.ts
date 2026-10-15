@@ -5,7 +5,12 @@ import {
   verifyPassword,
 } from "@/lib/services/account";
 import { registrationOpen } from "@/lib/config/flags";
-import { handleRouteError, jsonError, requireSessionForWrite } from "@/lib/utils/api";
+import {
+  handleRouteError,
+  jsonError,
+  readJsonBody,
+  requireSessionForWrite,
+} from "@/lib/utils/api";
 import { verifyCsrfToken } from "@/lib/utils/csrf";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +35,7 @@ export async function DELETE(req: Request) {
   try {
     const userId = await requireSessionForWrite("account");
 
-    const body = (await req.json().catch(() => null)) as {
+    const body = (await readJsonBody(req)) as {
       csrfToken?: unknown;
       password?: unknown;
     } | null;
