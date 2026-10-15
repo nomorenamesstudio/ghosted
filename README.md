@@ -1,6 +1,6 @@
 # Ghosted
 
-[![CI](https://github.com/krisztianhadi/ghosted/actions/workflows/ci.yml/badge.svg)](https://github.com/krisztianhadi/ghosted/actions/workflows/ci.yml)
+[![CI](https://github.com/nomorenamesstudio/ghosted/actions/workflows/ci.yml/badge.svg)](https://github.com/nomorenamesstudio/ghosted/actions/workflows/ci.yml)
 · MIT · Next.js 15 + React 19 · one container, one Postgres
 
 ![The Ghosted landing: a violet hero with the headline "Never let a job application go quiet on you", the real dashboard cards floating beside it — Stripe interviewing, Vercel applied, Framer marked Ghosted, Linear offering — and the ghost mascots among them](docs/assets/readme-header.jpg)
@@ -129,6 +129,7 @@ Full walkthrough, environment reference, email options, backups and upgrades:
 - [API reference](docs/API.md) - all endpoints, parameters, examples
 - [Architecture](docs/ARCHITECTURE.md) - tech stack, data flow, key decisions
 - [Changelog](docs/CHANGELOG.md) - changes by date and type
+- [The story](docs/STORY.md) - why it exists, in the author's words
 - [What it costs](docs/COSTS.md) - tokens, the estimate, and the provider balance
 - [Releasing](docs/RELEASING.md) - versioning, tags, publishing an image
 - [Code reviews](docs/reviews/) - two independent model reviews, and the fix lists
