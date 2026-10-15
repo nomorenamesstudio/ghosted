@@ -63,6 +63,83 @@ findings details; each carries the failing behaviour it removes.
     continuation-line caps, and a warning when `SMTP_ALLOW_INSECURE` is set alongside
     credentials or a non-loopback host.
 
+## Landed, 2026-10-15
+
+The "Now" block of the fix order is shipped, each item with a test that was
+watched to fail without it (all five go red when the fix is reverted):
+
+1. **The doubled unit conversion, with the prune condition.** `windowMs` is
+   milliseconds everywhere, the env default is converted once, and the overflow
+   prune never evicts a window that is still refusing. Shipped as `1.4.1` and
+   measured on the deployed staging build: 240 failures through the callback
+   path, then one sign-in attempt answered `429` with `Retry-After: 833` — the
+   remainder of a 15-minute window, where the same probe returned 54,000,000
+   seconds before the fix.
+2. **The email change.** The current password is required when the address
+   actually changes, the old address receives a notice naming the new one, and a
+   provider-only account — which has no password to prove — still moves with the
+   session alone. The gate runs before the duplicate-address check, so a
+   passwordless session cannot enumerate registered addresses through it either.
+   The `sessionEpoch` bump the record suggested as defence in depth is
+   deliberately **not** included: the password proof is the gate, an attacker
+   holding the password can re-authenticate after any bump, and the bump would
+   sign the account holder out of every device for their own legitimate change.
+3. **The log transport redacts tokens outside development**, where the log is
+   retained by the platform. Development keeps the clickable link, which is the
+   documented workflow. Retention itself remains the host's.
+4. **`verifyEmail` writes conditionally** (`WHERE id AND email`), so the check and
+   the write are one statement. Untested by interleaving — no seam exists to
+   commit an email change between them — so this one is closed structurally
+   rather than pinned by a test.
+5. **`login` and `register` require `application/json`** (`415` otherwise), which
+   closes the login-CSRF route; a form cannot send that media type without a
+   preflight.
+6. **`forgot-password` defers the send** to `after()`, so the hit path no longer
+   takes a mail round trip the miss path does not. `after()` throws outside a
+   request scope, so a directly-driven handler falls back to an unawaited send —
+   which is what the latency test exercises.
+
+Also fixed from the doc-honesty item: the peek that guards the Credentials
+callback refused while `count > max` and therefore admitted a sixth attempt where
+five were documented. It refuses at a spent window now, so the per-account limit
+is the five `SECURITY.md` describes.
+
+**Landed later the same day — the "Then" block, all four:**
+
+7. **Per-user counters on both password routes.** `change-password` and
+   `set-password` now carry an account window beside the per-IP one, and a
+   success clears only the account's own window: clearing the shared per-IP
+   bucket had handed the allowance back to everyone behind that address. The
+   `docs/API.md` promise of "per IP and per user" is now what the code does.
+8. **The documentation-honesty sweep.** `assertDeployable` is deleted (dead
+   code, no caller, no `instrumentation.ts`), and `.env.example` plus
+   `SELFHOST.md` now describe what the app actually does: a coherent-but-
+   unusable production deployment is *reported* (`/api/health` 503
+   `config: invalid`, which the compose healthcheck turns unhealthy) and sign-ups
+   are refused with 503 `MAIL_NOT_CONFIGURED`, while a malformed flag *value*
+   still stops the boot. `docker-compose.yml` passes `${EMAIL_TRANSPORT:-}` so an
+   unset value falls through to auto-detection as three documents promise; the
+   stale CSRF comment (sign-out) and the deletion route's comment are corrected.
+9. **The logo cache is bounded.** At most 5,000 domains, oldest evicted first,
+   and the upstream read is capped *while* reading rather than after:
+   `res.arrayBuffer()` against an endless body never returned — measured, and
+   the request's own `AbortSignal.timeout` did not end it — so the shared
+   `readCapped` helper now covers the Gravatar lookup too.
+10. **The SMTP conversation is bounded.** 64 KB per reply, 100 continuation
+    lines, and a wall-clock deadline (`SMTP_DEADLINE_MS`, default 30 s) over the
+    whole exchange, because an inactivity timer cannot end a peer that drips
+    bytes. `SMTP_ALLOW_INSECURE` warns at construction when it is combined with
+    credentials or a non-loopback host.
+
+Each has a test that was watched to fail without it. The three SMTP cases hang
+until the runner's timeout without their bound; the endless-body case likewise.
+
+**Still open, and not in the fix order** — the fan-out lead recorded as accepted
+rather than fixed: `company_logos` is now bounded in rows and bytes, but nothing
+budgets logo *lookups* per account, so one account with many applications can
+still drive the shared upstream fetch budget. Named here rather than quietly
+dropped.
+
 ## Operator facts still needed
 
 No source read settles these, and every `needs_validation` record on the limiter, the

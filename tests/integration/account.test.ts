@@ -66,6 +66,10 @@ describe("PATCH /api/auth/profile", () => {
       req(`${base}/profile`, "PATCH", {
         name: "New Name",
         email: "new@test.dev",
+        // The address is the recovery address: moving it proves the password.
+        // The gate runs before the duplicate check, so a session without the
+        // password cannot probe which addresses are taken either.
+        currentPassword: user.password,
       }),
     );
     expect(res.status).toBe(200);
@@ -87,7 +91,10 @@ describe("PATCH /api/auth/profile", () => {
     await createUser("b@test.dev");
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await PROFILE(
-      req(`${base}/profile`, "PATCH", { email: "b@test.dev" }),
+      req(`${base}/profile`, "PATCH", {
+        email: "b@test.dev",
+        currentPassword: user.password,
+      }),
     );
     expect(res.status).toBe(409);
     expect((await readJson(res)).code).toBe("EMAIL_TAKEN");
@@ -189,6 +196,61 @@ describe("POST /api/auth/change-password", () => {
     );
   });
 });
+
+  it("limits the account across addresses, not only the address", async () => {
+    // `req` gives every attempt a different address, so the per-IP window never
+    // sees more than one of them: only an account-keyed window can refuse the
+    // sixth, which is the guard `docs/API.md` promised and the code lacked.
+    const user = await createUser("pw-account@test.dev", "User", "oldpassword1");
+    const statuses: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      authMock.mockResolvedValueOnce(mockSession(user.id));
+      const res = await CHANGE_PASSWORD(
+        req(`${base}/change-password`, "POST", {
+          currentPassword: "wrong-password",
+          newPassword: "newpassword1",
+          confirmPassword: "newpassword1",
+        }),
+      );
+      statuses.push(res.status);
+    }
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
+  });
+
+  it("does not clear a shared address window on one account's success", async () => {
+    // Two accounts behind one address. The first spends four attempts of the
+    // address window, the second uses the fifth successfully. Clearing the
+    // address bucket on that success would hand the allowance back to everyone
+    // behind it — so the sixth request must still be refused.
+    const first = await createUser("pw-shared-a@test.dev", "User", "oldpassword1");
+    const second = await createUser("pw-shared-b@test.dev", "User", "oldpassword1");
+    const shared = { "x-forwarded-for": "10.7.0.1" };
+    const body = (currentPassword: string) => ({
+      currentPassword,
+      newPassword: "newpassword1",
+      confirmPassword: "newpassword1",
+    });
+
+    for (let i = 0; i < 4; i++) {
+      authMock.mockResolvedValueOnce(mockSession(first.id));
+      const res = await CHANGE_PASSWORD(
+        jsonRequest(`${base}/change-password`, "POST", body("wrong-password"), shared),
+      );
+      expect(res.status).toBe(401);
+    }
+
+    authMock.mockResolvedValueOnce(mockSession(second.id));
+    const ok = await CHANGE_PASSWORD(
+      jsonRequest(`${base}/change-password`, "POST", body("oldpassword1"), shared),
+    );
+    expect(ok.status).toBe(200);
+
+    authMock.mockResolvedValueOnce(mockSession(first.id));
+    const sixth = await CHANGE_PASSWORD(
+      jsonRequest(`${base}/change-password`, "POST", body("wrong-password"), shared),
+    );
+    expect(sixth.status).toBe(429);
+  });
 
 describe("POST /api/auth/set-password", () => {
   it("gives an account that has no password its first one", async () => {
@@ -575,7 +637,10 @@ describe("email verification", () => {
     // Change the email → becomes unverified with a fresh token.
     authMock.mockResolvedValueOnce(mockSession(user.id));
     const res = await PROFILE(
-      req(`${base}/profile`, "PATCH", { email: "newmail@test.dev" }),
+      req(`${base}/profile`, "PATCH", {
+        email: "newmail@test.dev",
+        currentPassword: user.password,
+      }),
     );
     expect(res.status).toBe(200);
 

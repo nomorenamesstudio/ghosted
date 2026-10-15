@@ -173,16 +173,6 @@ export function canDeliverMail(env: EnvRecord = process.env): boolean {
   return transport.delivers && Boolean(readText(env, "EMAIL_FROM"));
 }
 
-/**
- * The boot check: throws the whole list at once. Called once per server start
- * (`instrumentation.ts`) so a misconfigured container fails loudly and
- * immediately instead of at the first request that happens to need mail.
- */
-export function assertDeployable(env: EnvRecord = process.env): void {
-  const problems = deploymentProblems(env);
-  if (problems.length > 0) throw new ConfigError(problems);
-}
-
 let cached: RuntimeConfig | null = null;
 
 /**

@@ -6,6 +6,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  requireJsonBody,
 } from "@/lib/utils/api";
 import {
   getClientIp,
@@ -22,6 +23,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
+    const notJson = requireJsonBody(req);
+    if (notJson) return notJson;
+
     const ip = getClientIp(req);
     const rl = rateLimit(ip, "login");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);

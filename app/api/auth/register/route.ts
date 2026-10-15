@@ -13,6 +13,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  requireJsonBody,
 } from "@/lib/utils/api";
 import {
   getClientIp,
@@ -58,6 +59,9 @@ export async function POST(req: Request) {
     const ip = getClientIp(req);
     const rl = rateLimit(ip, "register");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
+
+    const notJson = requireJsonBody(req);
+    if (notJson) return notJson;
 
     const body = await req.json().catch(() => null);
     const parsed = registerSchema.safeParse(body);

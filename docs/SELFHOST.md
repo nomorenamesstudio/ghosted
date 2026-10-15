@@ -78,8 +78,12 @@ EMAIL_FROM="Ghosted <ghosted@yourdomain.com>"
 mail is deliverability-sensitive: set up SPF and DKIM with your provider, or the
 mail lands in spam.
 
-The app refuses to start if registration is open in production without a
-transport that actually sends, rather than letting sign-ups break one at a time.
+An instance with registration open in production and no transport that actually
+sends is reported rather than crash-looped: `/api/health` answers `503` with
+`config: invalid` — which the compose healthcheck turns into an unhealthy
+container — and sign-ups are refused with `503 MAIL_NOT_CONFIGURED`, so nobody
+half-signs-up. (A malformed flag *value*, such as a typo in `ALLOW_REGISTRATION`,
+does stop the boot.)
 
 Closing sign-ups later (`ALLOW_REGISTRATION=false`) does not touch provider
 sign-in: the buttons stay if you have credentials, because the accounts that
@@ -102,7 +106,14 @@ LOGIN.
 **Encryption is required.** `smtp://` means "upgrade with STARTTLS"; if the
 server does not offer it, the connection is refused rather than sending your
 password and your mail in the clear. The one exception is an unauthenticated
-relay on the same machine: set `SMTP_ALLOW_INSECURE=1` for that, and only that.
+relay on the same machine: set `SMTP_ALLOW_INSECURE=1` for that, and only that —
+and if you set it with credentials or a host that is not loopback, the boot log
+says so, because nothing else in the app would tell you.
+
+The client bounds a conversation rather than trusting the server to end it: 64 KB
+per reply, 100 continuation lines, and `SMTP_DEADLINE_MS` (default 30000) for the
+whole exchange. The socket timeout alone is an inactivity timer, and a peer that
+sends one byte before every boundary resets it forever.
 
 **Prefer `smtps://` when your provider offers it.** The STARTTLS path is tested
 as far as it can be without a trusted certificate — the client asks for the

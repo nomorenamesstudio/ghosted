@@ -4,6 +4,12 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 
+vi.mock("@/lib/emails", () => ({
+  sendVerificationEmail: vi.fn().mockResolvedValue(true),
+  sendPasswordResetEmail: vi.fn().mockResolvedValue(true),
+  sendEmailChangedEmail: vi.fn().mockResolvedValue(true),
+}));
+
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
   signIn: vi.fn(),
@@ -14,6 +20,7 @@ vi.mock("@/lib/auth", () => ({
 }));
 
 import { signIn } from "@/lib/auth";
+import { sendPasswordResetEmail } from "@/lib/emails";
 import { rateLimitAccount } from "@/lib/utils/rate-limit";
 import { POST as LOGIN } from "@/app/api/auth/login/route";
 import { POST as REGISTER } from "@/app/api/auth/register/route";
@@ -194,6 +201,47 @@ describe("POST /api/auth/login", () => {
     );
     expect(res.status).toBe(429);
     expect(res.headers.get("Retry-After")).toBeTruthy();
+  });
+
+  it("refuses a body that is not JSON, so a cross-site form cannot mint a session", async () => {
+    // A form post cannot set application/json, so the guard costs the real
+    // client one header and takes the cross-site login route away.
+    const res = await LOGIN(
+      new Request(`${base}/login`, {
+        method: "POST",
+        headers: { "content-type": "text/plain" },
+        body: JSON.stringify({ email: "a@test.dev", password: "password123" }),
+      }),
+    );
+    expect(res.status).toBe(415);
+    expect((await readJson(res)).code).toBe("UNSUPPORTED_MEDIA_TYPE");
+
+    const register = await REGISTER(
+      new Request(`${base}/register`, {
+        method: "POST",
+        headers: { "content-type": "application/x-www-form-urlencoded" },
+        body: "email=a@test.dev&password=password123",
+      }),
+    );
+    expect(register.status).toBe(415);
+  });
+
+  it("answers without waiting for the mail round trip", async () => {
+    // The hit path used to await the transport while the miss path did not,
+    // which is a membership oracle the docs promise does not exist. A transport
+    // that will not settle for ten seconds makes that visible: an awaiting
+    // route cannot answer inside the assertion below.
+    await createUser("fast@test.dev");
+    vi.mocked(sendPasswordResetEmail).mockImplementationOnce(
+      () => new Promise((resolve) => setTimeout(() => resolve(true), 10_000)),
+    );
+
+    const started = Date.now();
+    const res = await FORGOT(
+      authRequest(`${base}/forgot-password`, "POST", { email: "fast@test.dev" }),
+    );
+    expect(res.status).toBe(200);
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 
   it("allows a different IP after another is limited", async () => {

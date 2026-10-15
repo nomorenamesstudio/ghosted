@@ -126,6 +126,25 @@ export async function requireSessionForWrite(scope: string): Promise<string> {
   return userId;
 }
 
+/**
+ * Refuse a body that is not JSON.
+ *
+ * A cross-site HTML form can post `text/plain` or form-encoded data without a
+ * preflight, and these routes mint sessions — so an attacker could sign a
+ * visitor into an account they control (login CSRF) without ever reading a
+ * response. Requiring a media type a form cannot send closes it for the cost of
+ * one header check; the real form and every test send `application/json`.
+ */
+export function requireJsonBody(req: Request): NextResponse | null {
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.toLowerCase().includes("application/json")) return null;
+  return jsonError(
+    415,
+    "Send this request as application/json",
+    "UNSUPPORTED_MEDIA_TYPE",
+  );
+}
+
 /** 429 response with Retry-After (spec: 60s default). */
 export function rateLimited(retryAfterSeconds: number): NextResponse {
   return jsonError(

@@ -1,9 +1,11 @@
 import { logger } from "@/lib/utils/logger";
+import { readCapped } from "@/lib/utils/bounded-body";
 import {
   acceptGravatarResponse,
   gravatarHash,
   gravatarPath,
   gravatarUpstreamUrl,
+  MAX_BYTES,
 } from "@/lib/utils/gravatar";
 
 /**
@@ -35,7 +37,8 @@ export async function resolveGravatarPath(
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       headers: { "user-agent": "Ghosted/0.1 (gravatar lookup)" },
     });
-    const bytes = Buffer.from(await res.arrayBuffer());
+    const bytes = await readCapped(res, MAX_BYTES);
+    if (!bytes) return null;
     const contentType = acceptGravatarResponse(
       res.status,
       res.headers.get("content-type"),

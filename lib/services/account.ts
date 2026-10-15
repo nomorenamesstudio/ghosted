@@ -22,8 +22,13 @@ const hashToken = (t: string) =>
 /** Update profile fields (name/email). Throws 409 EMAIL_TAKEN on duplicates. */
 export async function updateProfile(
   userId: string,
-  input: { name?: string; email?: string; patienceLevel?: PatienceLevel },
-): Promise<{ user: User; emailChanged: boolean }> {
+  input: {
+    name?: string;
+    email?: string;
+    patienceLevel?: PatienceLevel;
+    currentPassword?: string;
+  },
+): Promise<{ user: User; emailChanged: boolean; previousEmail: string }> {
   const [current] = await db
     .select()
     .from(users)
@@ -43,6 +48,28 @@ export async function updateProfile(
   if (input.patienceLevel !== undefined) {
     values.patienceLevel = input.patienceLevel;
   }
+  // Moving the sign-in identifier is not something a session can do on its own:
+  // the address is also where a password reset would be sent, so a stolen
+  // session could otherwise hand itself a password it never knew, and then
+  // delete the account through the front door (static audit, third pass). An
+  // account with no password has none to prove — it signs in through a
+  // provider — so it moves with the session alone, and either way the old
+  // address is told afterwards.
+  if (
+    input.email !== undefined &&
+    input.email !== current.email &&
+    current.passwordHash
+  ) {
+    if (!input.currentPassword) {
+      throw new ApiError(
+        400,
+        "Enter your current password to change your email address",
+        "PASSWORD_REQUIRED",
+      );
+    }
+    await verifyPassword(userId, input.currentPassword);
+  }
+
   if (input.email !== undefined) {
     const [existing] = await db
       .select({ id: users.id })
@@ -72,7 +99,11 @@ export async function updateProfile(
     .set(values)
     .where(eq(users.id, userId))
     .returning();
-  return { user, emailChanged: input.email !== undefined && input.email !== current.email };
+  return {
+    user,
+    emailChanged: input.email !== undefined && input.email !== current.email,
+    previousEmail: current.email,
+  };
 }
 
 /**
@@ -289,11 +320,24 @@ export async function verifyEmail(
     return null;
   }
 
+  // The address check above and this write used to be separate statements that
+  // matched only the id, so an email change committing between them verified an
+  // address the token was never issued for (static audit, second pass). The
+  // write carries the address it was checked against, which makes the condition
+  // and the update one statement: no window, no second look-up.
   const now = new Date();
-  await db
+  const [verified] = await db
     .update(users)
     .set({ emailVerified: true, emailVerifiedAt: now })
-    .where(eq(users.id, row.userId));
+    .where(and(eq(users.id, row.userId), eq(users.email, row.email)))
+    .returning({ id: users.id });
+  if (!verified) {
+    logger.warn(
+      { userId: row.userId },
+      "verification token refused: the address changed before the write landed",
+    );
+    return null;
+  }
   await db
     .update(emailVerificationTokens)
     .set({ usedAt: now })
