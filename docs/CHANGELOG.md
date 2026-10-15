@@ -2,7 +2,7 @@
 
 All notable changes, by date and type.
 
-## Unreleased — 2026-10-15
+## 1.4.3 — 2026-10-15
 
 ### Security
 - **The session `update` trigger is a trigger, not a source.** A client could
