@@ -226,6 +226,34 @@ describe("POST /api/auth/login", () => {
     expect(register.status).toBe(415);
   });
 
+  it("refuses an oversized body instead of buffering it", async () => {
+    // Streamed, so there is no content-length to short-circuit on: the reader has
+    // to count what actually arrives. `req.json()` would have buffered all of it
+    // first, which is the whole point of the cap.
+    const oversized = JSON.stringify({
+      email: "a@test.dev",
+      password: "x".repeat(200_000),
+    });
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(oversized));
+        controller.close();
+      },
+    });
+    const res = await LOGIN(
+      new Request(`${base}/login`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: stream,
+        // Node's fetch types want this for a stream body; undici ignores it.
+        duplex: "half",
+      } as RequestInit),
+    );
+
+    expect(res.status).toBe(413);
+    expect((await readJson(res)).code).toBe("PAYLOAD_TOO_LARGE");
+  });
+
   it("answers without waiting for the mail round trip", async () => {
     // The hit path used to await the transport while the miss path did not,
     // which is a membership oracle the docs promise does not exist. A transport

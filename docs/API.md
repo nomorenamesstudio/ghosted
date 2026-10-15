@@ -16,6 +16,9 @@
 { "error": "human message", "code": "MACHINE_CODE", "details": {} }
 ```
 
+- Request bodies are capped at 64 KB: anything larger is `413
+  PAYLOAD_TOO_LARGE` before a schema sees it. Imports have their own, larger
+  bound.
 - State-changing endpoints are rate limited per IP and per user (see
   SETUP.md for defaults). Exceeding a limit returns 429 with a
   `Retry-After` header. Sign-in is additionally limited per account and, in

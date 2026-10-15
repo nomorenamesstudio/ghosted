@@ -2,6 +2,33 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-15
+
+### Security
+- **The session `update` trigger is a trigger, not a source.** A client could
+  name `name`, `email` and `emailVerified` in its update payload and have them
+  written straight into the token — a session asserting things about itself, and
+  `emailVerified` is the flag the unverified-application cap reads (the row was
+  refreshed afterwards, so the spoof did not survive, but nothing about the
+  design said so). Every mirrored claim now comes from the row the client cannot
+  edit.
+- **Request bodies are capped at 64 KB** (`lib/utils/api.ts`), across the twelve
+  routes that read JSON. `req.json()` took whatever arrived, so a large body was
+  buffered in memory before any schema saw it — the validation caps downstream
+  only measured something already held. Over the cap is `413
+  PAYLOAD_TOO_LARGE`; the import route keeps its own, larger bound.
+
+### Changed
+- **The delete confirmation recommends an export first**, with a link to
+  `/api/auth/export`. Deleting stays a deliberate, password-confirmed action —
+  the copy just says what is about to be gone while it is still there.
+
+### Tests
+- The provider `email_verified` gate in the OAuth `signIn` callback is pinned:
+  an explicit `false` is refused with nothing written, `true` is allowed, and an
+  absent claim is allowed — because LinkedIn's OIDC response omits it and
+  treating that as a denial would lock every LinkedIn user out.
+
 ## 1.4.2 — 2026-10-15
 
 ### Fixed

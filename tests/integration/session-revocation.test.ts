@@ -66,6 +66,33 @@ describe("jwt callback session revocation", () => {
     expect(await resolve(token)).not.toBeNull();
   });
 
+  it("mirrors the account on an update, ignoring what the client claimed", async () => {
+    // The `update` trigger is client-supplied, and it used to write `name`,
+    // `email` and `emailVerified` straight into the token — so a session could
+    // assert anything about itself. Every one of those claims now comes from the
+    // row the client cannot edit.
+    // Unverified in the row, so a payload claiming `emailVerified: true` is
+    // distinguishable from the truth.
+    const user = await createUser("claims@test.dev", "Real Name", "password123", {
+      emailVerified: false,
+    });
+    const token = await signIn(user.id, user.email);
+
+    const updated = (await jwtCallback()({
+      token,
+      trigger: "update",
+      session: {
+        name: "Spoofed Name",
+        email: "attacker@example.dev",
+        emailVerified: true,
+      },
+    })) as Record<string, unknown>;
+
+    expect(updated.name).toBe("Real Name");
+    expect(updated.email).toBe("claims@test.dev");
+    expect(updated.emailVerified).toBe(false);
+  });
+
   it("refuses a session issued before a password change", async () => {
     const user = await createUser("rotates@test.dev");
     const token = await signIn(user.id, user.email);

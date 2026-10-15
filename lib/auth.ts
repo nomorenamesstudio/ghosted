@@ -222,31 +222,20 @@ export const authConfig: NextAuthConfig = {
     async jwt({ token, user, account, trigger, session }) {
       // Profile updates (name/email) propagate into the JWT immediately so
       // the user menu stays in sync without a fresh sign-in.
-      if (trigger === "update" && session) {
-        const s = session as {
-          name?: string;
-          email?: string;
-          emailVerified?: boolean;
-          user?: { name?: string; email?: string; emailVerified?: boolean };
-        };
-        if (typeof s.name === "string") token.name = s.name;
-        if (typeof s.email === "string") token.email = s.email;
-        if (typeof s.emailVerified === "boolean") {
-          token.emailVerified = s.emailVerified;
-        }
-        if (s.user) {
-          if (typeof s.user.name === "string") token.name = s.user.name;
-          if (typeof s.user.email === "string") token.email = s.user.email;
-          if (typeof s.user.emailVerified === "boolean") {
-            token.emailVerified = s.user.emailVerified;
-          }
-        }
-        // A profile update (e.g. email change) may have reset verification in
-        // the DB — refresh the flag so the banner and cap stay in sync
-        // without requiring a fresh sign-in.
+      if (trigger === "update") {
+        // The update payload names the fields a client just changed, and it is
+        // client-supplied: taking `name`, `email` or `emailVerified` from it let
+        // a session assert anything about itself (a claim the audit recorded as
+        // cosmetic, but `emailVerified` is the flag the unverified cap reads,
+        // so it is not a thing to leave to the caller). The payload is a
+        // trigger, not a source — every mirrored claim is re-read from the
+        // account, and the session argument is deliberately unused.
+        void session;
         if (typeof token.sub === "string") {
           const [dbUser] = await db
             .select({
+              name: users.name,
+              email: users.email,
               emailVerified: users.emailVerified,
               mustChangePassword: users.mustChangePassword,
             })
@@ -254,10 +243,13 @@ export const authConfig: NextAuthConfig = {
             .where(eq(users.id, token.sub))
             .limit(1);
           if (dbUser) {
+            // A profile update (e.g. an email change) has already landed in the
+            // DB, so this is how the menu and the verification banner stay in
+            // sync without a fresh sign-in — and how the forced-change flag is
+            // cleared the moment the endpoint clears it.
+            token.name = dbUser.name;
+            token.email = dbUser.email;
             token.emailVerified = dbUser.emailVerified;
-            // Mirrored for the same reason: the forced change is cleared in the
-            // DB by the change-password endpoint, and a token that kept saying
-            // otherwise would keep locking a user out of their own account.
             token.mustChangePassword = dbUser.mustChangePassword;
           }
         }

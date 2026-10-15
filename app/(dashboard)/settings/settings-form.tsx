@@ -641,6 +641,13 @@ export function SettingsForm({
         loading={deleteBusy}
         onConfirm={confirmDeleteAccount}
       >
+        <p className="text-xs text-muted-foreground">
+          Prefer a copy first?{" "}
+          <a className="underline" href="/api/auth/export" download>
+            Export my data
+          </a>{" "}
+          while it is still there — after this, there is nothing left to export.
+        </p>
         {hasPassword && (
           <div className="space-y-2">
             <Label htmlFor="delete-password">Your password</Label>

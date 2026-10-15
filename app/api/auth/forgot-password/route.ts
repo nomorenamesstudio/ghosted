@@ -9,6 +9,7 @@ import {
   handleRouteError,
   jsonError,
   rateLimited,
+  readJsonBody,
 } from "@/lib/utils/api";
 import {
   getClientIp,
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     const rl = rateLimit(ip, "forgot-password");
     if (!rl.ok) return rateLimited(rl.retryAfterSeconds);
 
-    const body = await req.json().catch(() => null);
+    const body = await readJsonBody(req);
     const parsed = forgotPasswordSchema.safeParse(body);
     if (!parsed.success) {
       return jsonError(

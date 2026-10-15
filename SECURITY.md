@@ -172,6 +172,11 @@ here first.
   runtime image is built from Next's standalone output.
 - SMTP credentials are never logged; a malformed `SMTP_URL` reports the variable
   name, not the value.
+- **Request bodies are capped at 64 KB** on every JSON route (413 over the cap),
+  so nothing reaches a parser — or the heap — before a size has been agreed. The
+  import route has its own, larger bound. The session's mirrored claims (`name`,
+  `email`, `emailVerified`, `mustChangePassword`) are re-read from the account on
+  an `update`, never taken from the client that asked for the refresh.
 - **Upstream image bodies are read through a byte cap, and an SMTP conversation
   is bounded** (64 KB per reply, 100 continuation lines, a wall-clock deadline).
   Both are read paths that would otherwise hold whatever a third party chose to

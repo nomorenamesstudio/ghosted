@@ -8,6 +8,7 @@ import {
   listLinkedAccounts,
   resolveOAuthUser,
 } from "@/lib/services/oauth-accounts";
+import { authConfig } from "@/lib/auth";
 import { createUser, resetDb } from "@/tests/helpers";
 
 /** Row counts, to prove the reading side of the gate writes nothing. */
@@ -227,5 +228,56 @@ describe("OAuth account linking", () => {
     ).rejects.toThrow(OAuthEmailRequiredError);
 
     expect(await rowCounts()).toEqual({ users: 0, identities: 0 });
+  });
+});
+
+/**
+ * The provider-claim gate, which sits in the Auth.js `signIn` callback rather
+ * than in the service above — it has to run before anything is written, and it
+ * returns a redirect string instead of throwing.
+ *
+ * Nothing covered it until now, and it is the one branch in the OAuth path this
+ * project added after OAuth was already working in production: a provider that
+ * says the address is *not* verified has not proved the mailbox, and an
+ * unverified address matching a local account is exactly what the adopt rule
+ * would otherwise attach a provider identity to.
+ */
+describe("the provider email-verified gate", () => {
+  beforeEach(async () => {
+    await resetDb();
+  });
+
+  type SignInCallback = (params: Record<string, unknown>) => Promise<unknown>;
+
+  function signInCallback(): SignInCallback {
+    const callback = authConfig.callbacks?.signIn as unknown as SignInCallback;
+    if (!callback) throw new Error("no signIn callback");
+    return callback;
+  }
+
+  const providerSignIn = (emailVerified: boolean | undefined) => ({
+    user: { id: "provider-sub-1", email: "gate@test.dev", name: "Gate" },
+    account: { provider: "google", providerAccountId: "google-sub-1" },
+    profile: emailVerified === undefined ? {} : { email_verified: emailVerified },
+  });
+
+  it("refuses a provider that reports the address as unverified, without writing", async () => {
+    const before = await rowCounts();
+
+    expect(await signInCallback()(providerSignIn(false))).toBe(
+      "/login?error=ProviderEmailUnverified",
+    );
+
+    expect(await rowCounts()).toEqual(before);
+  });
+
+  it("accepts a verified address", async () => {
+    expect(await signInCallback()(providerSignIn(true))).toBe(true);
+  });
+
+  it("accepts a provider that omits the claim, because omitting is not denying", async () => {
+    // LinkedIn's OIDC response carries no `email_verified`: treating that as a
+    // denial would lock every LinkedIn user out.
+    expect(await signInCallback()(providerSignIn(undefined))).toBe(true);
   });
 });
