@@ -18,7 +18,7 @@ import {
  * Server-only: these values are read from `process.env` and rendered by server
  * components. Anything a client component needs is passed down as a prop.
  */
-export const REPO_URL = "https://github.com/krisztianhadi/ghosted";
+export const REPO_URL = "https://github.com/nomorenamesstudio/ghosted";
 export const LICENSE_URL = `${REPO_URL}/blob/main/LICENSE`;
 
 /**

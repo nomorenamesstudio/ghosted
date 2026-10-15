@@ -25,7 +25,7 @@ behaves like it.
 ## 2. Solo, in three commands
 
 ```bash
-git clone https://github.com/krisztianhadi/ghosted && cd ghosted
+git clone https://github.com/nomorenamesstudio/ghosted && cd ghosted
 cp .env.example .env
 openssl rand -base64 32        # paste into AUTH_SECRET
 ```

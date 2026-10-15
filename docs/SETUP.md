@@ -9,7 +9,7 @@
 ## Install
 
 ```bash
-git clone git@github.com:krisztianhadi/ghosted.git
+git clone git@github.com:nomorenamesstudio/ghosted.git
 cd ghosted
 pnpm install
 ```

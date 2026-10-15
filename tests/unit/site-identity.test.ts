@@ -110,7 +110,7 @@ describe("readSiteIdentity", () => {
   });
 
   it("exposes the repo and its license for the copy that links them", () => {
-    expect(REPO_URL).toBe("https://github.com/krisztianhadi/ghosted");
+    expect(REPO_URL).toBe("https://github.com/nomorenamesstudio/ghosted");
     expect(LICENSE_URL).toBe(`${REPO_URL}/blob/main/LICENSE`);
   });
 });

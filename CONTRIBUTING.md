@@ -7,7 +7,7 @@ arrives at all.
 ## Getting it running
 
 ```bash
-git clone https://github.com/krisztianhadi/ghosted && cd ghosted
+git clone https://github.com/nomorenamesstudio/ghosted && cd ghosted
 pnpm install
 docker compose up -d          # Postgres only, for development
 cp .env.example .env          # then set AUTH_SECRET: openssl rand -base64 32
