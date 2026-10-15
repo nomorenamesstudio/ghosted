@@ -74,3 +74,15 @@ next-env.d.ts
 
 # Intermediate renders from scripts/render-readme-banner.mjs
 /docs/assets/banner/rendered-*.png
+
+# harness files: machine-local, mirrored to nomorenamesstudio/infra (never commit)
+/CLAUDE.md
+/.dsh/
+/.claude/
+/.cursor/
+/.codex/
+/.opencode/
+/.agents/
+/.clinerules
+/.cursorrules
+/.github/copilot-instructions.md
