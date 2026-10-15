@@ -2,7 +2,7 @@
 
 All notable changes, by date and type.
 
-## Unreleased
+## 1.4.1 — 2026-10-14
 
 ### Fixed
 - **A doubled unit conversion made two limits 60,000× longer than documented.**
