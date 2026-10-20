@@ -89,9 +89,10 @@ const FEATURES: {
   /** Two-column tile on sm and up: bigger padding and a bigger heading. */
   wide?: boolean;
   /** Footer note, prefixed with the repo mark, for tiles that are not released
-   *  yet — whatever the reason, including a repo that is public but not ready
-   *  to point people at. */
+   *  yet. */
   soon?: boolean;
+  /** Footer link where the work already exists — the repo the tile is about. */
+  link?: { href: string; label: string };
 }[] = [
   {
     icon: Ghost,
@@ -112,7 +113,7 @@ const FEATURES: {
     title: "Open source",
     body: "MIT-licensed and self-hostable: one container and a Postgres, migrations on start. Run it on your own box if you would rather not trust anyone's server, ours included.",
     span: "",
-    soon: true,
+    link: { href: REPO_URL, label: "View on GitHub" },
   },
   {
     icon: Plug,
@@ -136,9 +137,9 @@ const FEATURES: {
 ];
 
 /**
- * The GitHub mark, inline. lucide dropped brand icons, and this is the one place
- * the page needs one; `currentColor` keeps it on the same muted gray as the rest
- * of the tile footer.
+ * The GitHub mark, inline. lucide dropped brand icons, and the tile footers are
+ * the one place the page needs one; `currentColor` keeps it on the same muted
+ * gray as the text beside it.
  */
 function GithubMark({ className }: { className?: string }) {
   return (
@@ -800,6 +801,17 @@ export function Landing() {
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                       {f.body}
                     </p>
+                    {f.link && (
+                      <a
+                        href={f.link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 inline-flex w-fit items-center gap-1.5 font-mono text-xs text-muted-foreground transition-colors hover:text-foreground hover:underline"
+                      >
+                        <GithubMark className="h-3.5 w-3.5" />
+                        {f.link.label}
+                      </a>
+                    )}
                     {f.soon && (
                       <span className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
                         <GithubMark className="h-3.5 w-3.5" />
