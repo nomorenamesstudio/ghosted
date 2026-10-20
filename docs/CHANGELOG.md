@@ -2,6 +2,19 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-20
+
+### Changed
+- **The landing's "Open source" tile links the repo instead of promising it.** It
+  said "coming soon" while `nomorenamesstudio/ghosted` had been public and
+  MIT-licensed since 1.0. The tile footer is now a link to the source; only the MCP
+  tile still says coming soon.
+
+### Added
+- **The repository has a Sponsor button.** `.github/FUNDING.yml` points it at
+  `buymeacoffee.com/nomorenames`, the same page the donate banner defaults to. A
+  self-hoster swaps the line for their own page or deletes the file.
+
 ## Unreleased — 2026-10-15
 
 ### Changed

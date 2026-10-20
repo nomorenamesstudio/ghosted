@@ -1,0 +1,5 @@
+# GitHub renders this as the repository's Sponsor button. It points at the hosted
+# instance's coffee page — the same one `NEXT_PUBLIC_DONATE_URL` defaults to — so
+# self-hosters who would rather not fund someone else's evenings can replace the
+# line with their own page, or delete the file.
+buy_me_a_coffee: nomorenames
