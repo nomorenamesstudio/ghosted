@@ -38,7 +38,7 @@ section, and a stalled hunt became something I could see.
 | **Night mode, keyboard, screen reader** | System theme or manual, usable without a mouse, readable at 200% zoom. The end-to-end suite runs axe on every page. |
 | **Your own instance** | One container and a Postgres. Two environment flags decide whether it is a solo instance or a family one. |
 
-![The board: every column populated — applied, interviewing, offers and ghosted — with cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
+![The whole board on a desktop: the app bar with search, filter, sort and the list/board switch, then every column populated — applied, interviewing, offers and ghosted — with cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
 
 ## Quick start
 

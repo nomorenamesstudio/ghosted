@@ -41,10 +41,13 @@
     display: grid;
     align-items: center;
     padding-left: 86px;
-    grid-template-columns: minmax(0, 1fr) 640px;
+    grid-template-columns: minmax(0, 1fr) 600px;
     gap: 24px;
+    /* Symmetric gutters: the pile used to sit flush against the right edge. */
+    padding-right: 86px;
   }
-  .social .content { grid-template-columns: minmax(0, 1fr) 500px; padding-left: 56px; }
+  .social .content { grid-template-columns: minmax(0, 1fr) 520px; padding-left: 56px; padding-right: 56px; }
+  .social .pile { transform: translateY(-50%) scale(0.93); }
 
   /* --- left: what it is --------------------------------------------------- */
   h1 {
@@ -55,7 +58,7 @@
     max-width: 790px;
     text-wrap: balance;
   }
-  .social h1 { font-size: 52px; max-width: 640px; }
+  .social h1 { font-size: 48px; max-width: 560px; }
 
   /* The landing's hero subhead, verbatim: the card and the page say one thing. */
   .lede {
@@ -82,8 +85,9 @@
   .stage { position: relative; height: 100%; }
   .pile {
     position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
+    top: 50%; right: 0;
+    transform: translateY(-50%);
+    transform-origin: right center;
     width: 560px; height: 474px;
   }
 
