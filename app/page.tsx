@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Landing } from "@/components/Landing";
-import { softwareApplicationJsonLd } from "@/lib/structured-data";
+import {
+  faqJsonLd,
+  softwareApplicationJsonLd,
+} from "@/lib/structured-data";
 
 /**
  * The landing is the one page worth consolidating: the app answers on the
@@ -38,6 +41,15 @@ export default function HomePage() {
             /</g,
             "\\u003c",
           ),
+        }}
+      />
+      {/* Second block rather than one @graph: the two nodes have nothing to say
+          to each other, and a crawler that reads only the first still gets the
+          app. Answers come from `lib/faq.ts`, the same array the page renders. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqJsonLd()).replace(/</g, "\\u003c"),
         }}
       />
       <Landing />

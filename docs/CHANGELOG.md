@@ -2,6 +2,52 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-22
+
+### Feature
+- **The README and the landing are written for discovery, not just for readers.**
+  The README now follows one structure (badges, pitch, why, what it does, quick
+  start, how it works, FAQ, contributing, license), the repo gained a Sponsor
+  button, and the landing gained the three things answer engines quote from: a
+  hero that names the category, a "Why Ghosted exists" section whose first
+  sentence is the answer, and a comparison table against a typical paid tracker
+  and a spreadsheet.
+- **The landing's FAQ is one source of truth.** Questions and answers live in
+  `lib/faq.ts` as plain text, rendered as real headings inside the disclosures and
+  emitted verbatim as `FAQPage` structured data — the schema can no longer drift
+  from the copy, because there is only one copy. Answers were rewritten to open
+  with the answer and stay inside 40–60 words.
+- **`SoftwareApplication` now states the price.** `offers` at `0 USD` repeats the
+  claim the page already makes; `aggregateRating` and `review` stay out, because
+  nobody has rated anything.
+- **`/llms.txt`** is rendered per request from this deployment's own origin, so a
+  self-hosted instance never hands an answer engine a map pointing at ghosted.boo.
+- **The meta description says what the page is** — 150 characters, keyword first.
+
+### Fix
+- **The social card, the OG image and the README header carry the landing's own
+  words.** All three come out of `docs/assets/banner/banner.html`, which now renders
+  the hero H1 and subhead verbatim instead of an older tagline. The OG canvas sets
+  that headline at 52px — larger than the page's, because a preview is read at a
+  glance — and the OG image is the same canvas at 1200×630 ×2 (`?v=2`, because
+  crawlers key the card by URL).
+- **"Why Ghosted exists" was a narrow centred block** in a page whose other
+  sections run edge to edge, so the reader lost the left margin. It now uses the
+  standard frame, with the calm mascot beside the story.
+- **Two headlines broke raggedly.** The hero H1 needed a third line with a
+  one-word tail at the hero column's width, and it could split at the hyphen in
+  "open-source"; it is now one size at every breakpoint (2.75rem), balanced, with
+  "open-source" unbreakable. The features headline broke as "…nothing it /
+  doesn't" and is balanced too. The social card had the same problem at 1200×630
+  and now takes a deliberate two-line break.
+- **The reworked landing's "Why Ghosted exists" section was swallowed by the app
+  window.** The dashboard mock pulls itself up over the hero's bottom padding, so a
+  section placed between them lost its last paragraph under the browser chrome. The
+  story now sits directly under the mock.
+- **The FAQ no longer names the operator.** `tests/e2e/seo.spec.ts` asserts that a
+  prerendered page carries no deployment identity; an answer naming the studio put
+  it into every self-hosted build.
+
 ## Unreleased — 2026-10-20
 
 ### Changed

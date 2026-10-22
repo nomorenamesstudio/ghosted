@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import {
-  ArrowDown,
   ArrowRight,
   Bell,
   BellOff,
@@ -35,6 +34,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { LANDING_FAQ } from "@/lib/faq";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
 import { LICENSE_URL, REPO_URL } from "@/lib/site";
 // The card *shell*, not ApplicationCardView: the real card is a client component
@@ -137,6 +137,64 @@ const FEATURES: {
 ];
 
 /**
+ * The comparison table's rows.
+ *
+ * The middle column describes a typical paid tracker, not one product, and says
+ * "rarely" or "usually" where the fact is not mine to state. A comparison that
+ * overstates a competitor is the same penalty risk as schema that overstates us,
+ * and it is easier to disprove.
+ */
+const COMPARISON: {
+  row: string;
+  ghosted: string;
+  paid: string;
+  sheet: string;
+}[] = [
+  {
+    row: "Price",
+    ghosted: "Free, with no paid tier",
+    paid: "Usually a monthly subscription",
+    sheet: "Free",
+  },
+  {
+    row: "AI in the product",
+    ghosted: "None — you write the application",
+    paid: "Often the selling point",
+    sheet: "None",
+  },
+  {
+    row: "Applications that go quiet",
+    ghosted: "Their own section after 10 days",
+    paid: "Rarely a feature",
+    sheet: "You check by hand",
+  },
+  {
+    row: "Your data",
+    ghosted: "One Postgres, JSON export any time",
+    paid: "Their database",
+    sheet: "Your file",
+  },
+  {
+    row: "Self-hosting",
+    ghosted: "Yes — one container and a Postgres",
+    paid: "No",
+    sheet: "n/a",
+  },
+  {
+    row: "License",
+    ghosted: "MIT, source on GitHub",
+    paid: "Closed source",
+    sheet: "n/a",
+  },
+  {
+    row: "Signing up",
+    ghosted: "Email, or Google and LinkedIn",
+    paid: "Required, usually billed",
+    sheet: "None",
+  },
+];
+
+/**
  * The GitHub mark, inline. lucide dropped brand icons, and the tile footers are
  * the one place the page needs one; `currentColor` keeps it on the same muted
  * gray as the text beside it.
@@ -171,178 +229,20 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
 /**
  * FAQ. Native `<details>` rather than a Radix accordion: the answers open
  * without JavaScript, stay keyboard-operable, and screen readers announce them
- * as a disclosure. Panels deliberately do not close each other — weighing "why
- * is it free" against "what's the catch" should not mean re-opening what you
+ * as a disclosure. Panels deliberately do not close each other — weighing "is it
+ * really free" against "what's the catch" should not mean re-opening what you
  * just read.
+ *
+ * The questions and answers live in `lib/faq.ts` as plain text, because the same
+ * array is emitted as `FAQPage` structured data — the schema has to say exactly
+ * what the page says, and two copies of the copy is how that stops being true.
+ * Each question is a real heading inside the disclosure, which is what makes it
+ * quotable by an answer engine and navigable by a screen reader.
  */
-/** Body links in the FAQ: the app's inline-link color, underlined at rest. */
-const FAQ_LINK =
+/** Body links in running copy: the app's inline-link color, underlined at rest. */
+const BODY_LINK =
   "text-primary underline underline-offset-[3px] transition-colors hover:text-primary/80";
 
-const FAQ: { q: string; a: ReactNode }[] = [
-  {
-    q: "Why did you make it?",
-    a: (
-      <>
-        <p>
-          I built Ghosted because every existing job tracker was either
-          expensive, bloated, or lost track of the applications that went quiet.
-          I was tracking mine in a spreadsheet and an inbox, and the ones that
-          went silent were exactly the ones I forgot: no rejection, no reply,
-          just nothing. After a while I didn&apos;t even remember where I had
-          already applied.
-        </p>
-        <p>
-          Today you need to apply for dozens or even hundreds of jobs. It&apos;s
-          humanly impossible to keep track of it. At least for me it was.
-        </p>
-        <p>
-          Ghosted does one job. It keeps every application and its timeline in one
-          place, with a simple user interface, and it gives the quiet ones their
-          own section — so a hunt that has stalled is something you can see rather
-          than something you slowly forget.
-        </p>
-        <p>
-          Additionally, building Ghosted really keeps me busy and sane while I
-          keep applying into the void and wait for a template rejection.
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "Why is it free?",
-    a: (
-      <>
-        <p>
-          Job hunting is expensive and stressful enough already — portfolio and CV
-          crafting, take-homes, time off, and often no income while you do it.
-        </p>
-        <p>
-          Charging rent on the logbook felt like charging people for being
-          unemployed. I know many do this. I don&apos;t.
-        </p>
-        <p>
-          It is free for casual use and stays that way: no ads, no upsell, and
-          nothing about your hunt sold to anyone.
-        </p>
-        <p>
-          If you feel like it, you can support the cause with a small donation via{" "}
-          <a
-            href={DONATE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={FAQ_LINK}
-          >
-            buymeacoffee
-          </a>{" "}
-          (from the menu or linked here).
-        </p>
-        <p>
-          If you work for a company that would sponsor the project, or want to
-          talk about white-label options, drop an email to{" "}
-          <a href="mailto:hey@nomorenames.studio" className={FAQ_LINK}>
-            hey@nomorenames.studio
-          </a>
-          .
-        </p>
-      </>
-    ),
-  },
-  {
-    q: "What's the catch?",
-    a: (
-      <>
-        <p>
-          There is no catch. I wanted to build a simple and honest tool for myself
-          but it grew to a state where it could be helpful for others. This is a
-          one-man show, no funding, no scaling, no exit strategy and definitely no
-          data harvesting. Not on my watch.
-        </p>
-        <p>
-          If you don&apos;t trust me then feel free to self host it for yourself or
-          friends and family. It&apos;s all there on the{" "}
-          <a
-            href={REPO_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={FAQ_LINK}
-          >
-            git repo
-          </a>{" "}
-          under the{" "}
-          <a
-            href={LICENSE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={FAQ_LINK}
-          >
-            MIT license
-          </a>
-          .
-        </p>
-        <p>That is the whole business model — there isn&apos;t one.</p>
-      </>
-    ),
-  },
-  {
-    q: "Why no AI?",
-    a: (
-      <>
-        <p>
-          Ghosted writes nothing for you, applies to nothing for you and reads no
-          mailbox — it only knows what you type into it.
-        </p>
-        <p>
-          The internet is already full of bloated software and nothing can avoid
-          the AI treatment.
-        </p>
-        <p>
-          Well. Ghosted was built with AI assistance, but ships with no built-in
-          AI on purpose.
-        </p>
-        <p>
-          If you do want an agent in the loop, it goes the other way round. An MCP
-          integration is coming, so your own agent, with your own key, can do the
-          filing.
-        </p>
-        <p>The log stays the tool; the agent stays yours.</p>
-      </>
-    ),
-  },
-  {
-    q: "Can I ask for features?",
-    a: (
-      <>
-        <p>
-          Maybe. If your idea fits the vision and doesn&apos;t add bloat, I&apos;ll
-          consider it — but nothing is guaranteed, as my resources are limited.
-        </p>
-        <p>
-          Same goes for PRs: they will be approved only if they respect the scope
-          of the project.
-        </p>
-        <p>Ghosted is simple on purpose. Less is more.</p>
-      </>
-    ),
-  },
-  {
-    q: "How to contribute?",
-    a: (
-      <>
-        <p>
-          The code is public and MIT-licensed. File an issue for what breaks,
-          open a pull request for what you would rather fix yourself, or
-          self-host it and report how it went on your machine — that last one is
-          the most useful.
-        </p>
-        <p>
-          Ghosted is hand-written and AI-enhanced, so a pull request a model
-          drafted is welcome too — as long as you read it before you send it.
-        </p>
-      </>
-    ),
-  },
-];
 
 /**
  * Both calls to action are the same button: the same size, weight, lift on hover
@@ -656,12 +556,24 @@ export function Landing() {
         <section className="relative overflow-hidden bg-gradient-to-b from-violet-600 to-violet-700">
           <div className="mx-auto flex w-full max-w-[650px] flex-col px-5 pb-24 pt-12 sm:px-6 sm:pb-32 sm:pt-16 lg:grid lg:max-w-6xl lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-12 lg:pb-44 lg:pt-20">
             <div className="order-2 mt-14 text-center lg:order-1 lg:mt-0 lg:text-left">
-              <h1 className="text-[2.75rem] font-bold leading-[1.06] tracking-[-0.02em] text-white sm:text-[3rem] lg:text-[3.25rem]">
-                Never let a job application go quiet on you.
+              {/* The H1 names the category: the pun was the whole first screen
+                  and a pun ranks for nothing. The line it replaced opens the
+                  subhead instead, where it still lands first. */}
+              {/* One size at every breakpoint, and 2.75rem is the size the copy
+                  fits: the hero column is 515px wide at lg, so anything above
+                  44px pushes the headline to a third line whose tail is a single
+                  word. Measured at 1440/1024/834/390 — 44px breaks into two full
+                  lines from tablet up, three even ones on a phone. */}
+              <h1 className="text-balance text-[2.75rem] font-bold leading-[1.06] tracking-[-0.02em] text-white">
+                Ghosted, a free,{" "}
+                {/* Kept whole: a line break after "open-" read as a typo. */}
+                <span className="whitespace-nowrap">open-source</span> job
+                tracker
               </h1>
               <p className="mt-6 text-base leading-relaxed text-violet-100 sm:text-lg">
-                A simple logbook for your jobhunt. Every application, interview
-                and ghosting on one timeline. Nothing more, nothing less.
+                Never let a job application go quiet on you. Every application,
+                interview and ghosting on one timeline, and a section of its own
+                for the ones that stopped answering.
               </p>
               {/* Phones get the standard shape: two full-width rows, primary
                   first, instead of a wrapped row of two different widths. */}
@@ -672,16 +584,15 @@ export function Landing() {
                     <ArrowRight className={CTA_ARROW} aria-hidden />
                   </Link>
                 </Button>
-                <Link
-                  href="#features"
-                  className="group inline-flex w-full items-center justify-center gap-1.5 rounded-md py-1 text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700 sm:w-auto"
+                <a
+                  href={REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex w-full items-center justify-center gap-2 rounded-md py-1 text-sm font-medium text-violet-100 underline decoration-violet-300/50 underline-offset-4 transition-colors hover:text-white hover:decoration-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-violet-700 sm:w-auto"
                 >
-                  See how it works
-                  <ArrowDown
-                    className="h-4 w-4 transition-transform group-hover:translate-y-0.5"
-                    aria-hidden
-                  />
-                </Link>
+                  <GithubMark className="h-4 w-4" />
+                  View source on GitHub
+                </a>
               </div>
             </div>
 
@@ -760,6 +671,57 @@ export function Landing() {
           <LandingMock />
         </section>
 
+        {/* Why it exists, directly under the app window: an answer engine quotes
+            the first sentence of a section, so the first sentence is the answer
+            and the story follows it. It sits after the mock rather than between
+            the hero and it because the mock pulls itself up over the hero's
+            bottom padding — that overlap is the composition, and a section in
+            between would be swallowed by it. */}
+        <section
+          id="why-ghosted-exists"
+          aria-label="Why Ghosted exists"
+          className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 pt-16 sm:px-6 sm:pt-24"
+        >
+          {/* Same frame as the sections below it, not a narrower centred block:
+              the reader should not have to re-find the left edge of the page. */}
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,20rem)] lg:gap-14">
+            <div>
+              <h2 className="text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem]">
+                Why Ghosted exists
+              </h2>
+              <div className="mt-6 max-w-2xl space-y-4 text-base leading-relaxed text-muted-foreground sm:text-lg">
+                <p className="text-foreground">
+                  Every job tracker I tried was a spreadsheet, an inbox, or
+                  somebody&apos;s subscription funnel.
+                </p>
+                <p>
+                  A friend applied to more than 500 places before me and had
+                  nothing encouraging to report. I started my own hunt in late
+                  August 2026, logged the first real application on 3 September,
+                  and it ghosted me too.
+                </p>
+                <p>
+                  The ones that went silent were the ones I forgot first — no
+                  rejection, no reply, nothing. So Ghosted gives them their own
+                  section: a hunt that has stalled becomes something you can see
+                  instead of something you slowly lose track of.
+                </p>
+              </div>
+            </div>
+            {/* `content` is the calm pose and the only one the page was not using;
+                the hero already has the confused, sad and finger-gun ghosts. */}
+            <div className="mx-auto w-40 sm:w-48 lg:mx-0 lg:w-full lg:justify-self-end">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={ART.content}
+                alt=""
+                aria-hidden
+                className="ghost-float w-full opacity-90 drop-shadow-xl"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* Features — a bento, not six equal cards: the differentiator is a big
             tile, the timeline is wide, the rest stay small. Section rhythm is
             py-16/py-24 everywhere, so the page breathes at one pace. */}
@@ -768,7 +730,7 @@ export function Landing() {
           aria-label="Features"
           className="mx-auto w-full max-w-6xl scroll-mt-20 px-5 py-16 sm:px-6 sm:py-24"
         >
-          <h2 className="mx-auto max-w-2xl text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:mx-0 lg:text-left">
+          <h2 className="mx-auto max-w-2xl text-balance text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:mx-0 lg:text-left">
             Everything a job hunt needs, nothing it doesn&apos;t
           </h2>
           <div className="mt-10 grid gap-4 sm:grid-cols-2 sm:mt-14 lg:grid-cols-4">
@@ -879,11 +841,93 @@ export function Landing() {
           </div>
         </section>
 
+        {/* Comparison — the block answer engines pull for "X vs Y" queries. The
+            middle column says "a typical paid tracker", and rows where the answer
+            is not ours to state say "depends": a table that overstates a
+            competitor is the same penalty risk as schema that overstates us. */}
+        <section
+          aria-label="Ghosted compared"
+          className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-6 sm:py-24"
+        >
+          <h2 className="mx-auto max-w-2xl text-center text-[2rem] font-bold leading-[1.15] tracking-[-0.02em] sm:text-[2.25rem] lg:mx-0 lg:text-left">
+            Ghosted vs a paid tracker vs a spreadsheet
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-center text-base leading-relaxed text-muted-foreground lg:mx-0 lg:text-left">
+            What the free option actually gives you, next to the two things it
+            replaces.
+          </p>
+          {/* Scrollable on a phone, so the strip needs a stop of its own — the
+              same contract the board makes (axe: scrollable-region-focusable). */}
+          <div
+            role="region"
+            aria-label="Comparison table"
+            tabIndex={0}
+            className="mt-10 overflow-x-auto rounded-xl border bg-card pb-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            <table className="w-full min-w-[40rem] border-collapse text-left text-sm">
+              <caption className="sr-only">
+                Ghosted compared with a typical paid job tracker and a spreadsheet
+              </caption>
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th scope="col" className="w-[22%] px-5 py-3 font-semibold">
+                    <span className="sr-only">Feature</span>
+                  </th>
+                  <th scope="col" className="px-5 py-3 font-semibold">
+                    Ghosted
+                  </th>
+                  <th scope="col" className="px-5 py-3 font-semibold">
+                    A typical paid tracker
+                  </th>
+                  <th scope="col" className="px-5 py-3 font-semibold">
+                    A spreadsheet
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="[&_tr+tr]:border-t">
+                {COMPARISON.map(({ row, ghosted, paid, sheet }) => (
+                  <tr key={row}>
+                    <th scope="row" className="px-5 py-4 align-top font-medium">
+                      {row}
+                    </th>
+                    <td className="px-5 py-4 align-top text-muted-foreground">
+                      {ghosted}
+                    </td>
+                    <td className="px-5 py-4 align-top text-muted-foreground">
+                      {paid}
+                    </td>
+                    <td className="px-5 py-4 align-top text-muted-foreground">
+                      {sheet}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Paid trackers differ; the middle column describes the common shape,
+            not one product. Ghosted is{" "}
+            <a
+              href={LICENSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={BODY_LINK}
+            >
+              MIT licensed
+            </a>
+            , so the source is yours to read, fork or self-host.
+          </p>
+        </section>
+
         {/* FAQ — the page has made its claims and its refusals; this is where
             the reader gets to check them. Same two-column rhythm as the band
             above (sticky heading, list on the right) so it reads as its
             continuation rather than a new pitch. */}
-        <section aria-label="Questions, answered" className="bg-background">
+        <section
+          id="faq"
+          aria-label="Questions, answered"
+          className="scroll-mt-20 bg-background"
+        >
           <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-6 sm:py-28">
             <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,34rem)] lg:items-start lg:gap-16">
               <div className="lg:sticky lg:top-24">
@@ -896,25 +940,41 @@ export function Landing() {
                 </p>
               </div>
               <div className="mx-auto flex w-full max-w-[700px] flex-col gap-4 lg:mx-0 lg:max-w-none">
-                {FAQ.map(({ q, a }) => (
+                {LANDING_FAQ.map(({ q, a }) => (
                   <details
                     key={q}
                     className="group rounded-xl border bg-card shadow transition-colors hover:border-violet-500/40 open:border-violet-500/40"
                   >
                     <summary className="flex cursor-pointer list-none items-center justify-between gap-6 rounded-xl px-6 py-5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
-                      <span className="text-base font-semibold tracking-[-0.02em] sm:text-lg">
+                      <h3 className="text-base font-semibold tracking-[-0.02em] sm:text-lg">
                         {q}
-                      </span>
+                      </h3>
                       <ChevronDown
                         aria-hidden
                         className="h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180 motion-reduce:transition-none"
                       />
                     </summary>
-                    <div className="px-6 pb-6 pr-10 text-sm leading-relaxed text-muted-foreground [&>p+p]:mt-3">
+                    <p className="px-6 pb-6 pr-10 text-sm leading-relaxed text-muted-foreground">
                       {a}
-                    </div>
+                    </p>
                   </details>
                 ))}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Something the answers miss? Write to{" "}
+                  <a href="mailto:hey@nomorenames.studio" className={BODY_LINK}>
+                    hey@nomorenames.studio
+                  </a>
+                  , or{" "}
+                  <a
+                    href={DONATE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={BODY_LINK}
+                  >
+                    buy me a coffee
+                  </a>
+                  .
+                </p>
               </div>
             </div>
           </div>

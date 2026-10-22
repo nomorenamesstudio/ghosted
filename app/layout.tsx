@@ -37,8 +37,10 @@ export const metadata: Metadata = {
   title: "Ghosted — the job application tracker that never goes quiet",
   // Only the operator's own instance should turn up in search results; a
   // self-hosted one is private unless it says otherwise.
+  // 150 characters: the term a job seeker searches, then the two facts that
+  // decide whether they click (free, and where the data lives).
   description:
-    "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
+    "A free, open-source job tracker for your hunt: every application, interview and ghosting on one timeline, plus a section for the ones that went quiet.",
   applicationName: "Ghosted",
   metadataBase: new URL(siteUrl),
   // Home-screen icons, cut from `public/staring-at-phone-sad-app-icon-alt.png`
@@ -93,10 +95,12 @@ export const metadata: Metadata = {
         // desktop one come from the same file. The `?v=` is the crawler-cache
         // equivalent of the icon URLs: social cards are cached by URL, so bump it
         // instead of expecting a replaced file to be re-fetched.
-        url: "/ghost-og.png?v=1",
+        url: "/ghost-og.png?v=2",
         width: 2400,
         height: 1260,
-        alt: "The Ghosted ghost holding a phone, beside the words: never let a job application go quiet on you.",
+        // The card is the landing's hero: the same H1, the same subhead. Built
+        // from docs/assets/banner/banner.html, so the two cannot drift apart.
+        alt: "The Ghosted card: the headline \"Ghosted, a free, open-source job tracker\" beside the app's own application cards and two ghost mascots.",
       },
     ],
   },
@@ -105,7 +109,7 @@ export const metadata: Metadata = {
     title: "Ghosted — the job application tracker that never goes quiet",
     description:
       "Track your job applications and interview progress — and never lose track of the ones that went quiet.",
-    images: ["/ghost-og.png?v=1"],
+    images: ["/ghost-og.png?v=2"],
   },
 };
 
