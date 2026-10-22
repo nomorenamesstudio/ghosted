@@ -1,143 +1,154 @@
-# Ghosted
+# Ghosted — A Free, FOSS Job Tracker
 
-[![CI](https://github.com/nomorenamesstudio/ghosted/actions/workflows/ci.yml/badge.svg)](https://github.com/nomorenamesstudio/ghosted/actions/workflows/ci.yml)
-· MIT · Next.js 15 + React 19 · one container, one Postgres
+[![License](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=for-the-badge)](CONTRIBUTING.md)
+[![Next.js 15](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge)](https://nextjs.org)
+[![CI](https://img.shields.io/github/actions/workflow/status/nomorenamesstudio/ghosted/ci.yml?branch=main&style=for-the-badge&label=CI)](https://github.com/nomorenamesstudio/ghosted/actions/workflows/ci.yml)
 
-![The Ghosted landing: a violet hero with the headline "Never let a job application go quiet on you", the real dashboard cards floating beside it — Stripe interviewing, Vercel applied, Framer marked Ghosted, Linear offering — and the ghost mascots among them](docs/assets/readme-header.jpg)
+![The Ghosted social card: the headline "Ghosted, a free, open-source job tracker", the hero subhead, and the app's own application cards floating beside two ghost mascots](docs/assets/social-preview.jpg)
 
-A job-application tracker for the part of a hunt nobody tracks: the silence. Log
-every application, keep its interview timeline in one place, and the ones that
-stopped answering get their own section instead of slowly being forgotten.
+**A free, open-source job tracker that keeps every application and interview on
+one timeline — and gives the ones that went quiet a section of their own.**
 
-A hosted instance runs at **[ghosted.boo](https://ghosted.boo)**, by
-[No More Names Studio](https://nomorenames.studio) — and everything here is what
-runs it, the same image the self-hosted shape uses.
+Hosted at **[ghosted.boo](https://ghosted.boo)**. Self-host it with Docker and
+your own Postgres, or use the hosted instance. No paid tier, no ads, no AI
+reading your mail.
 
-- **Ghosted is a state, not a mood.** An application that has not moved in ten
-  days (configurable, per-user) leaves its column and joins the ghosted ones, so
-  a stalled hunt is something you can see rather than slowly forget.
-- **One timeline per application.** The five-step default extends, reorders, and
-  auto-advances the status as milestones complete; rejected and offer are yours
-  to set.
-- **Yours to leave with.** A versioned JSON export and an import that merges into
-  an existing account. A tracker you cannot leave is not one you can trust.
-- **No account required to run it.** Docker Compose, your Postgres, your domain.
-  Two environment flags decide whether it is a solo instance or a family one.
-- **No tracking, no upsell, no AI reading your mail.** It knows only what you
-  type into it, and nothing here phones home.
-- **Keyboard and screen-reader honest.** The end-to-end suite runs axe on every
-  page; the app is usable without a mouse and readable at 200% zoom.
+## Why this exists
 
-![The board view: every column populated — applied 5, interviewing 7, offers 4 and ghosted 9 — with real cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
+Every job tracker I tried was a spreadsheet, an inbox, or somebody's subscription
+funnel. Ghosting and hundreds of applications are the baseline of looking for
+work now, and the applications that go silent are exactly the ones you forget
+first: no rejection, no reply, nothing.
 
-## Built with AI
+A friend applied to more than 500 places before me and had nothing encouraging to
+report. I started my own hunt in late August 2026, logged the first real
+application on 3 September, and it ghosted me too. So the quiet ones got their own
+section, and a stalled hunt became something I could see.
 
-Ghosted is hand-written and AI-enhanced. It was built in pair-programming
-sessions with **DeepSeek V4.1 Flash** running in **DeepSeek Harness**: the
-architecture, design and product decisions are mine, the AI wrote and refactored
-much of the code, and every change was read, tested and committed by hand. Code
-that a machine wrote is still code a human is accountable for.
+## What it does
+
+| | |
+| --- | --- |
+| **A board and a list** | The same applications two ways. Drag cards between stages, or read them as sections that scroll. |
+| **Ghosted, automatically** | An application that has not moved for ten days leaves its stage and joins the ghosted ones. You set the pace. |
+| **One timeline per application** | Five rounds by default, extendable and reorderable. Finishing a round advances the status; rejected, archived and offer stay in your hands. |
+| **Everything exported** | JSON export any time, import into an existing account, and account deletion that actually deletes. |
+| **Search, filter, favorites** | Find by company or role, filter by status, pin the ones you care about, and undo an archive. |
+| **Night mode, keyboard, screen reader** | System theme or manual, usable without a mouse, readable at 200% zoom. The end-to-end suite runs axe on every page. |
+| **Your own instance** | One container and a Postgres. Two environment flags decide whether it is a solo instance or a family one. |
+
+![The board: every column populated — applied, interviewing, offers and ghosted — with cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
 
 ## Quick start
 
 ```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Start Postgres and create the test database
-docker compose up -d
-pnpm db:create-test
-
-# 3. Configure environment
-cp .env.example .env
-#    - set AUTH_SECRET (openssl rand -base64 32)
-#    - optionally set TEST_DATABASE_URL
-
-# 4. Apply migrations (dev + test databases)
-pnpm db:migrate
-DATABASE_URL="$TEST_DATABASE_URL" pnpm db:migrate
-
-# 5. Run the dev server
-pnpm dev            # http://localhost:3000  (JSON logs)
-pnpm dev:pretty     # same, piped through pino-pretty
-
-# 6. (Optional) seed demo data
-pnpm db:seed                    # demo@example.com / password123
-pnpm db:seed you@example.com    # or fill an account that already exists
+git clone https://github.com/nomorenamesstudio/ghosted && cd ghosted
+cp .env.example .env      # set AUTH_SECRET: openssl rand -base64 32
+docker compose up -d      # Postgres
+pnpm install && pnpm db:migrate && pnpm db:seed
+pnpm dev                  # http://localhost:3000 — demo@example.com / password123
 ```
 
-Port 3000 taken? `pnpm dev -- --port 3100`, and point the e2e suite at it with
-`NEXT_PUBLIC_APP_URL`. The full environment reference is in `.env.example` and
-[docs/SETUP.md](docs/SETUP.md).
-
-## Self-hosting
-
-Ghosted runs as a container plus Postgres. Two shapes ship in the same image: a
-solo instance (the landing page off, sign-ups closed, one account created at boot
-with a password you must replace at first sign-in) and a family instance
-(sign-ups open, email verification required). Everything is environment
-configuration — no fork, no build flags.
+Self-hosting is the same image with different flags:
 
 ```bash
-cp .env.example .env   # set AUTH_SECRET, then SHOW_LANDING / ALLOW_REGISTRATION
 docker compose --profile selfhost up -d
 ```
 
-Email is provider-neutral: Resend, any SMTP server, or a log stub for an instance
-that does not need to send at all. Migrations run at container start under an
-advisory lock, and a failed migration exits the container rather than serving a
-half-migrated database.
-
-Full walkthrough, environment reference, email options, backups and upgrades:
+Migrations run at container start under an advisory lock, and a failed migration
+exits the container instead of serving a half-migrated database. Full walkthrough,
+environment reference, email options, backups and upgrades:
 [docs/SELFHOST.md](docs/SELFHOST.md).
 
-![One application's page: Figma, Design Systems Engineer, an Offer badge, the timeline with application, HR screen, technical interview, test, offer and an additional round each dated, and the details card with status, job posting link and notes](docs/assets/timeline.png)
+## How it works
 
-## Features
+```
+        ┌───────────────────────────────────────┐
+ you ──►│  Next.js 15 app  (board · list · one  │
+        │  timeline per application)            │
+        └──────────────────┬────────────────────┘
+                           │  Drizzle ORM
+                 ┌─────────▼──────────┐
+                 │     PostgreSQL     │
+                 │  applications      │
+                 │  milestones        │
+                 │  users, sessions   │
+                 └────────────────────┘
 
-- Application CRUD with a 5-step default timeline (extendable, with reordering,
-  per-row menus and a progress bar)
-- Milestone progress auto-advances the status: `applied -> interviewing ->
-  offer`; `rejected` / `archived` / `offer` are manual terminal states
-- Dashboard stats (total / active / interviewing / offers / rejected / ghosted)
-- Search, status filter, sort, pagination, infinite scroll, sticky section
-  headers, reversible archive, favorites pinned to the top
-- Email/password auth (bcrypt) + optional Google/LinkedIn OAuth, email
-  verification, password reset, GDPR export + account deletion
-- Unverified accounts are limited to 3 applications until their email is
-  verified (env-configurable)
-- Night mode (system default + manual override), responsive UI
+ status  =  derived from milestones + your patience window
+ ghosted =  no movement for 10 days (per-account setting)
+```
 
-## Tech stack
+One Postgres holds everything. Self-hosted, that database is yours; on the hosted
+instance it is mine, and it leaves with you as JSON.
 
-| Layer        | Choice                                                              |
-| ------------ | ------------------------------------------------------------------- |
-| Framework    | Next.js 15 (App Router) + React 19                                  |
-| ORM          | Drizzle + drizzle-kit (SQL migrations, no auto-sync in prod)        |
-| Database     | PostgreSQL 16 (local Docker; Neon/Supabase-ready)                   |
-| Auth         | Auth.js v5 (email/password + Google/LinkedIn when configured)        |
-| UI           | shadcn/ui-style components + Tailwind CSS                           |
-| Client state | TanStack Query (caching + optimistic updates)                       |
-| Validation   | Zod v4                                                              |
-| Logging      | pino (structured JSON)                                              |
-| Testing      | Vitest + React Testing Library + Playwright (with axe)              |
+## Built with AI
+
+Ghosted is hand-written and AI-enhanced. The architecture, design and product
+decisions are mine; the AI wrote and refactored much of the code, and every change
+was read, tested and committed by hand. Mostly DeepSeek V4 and V4.1 Flash in
+DeepSeek Harness, with GLM-5.3 running the security passes. Code a machine wrote is
+still code a human is accountable for.
+
+## FAQ
+
+### Is Ghosted really free?
+
+Yes. No paid tier, no ads, nothing about your hunt is sold. Job hunting already
+costs money and time, so charging rent on the logbook never made sense.
+
+### Why is there no AI in Ghosted?
+
+The product writes nothing for you, applies to nothing for you and reads no
+mailbox. It knows only what you type into it. There is no model, no API key and no
+token bill at runtime.
+
+### Can I self-host it?
+
+Yes. One container plus a Postgres, everything else in environment variables. No
+prebuilt image ships on purpose: the app bakes your domain into its pages at build
+time, so you build it yourself with Docker Compose.
+
+### How does it decide an application went quiet?
+
+Ten days without movement, by default, and you set your own pace per account. It is
+a nudge rather than a verdict — anything you have touched recently stays put.
+
+### Who built it?
+
+K, at [No More Names Studio](https://nomorenames.studio). Ghosted started during my
+own hunt in 2026 and grew out of whatever was missing while I logged applications.
+
+### What's the catch?
+
+There is none. No funding, no scaling, no exit strategy, no data harvesting. The
+logbook stays the size of a logbook on purpose.
+
+## Contributing
+
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md) — it covers local setup, the test suites
+   and what gets merged.
+2. Open an issue for what breaks, or a pull request for what you would rather fix.
+3. Self-host it and report how it went on your machine. That report is the most
+   useful thing you can send.
+
+Ghosted is simple on purpose: a pull request is merged when it respects the scope of
+the project, and a model-drafted one is welcome as long as you read it first.
 
 ## Documentation
 
-- [Setup & run](docs/SETUP.md) - install, env vars, commands, testing, CI/CD
-- [Self-hosting](docs/SELFHOST.md) - run your own copy with Docker
-- [API reference](docs/API.md) - all endpoints, parameters, examples
-- [Architecture](docs/ARCHITECTURE.md) - tech stack, data flow, key decisions
-- [Changelog](docs/CHANGELOG.md) - changes by date and type
-- [The story](docs/STORY.md) - why it exists, in the author's words
-- [What it costs](docs/COSTS.md) - tokens, the estimate, and the provider balance
-- [Releasing](docs/RELEASING.md) - versioning, tags, publishing an image
-- [Code reviews](docs/reviews/) - two independent model reviews, and the fix lists
-- [Contributing](CONTRIBUTING.md) - getting it running, what gets merged
-- [Security](SECURITY.md) - reporting a vulnerability, dependency triage
-- [Docs index](docs/INDEX.md) - everything, in one place
+[Setup](docs/SETUP.md) · [Self-hosting](docs/SELFHOST.md) ·
+[API](docs/API.md) · [Architecture](docs/ARCHITECTURE.md) ·
+[Changelog](docs/CHANGELOG.md) · [The story](docs/STORY.md) ·
+[Costs](docs/COSTS.md) · [Releasing](docs/RELEASING.md) ·
+[Reviews](docs/reviews/) · [Security](SECURITY.md) · [Docs index](docs/INDEX.md)
 
 ## License
 
-MIT - see [LICENSE](LICENSE). Built by
-[No More Names Studio](https://nomorenames.studio) (hey@nomorenames.studio).
+MIT — see [LICENSE](LICENSE). Use it, fork it, self-host it.
+
+[![Star this repo](https://img.shields.io/github/stars/nomorenamesstudio/ghosted?style=for-the-badge)](https://github.com/nomorenamesstudio/ghosted)
+
+Built by [K](https://github.com/nomorenamesstudio) |
+[nomorenames.studio](https://nomorenames.studio)

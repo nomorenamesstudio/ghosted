@@ -59,11 +59,61 @@ test("the structured data parses inside the page and names the app", async ({
   expect(data.url.startsWith("http")).toBe(true);
   expect(data.applicationCategory).toBe("BusinessApplication");
 
+  // The price claim the page itself makes ("free forever", and the first FAQ
+  // answer). Schema that repeats visible copy is the contract; `price: "0"` only
+  // holds while the landing still says free.
+  expect(data.offers["@type"]).toBe("Offer");
+  expect(data.offers.price).toBe("0");
+
   // Claims nobody has made on the owner's behalf. Structured data that
   // overstates is a penalty risk, so their absence is the contract.
-  for (const invented of ["aggregateRating", "review", "offers", "price"]) {
+  for (const invented of ["aggregateRating", "review"]) {
     expect(data, `no ${invented} claim`).not.toHaveProperty(invented);
   }
+});
+
+test("every FAQ question is a heading and a schema entry", async ({ page }) => {
+  await page.goto("/");
+
+  const blocks = await page
+    .locator('script[type="application/ld+json"]')
+    .allTextContents();
+  const faq = blocks
+    .map((raw) => JSON.parse(raw))
+    .find((data) => data["@type"] === "FAQPage");
+  expect(faq, "a FAQPage block is rendered").toBeTruthy();
+  expect(faq.mainEntity.length).toBeGreaterThanOrEqual(5);
+
+  // Both halves have to be there: an answer engine quotes the heading, and a
+  // schema entry no user can see is the overstatement this file already guards.
+  for (const entry of faq.mainEntity) {
+    expect(entry["@type"]).toBe("Question");
+    expect(entry.acceptedAnswer.text.length).toBeGreaterThan(40);
+    const heading = page.getByRole("heading", { name: entry.name, exact: true });
+    expect(await heading.count(), `heading for "${entry.name}"`).toBe(1);
+  }
+});
+
+test("llms.txt answers with this deployment's own origin", async ({
+  page,
+  request,
+}) => {
+  const res = await request.get("/llms.txt");
+  expect(res.status()).toBe(200);
+  expect(res.headers()["content-type"]).toContain("text/plain");
+
+  // Rebuilt per request from `NEXT_PUBLIC_APP_URL`: a self-hosted instance must
+  // not hand an answer engine a map pointing at the hosted domain. Anchored to the
+  // page's own canonical rather than a literal port, so the contract survives a
+  // deployment that answers on another hostname.
+  await page.goto("/");
+  const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
+  const origin = new URL(canonical!).origin;
+
+  const body = await res.text();
+  expect(body).toContain(origin);
+  expect(body, "no hosted-instance links").not.toContain("ghosted.boo");
+  expect(body).toContain("github.com/nomorenamesstudio/ghosted");
 });
 
 test("the sitemap lists this instance's absolute URLs", async ({ request }) => {
