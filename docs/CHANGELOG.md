@@ -25,6 +25,14 @@ All notable changes, by date and type.
 - **The meta description says what the page is** — 150 characters, keyword first.
 
 ### Fix
+- **The cards' gutters are symmetric now.** The card pile is wider than its grid
+  column and was centred, so it overflowed the canvas on the right: 56px of air on
+  the left of the text, 31px on the right of the artwork. The pile anchors to its
+  column's right edge instead, and both canvases carry matching 56px (OG) and 86px
+  (README) gutters.
+- **The README's board shot is the full capture.** It used to be sliced below the
+  app bar, which hid the search, filters and the list/board switch — the parts a
+  reader looks for first.
 - **The social card, the OG image and the README header carry the landing's own
   words.** All three come out of `docs/assets/banner/banner.html`, which now renders
   the hero H1 and subhead verbatim instead of an older tagline. The OG canvas sets
