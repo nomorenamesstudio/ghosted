@@ -34,8 +34,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { LANDING_FAQ } from "@/lib/faq";
-import { DONATE_URL } from "@/lib/utils/donate-banner";
+import { LANDING_FAQ, type FaqEntry } from "@/lib/faq";
 import { LICENSE_URL, REPO_URL } from "@/lib/site";
 // The card *shell*, not ApplicationCardView: the real card is a client component
 // (live relative timestamps, Radix avatar and progress), and rendering it here
@@ -239,6 +238,35 @@ const NOT_DOING: { icon: LucideIcon; title: string; body: string }[] = [
  * Each question is a real heading inside the disclosure, which is what makes it
  * quotable by an answer engine and navigable by a screen reader.
  */
+/**
+ * One FAQ answer, with its optional link spliced in at the label it names.
+ *
+ * The answer stays a plain string so the schema can quote exactly what the page
+ * says; the anchor is decoration over the same words, not a second copy.
+ */
+function FaqAnswer({ entry }: { entry: FaqEntry }) {
+  const { a, link } = entry;
+  if (!link) return <>{a}</>;
+
+  const at = a.indexOf(link.label);
+  if (at === -1) return <>{a}</>;
+
+  return (
+    <>
+      {a.slice(0, at)}
+      <a
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={BODY_LINK}
+      >
+        {link.label}
+      </a>
+      {a.slice(at + link.label.length)}
+    </>
+  );
+}
+
 /** Body links in running copy: the app's inline-link color, underlined at rest. */
 const BODY_LINK =
   "text-primary underline underline-offset-[3px] transition-colors hover:text-primary/80";
@@ -940,7 +968,7 @@ export function Landing() {
                 </p>
               </div>
               <div className="mx-auto flex w-full max-w-[700px] flex-col gap-4 lg:mx-0 lg:max-w-none">
-                {LANDING_FAQ.map(({ q, a }) => (
+                {LANDING_FAQ.map(({ q, a, link }) => (
                   <details
                     key={q}
                     className="group rounded-xl border bg-card shadow transition-colors hover:border-violet-500/40 open:border-violet-500/40"
@@ -955,7 +983,7 @@ export function Landing() {
                       />
                     </summary>
                     <p className="px-6 pb-6 pr-10 text-sm leading-relaxed text-muted-foreground">
-                      {a}
+                      <FaqAnswer entry={{ q, a, link }} />
                     </p>
                   </details>
                 ))}
@@ -963,15 +991,6 @@ export function Landing() {
                   Something the answers miss? Write to{" "}
                   <a href="mailto:hey@nomorenames.studio" className={BODY_LINK}>
                     hey@nomorenames.studio
-                  </a>
-                  , or{" "}
-                  <a
-                    href={DONATE_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={BODY_LINK}
-                  >
-                    buy me a coffee
                   </a>
                   .
                 </p>

@@ -11,9 +11,9 @@ import { siteIdentity } from "@/lib/site";
  * from the identity — the header just stops repeating it three inches from a
  * hero illustration of the same ghost.
  *
- * The superscript is `BRAND_TAG` (see lib/site.ts): empty on the hosted
- * instance — the "beta" it used to say is gone — and `DIY` by default on a
- * self-hosted one, overridable to any word or to "none".
+ * The superscript is `BRAND_TAG` (see lib/site.ts): `beta` on the hosted
+ * instance, `DIY` by default on a self-hosted one, overridable to any word or to
+ * "none".
  *
  * `href` defaults to the app because that is where the mark leads once you are
  * signed in; the landing passes "/" so it stays on the public page. Pass `null`

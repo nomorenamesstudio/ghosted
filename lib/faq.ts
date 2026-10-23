@@ -1,3 +1,5 @@
+import { DONATE_URL } from "@/lib/utils/donate-banner";
+
 /**
  * The landing's FAQ, as text — one source for the page and for the `FAQPage`
  * structured data.
@@ -6,16 +8,27 @@
  * things were wrong with that: a crawler could not match the visible answer to
  * the schema (the schema was never emitted at all), and answer engines extract
  * the first sentence of a block, which was never the answer. So each answer now
- * opens with the answer, stays inside 40–60 words, and holds no markup — the
- * donate and repo links live in the sections that are about them.
+ * opens with the answer and stays inside 40–60 words. An answer may carry one
+ * link; it is declared beside the text (`link`) rather than written into it, so the
+ * sentence the page renders and the sentence the schema emits stay the same words.
  *
  * `lib/structured-data.ts` emits this array verbatim, so an edit here changes the
  * page and the schema together, which is the only way they stay matched.
  */
-export const LANDING_FAQ: { q: string; a: string }[] = [
+export interface FaqEntry {
+  q: string;
+  /** The answer as plain text: this is what the page renders and what the
+   *  `FAQPage` schema repeats. */
+  a: string;
+  /** One link inside the answer, matched by its label in `a`. */
+  link?: { label: string; href: string };
+}
+
+export const LANDING_FAQ: FaqEntry[] = [
   {
     q: "Is Ghosted really free?",
-    a: "Yes. There is no paid tier, no ads, and nothing about your hunt is sold. Job hunting already costs money and time, so charging rent on the logbook never made sense. If you want to chip in there is a coffee link in the footer, and skipping it changes nothing.",
+    a: "Yes. There is no paid tier, no ads, and nothing about your hunt is sold. Job hunting already costs money and time, so charging rent on the logbook never made sense. If you feel like it you can buy me a coffee, and skipping it changes nothing.",
+    link: { label: "buy me a coffee", href: DONATE_URL },
   },
   {
     q: "Why is there no AI in Ghosted?",
