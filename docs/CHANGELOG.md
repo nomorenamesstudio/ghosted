@@ -2,6 +2,23 @@
 
 All notable changes, by date and type.
 
+## Unreleased — 2026-10-23
+
+### Changed
+- **The FAQ's tail line is just the address now.** "Write to hey@nomorenames.studio.
+  or buy me a coffee" was doing two jobs badly; the coffee link moved into the
+  answer it belongs to, so "Is Ghosted really free?" links it inline and the tail
+  asks readers to write.
+- **An FAQ answer may carry one link, declared beside the text.** `lib/faq.ts` keeps
+  the sentence as plain text (it is the schema's copy verbatim) and names the anchor
+  by its label; the renderer splices it in, so the visible words and the emitted
+  words stay identical.
+
+### Fix
+- **The hosted wordmark says `beta` again.** The tag had no default on the hosted
+  instance, so it silently disappeared; `BRAND_TAG=none` still turns it off, and a
+  self-hosted wordmark keeps `DIY`.
+
 ## Unreleased — 2026-10-22
 
 ### Feature

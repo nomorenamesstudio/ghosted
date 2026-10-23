@@ -128,11 +128,15 @@ export function readSiteIdentity(
         }
       : null;
 
+  // The hosted instance says "beta" again: it is the honest word for software one
+  // person maintains in the evenings, and it was only ever absent because the tag
+  // had no default. `BRAND_TAG=none` still silences it, and a self-hosted instance
+  // gets `DIY`, which says more about whose box it is running on.
   const statedTag = env.BRAND_TAG?.trim();
   const brandTag =
     statedTag === undefined
       ? hosted
-        ? null
+        ? "beta"
         : "DIY"
       : statedTag.toLowerCase() === "none"
         ? null

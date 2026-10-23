@@ -75,11 +75,13 @@ describe("readSiteIdentity", () => {
     });
   });
 
-  it("tags a self-hosted wordmark DIY, keeps the hosted one bare, and honours an override", () => {
-    expect(readSiteIdentity(hosted, {}).brandTag).toBeNull();
+  it("tags the hosted wordmark beta, a self-hosted one DIY, and honours an override", () => {
+    expect(readSiteIdentity(hosted, {}).brandTag).toBe("beta");
     expect(readSiteIdentity(selfHosted, {}).brandTag).toBe("DIY");
-    expect(readSiteIdentity(selfHosted, { BRAND_TAG: "beta" }).brandTag).toBe("beta");
+    expect(readSiteIdentity(selfHosted, { BRAND_TAG: "roadmap" }).brandTag).toBe("roadmap");
     expect(readSiteIdentity(selfHosted, { BRAND_TAG: "none" }).brandTag).toBeNull();
+    // The hosted default is not a fixture either: "none" has to win there too.
+    expect(readSiteIdentity(hosted, { BRAND_TAG: "none" }).brandTag).toBeNull();
   });
 
   it("keeps the hosted instance's own tracker with no new configuration", () => {
