@@ -7,7 +7,6 @@ import { STATUS_ORDER, STATUS_TITLES, type DisplayStatus } from "@/lib/utils/sta
 import { AddApplicationModal } from "./AddApplicationModal";
 import { VerificationModal } from "./VerificationModal";
 import { ApplicationSection } from "./ApplicationSection";
-import { ViewToggle } from "./ViewToggle";
 import { ApplicationsEmptyState } from "./ApplicationsEmptyState";
 import { KanbanBoard } from "./KanbanBoard";
 import { GhostPulse } from "./loading";
@@ -29,7 +28,8 @@ import {
 const ALL = "__all__";
 const COLLAPSED_KEY = "ghosted-collapsed-sections";
 
-export type ViewMode = "list" | "board";
+export type { ViewMode } from "./view-mode";
+import type { ViewMode } from "./view-mode";
 
 /** Hairline between the control groups when they live in the header. */
 function Divider() {
@@ -40,7 +40,6 @@ export function ApplicationList({
   status,
   onStatusChange,
   view,
-  onViewChange,
   emailVerified,
   applicationCount,
   unverifiedAppLimit,
@@ -48,9 +47,8 @@ export function ApplicationList({
 }: {
   status: "" | DisplayStatus;
   onStatusChange: (s: "" | DisplayStatus) => void;
-  /** Owned by Dashboard: it also decides the page width. */
+  /** From the shared view store (components/view-mode.ts), switched from the user menu. */
   view: ViewMode;
-  onViewChange: (view: ViewMode) => void;
   emailVerified: boolean;
   applicationCount: number;
   unverifiedAppLimit: number;
@@ -266,7 +264,6 @@ export function ApplicationList({
               <SelectItem value="progress">Progress</SelectItem>
             </SelectContent>
           </Select>
-          <ViewToggle view={view} onChange={onViewChange} />
           {/* Header placement groups the controls: search/sort/view, then the
               action, then the account menu — separated by hairlines. */}
           {controlsInHeader && <Divider />}

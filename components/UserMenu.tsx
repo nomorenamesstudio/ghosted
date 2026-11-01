@@ -1,20 +1,22 @@
 "use client";
 
 import Link from "next/link";
-import { Coffee, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { Coffee, LayoutGrid, List, LogOut, Settings } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DONATE_URL } from "@/lib/utils/donate-banner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useViewMode, type ViewMode } from "./view-mode";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { signOutAction } from "@/lib/actions/auth";
-import { useTheme } from "./theme-provider";
 
 function initials(name: string): string {
   return (
@@ -36,8 +38,8 @@ export function UserMenu({
   email: string;
   image?: string;
 }) {
-  const { theme, toggleTheme } = useTheme();
   const queryClient = useQueryClient();
+  const { view, setView } = useViewMode();
 
   return (
     <DropdownMenu>
@@ -73,10 +75,26 @@ export function UserMenu({
             Donate
           </a>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={toggleTheme}>
-          {theme === "dark" ? <Sun /> : <Moon />}
-          {theme === "dark" ? "Light mode" : "Night mode"}
-        </DropdownMenuItem>
+        {/* How the applications are laid out. It used to be a segmented control in
+            the toolbar; the choice belongs with the account's other preferences,
+            and the toolbar gets the width back. */}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="pb-0 text-xs font-normal text-muted-foreground">
+          View
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={view}
+          onValueChange={(next) => setView(next as ViewMode)}
+        >
+          <DropdownMenuRadioItem value="board">
+            <LayoutGrid className="mr-2 h-4 w-4" />
+            Board
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="list">
+            <List className="mr-2 h-4 w-4" />
+            List
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         {/* Hidden form; the menu button submits it via the form attribute. */}
         <form id="sign-out-form" action={signOutAction} hidden />

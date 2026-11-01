@@ -7,16 +7,15 @@ import type { DisplayStatus } from "@/lib/utils/status";
 import { DonateBanner } from "./DonateBanner";
 import { PasswordNoticeBanner } from "./PasswordNoticeBanner";
 import { VerificationBanner } from "./VerificationBanner";
-import { ApplicationList, type ViewMode } from "./ApplicationList";
+import { ApplicationList } from "./ApplicationList";
+import { useHydrateView, useViewMode } from "./view-mode";
 import { ScrollTopButton } from "./ScrollTopButton";
 import { useAccountIsEmpty } from "./use-account-is-empty";
 
-const VIEW_KEY = "ghosted-view";
-
 /**
- * Which view is active lives here, not in ApplicationList, because the board
- * needs more than the list does: the page shell widens to the full window to
- * give the columns the room.
+ * The board needs more than the list does: the page shell widens to the full
+ * window to give the columns the room, and that rule is keyed on `<html
+ * data-view>`, which `components/view-mode.ts` owns along with the stored choice.
  *
  * The board is the default; a stored preference is applied *after* mount, since
  * reading localStorage during the first render would paint a different toggle on
@@ -56,54 +55,27 @@ export function Dashboard({
 
   // Status filter, owned here and driven by the list's dropdown.
   const [status, setStatus] = useState<"" | DisplayStatus>("");
-  // The board is the default view.
-  const [view, setView] = useState<ViewMode>("board");
-  // Whether the stored preference has been read yet. The shell's width is keyed
-  // on `data-view`, the inline script in the root layout already set that from
-  // storage before first paint, and this flag is what keeps this component from
-  // touching it until it knows the same value — otherwise a list user's shell
-  // would flash to board width and back on the way to "list".
-  const [viewKnown, setViewKnown] = useState(false);
+  // Which view is showing comes from the shared store (components/view-mode.ts):
+  // the user menu switches it, this page renders it, and the store owns the stored
+  // preference and `data-view` on <html>.
+  const { view } = useViewMode();
+  useHydrateView();
 
+  // `data-board-content` is this page's own content, which is the only content that
+  // widens with the board — so unlike `data-view` it does not outlive the dashboard:
+  // a detail page reached from the board keeps the wide frame, without carrying the
+  // board's content width.
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(VIEW_KEY);
-      if (stored === "board" || stored === "list") setView(stored);
-    } catch {
-      /* ignore storage errors */
-    }
-    setViewKnown(true);
-  }, []);
-
-  // The shell is widened by rules keyed on these attributes, so the layout stays a
-  // server component. `data-view` follows the *view*, not this route — the header
-  // goes with the view, so it is deliberately left alone when the dashboard
-  // unmounts: a detail page you reached from the board keeps the wide frame.
-  // `data-board-content` is this page's own content, which is the only content
-  // that widens, so that one does not outlive the dashboard.
-  useEffect(() => {
-    if (!viewKnown) return;
     const root = document.documentElement;
     if (view === "board") {
-      root.dataset.view = "board";
       root.dataset.boardContent = "";
     } else {
-      delete root.dataset.view;
       delete root.dataset.boardContent;
     }
     return () => {
       delete root.dataset.boardContent;
     };
-  }, [view, viewKnown]);
-
-  function changeView(next: ViewMode) {
-    setView(next);
-    try {
-      localStorage.setItem(VIEW_KEY, next);
-    } catch {
-      /* ignore storage errors */
-    }
-  }
+  }, [view]);
 
   return (
     <>
@@ -138,7 +110,6 @@ export function Dashboard({
           status={status}
           onStatusChange={setStatus}
           view={view}
-          onViewChange={changeView}
           emailVerified={emailVerified}
           applicationCount={applicationCount}
           unverifiedAppLimit={unverifiedAppLimit}

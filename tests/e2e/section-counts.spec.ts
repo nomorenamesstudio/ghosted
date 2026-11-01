@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   createAppViaApi,
   registerUser,
+  setView,
   uniqueEmail,
   useListView,
 } from "./helpers";
@@ -54,10 +55,7 @@ test("the dashboard carries no stat-card row in either view", async ({
   await expect(page.getByTestId("stat-total")).toHaveCount(0);
 
   // The board never had them, and still does not.
-  await page
-    .locator('[role="group"][aria-label="View"]')
-    .getByRole("button", { name: "Board" })
-    .click();
+  await setView(page, "board");
   await expect(page.getByTestId("kanban-board")).toBeVisible();
   await expect(page.getByTestId("stat-total")).toHaveCount(0);
 });

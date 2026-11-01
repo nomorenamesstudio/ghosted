@@ -36,8 +36,12 @@ function watchForHydrationErrors(page: Page): string[] {
 async function expectNoToolbar(page: Page) {
   await expect(page.getByLabel("Search applications")).toHaveCount(0);
   await expect(page.getByLabel("Sort applications")).toHaveCount(0);
-  await expect(page.locator('[role="group"][aria-label="View"]')).toHaveCount(0);
   await expect(page.getByTestId("add-application-fab")).toHaveCount(0);
+  // The view switch is not part of the toolbar on any account: it lives in the
+  // account menu, which exists even here.
+  await page.getByRole("button", { name: "User menu" }).click();
+  await expect(page.getByRole("menuitemradio", { name: "Board" })).toBeVisible();
+  await page.keyboard.press("Escape");
 }
 
 test("empty account: empty state only, then everything returns with the first application", async ({
@@ -73,7 +77,6 @@ test("empty account: empty state only, then everything returns with the first ap
     page.getByTestId("header-slot").getByPlaceholder("Search company or role…"),
   ).toBeVisible();
   await expect(page.getByTestId("header-slot").getByLabel("Sort applications")).toBeVisible();
-  await expect(page.getByTestId("header-slot").getByLabel("View")).toBeVisible();
   await expect(
     page.getByTestId("header-slot").getByTestId("add-application-fab"),
   ).toBeVisible();

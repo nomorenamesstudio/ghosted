@@ -43,18 +43,20 @@ export async function markMustChangePassword(email: string): Promise<void> {
  * on mount and reload instead. Same end state, and specs stay readable from the
  * empty account onwards.
  */
+/**
+ * Board or list, from where the choice actually lives now: the account menu. It
+ * used to be a segmented control in the toolbar, which meant every spec that just
+ * wanted the list had to know where that control sat at the current width.
+ */
+export async function setView(page: Page, view: "board" | "list"): Promise<void> {
+  await page.getByRole("button", { name: "User menu" }).click();
+  await page
+    .getByRole("menuitemradio", { name: view === "board" ? "Board" : "List" })
+    .click();
+}
+
 export async function useListView(page: Page): Promise<void> {
-  const toggle = page
-    .locator('[role="group"][aria-label="View"]')
-    .getByRole("button", { name: "List" });
-
-  if (await toggle.isVisible().catch(() => false)) {
-    await toggle.click();
-  } else {
-    await page.addInitScript(() => localStorage.setItem("ghosted-view", "list"));
-    await page.reload();
-  }
-
+  await setView(page, "list");
   await expect(page.getByTestId("application-sections")).toBeVisible();
 }
 

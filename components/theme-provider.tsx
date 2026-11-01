@@ -8,83 +8,96 @@ import {
   useState,
 } from "react";
 
-export type Theme = "light" | "dark";
+/**
+ * Appearance is a setting, not a mode to toggle: three choices, and `system` is
+ * the default — the arrangement paddō settled on, because "follow my device" is
+ * what people mean and a switch that only knows light and dark has to guess on
+ * first paint.
+ *
+ * `theme` is what the user picked ("system" included). `resolvedTheme` is what it
+ * currently means — the only value a component should branch on.
+ */
+export type Theme = "light" | "dark" | "system";
+
+export const THEMES: Theme[] = ["system", "light", "dark"];
+
+export const DEFAULT_THEME: Theme = "system";
+
 const STORAGE_KEY = "ghosted-theme";
 
+const DARK_QUERY = "(prefers-color-scheme: dark)";
+
+export function isTheme(value: unknown): value is Theme {
+  return value === "light" || value === "dark" || value === "system";
+}
+
 interface ThemeContextValue {
+  /** The setting: `system`, `light` or `dark`. */
   theme: Theme;
-  toggleTheme: () => void;
+  /** What it resolves to right now. */
+  resolvedTheme: "light" | "dark";
   setTheme: (theme: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function systemTheme(): Theme {
-  if (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  ) {
-    return "dark";
-  }
-  return "light";
+function systemPrefersDark(): boolean {
+  return typeof window !== "undefined" && window.matchMedia(DARK_QUERY).matches;
+}
+
+/**
+ * The landing follows the device whatever is stored: it is the page strangers see
+ * first, and a "dark" picked inside the app should not keep it dark for someone
+ * whose desktop is light. The pre-paint script in the root layout applies the
+ * same rule before first paint.
+ */
+function themeOnThisRoute(stored: Theme | null): Theme {
+  return window.location.pathname === "/"
+    ? DEFAULT_THEME
+    : (stored ?? DEFAULT_THEME);
 }
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("light");
+  const [theme, setThemeValue] = useState<Theme>(DEFAULT_THEME);
+  const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">("light");
   const [hydrated, setHydrated] = useState(false);
 
-  // Initial theme: localStorage override, else the user's system preference.
-  //
-  // The landing is the exception: it follows the operating system, because it is
-  // the page strangers see first and a "light" picked inside the app should not
-  // keep it bright for a visitor whose whole desktop is dark. The pre-paint
-  // script in the root layout applies the same rule before first paint.
+  // Read the stored choice once; until this runs the page shows whatever the
+  // pre-paint script in the root layout decided.
   useEffect(() => {
-    const onLanding = window.location.pathname === "/";
-    const stored = onLanding ? null : localStorage.getItem(STORAGE_KEY);
-    const initial: Theme =
-      stored === "light" || stored === "dark" ? stored : systemTheme();
-    setTheme(initial);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const initial = themeOnThisRoute(isTheme(stored) ? stored : null);
+    setThemeValue(initial);
+    setResolvedTheme(
+      initial === "system" ? (systemPrefersDark() ? "dark" : "light") : initial,
+    );
     setHydrated(true);
   }, []);
 
-  // Apply the class to <html>.
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }, [theme]);
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+  }, [resolvedTheme]);
 
-  // Follow live system changes while the user has no explicit override.
+  // Follow the device while the setting is "system" — and only then.
   useEffect(() => {
-    if (!hydrated) return;
-    if (window.location.pathname === "/") {
-      // no stored override on the landing: keep following the system
-    } else if (localStorage.getItem(STORAGE_KEY)) {
-      return;
-    }
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) =>
-      setTheme(e.matches ? "dark" : "light");
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [hydrated]);
+    if (!hydrated || theme !== "system") return;
+    const media = window.matchMedia(DARK_QUERY);
+    const onChange = (event: MediaQueryListEvent) =>
+      setResolvedTheme(event.matches ? "dark" : "light");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
+  }, [hydrated, theme]);
 
-  const toggleTheme = useCallback(() => {
-    setTheme((t) => {
-      const next = t === "dark" ? "light" : "dark";
-      localStorage.setItem(STORAGE_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const setThemePref = useCallback((t: Theme) => {
-    localStorage.setItem(STORAGE_KEY, t);
-    setTheme(t);
+  const setTheme = useCallback((next: Theme) => {
+    localStorage.setItem(STORAGE_KEY, next);
+    setThemeValue(next);
+    setResolvedTheme(
+      next === "system" ? (systemPrefersDark() ? "dark" : "light") : next,
+    );
   }, []);
 
   return (
-    <ThemeContext.Provider
-      value={{ theme, toggleTheme, setTheme: setThemePref }}
-    >
+    <ThemeContext.Provider value={{ theme, resolvedTheme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );

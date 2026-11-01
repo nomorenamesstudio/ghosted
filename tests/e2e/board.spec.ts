@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createAppViaApi, registerUser, uniqueEmail } from "./helpers";
+import { createAppViaApi, registerUser, setView, uniqueEmail } from "./helpers";
 
 /** Columns in the order the stages actually happen. */
 const COLUMN_ORDER = [
@@ -73,14 +73,13 @@ test("the controls sit in the header on a wide screen, not in a row", async ({
   const header = page.getByTestId("header-slot");
   await expect(header.getByPlaceholder("Search company or role…")).toBeVisible();
   await expect(header.getByLabel("Sort applications")).toBeVisible();
-  await expect(header.getByLabel("View")).toBeVisible();
   await expect(header.getByTestId("add-application-fab")).toBeVisible();
+  // The view switch is not a toolbar control any more: it is in the account menu,
+  // where the rest of the account's preferences live.
+  await expect(page.locator('[role="group"][aria-label="View"]')).toHaveCount(0);
 
   // List view keeps them in their own row, at any width.
-  await page
-    .locator('[role="group"][aria-label="View"]')
-    .getByRole("button", { name: "List" })
-    .click();
+  await setView(page, "list");
   await expect(page.getByTestId("application-sections")).toBeVisible();
   await expect(
     page.getByTestId("header-slot").getByPlaceholder("Search company or role…"),
@@ -94,10 +93,7 @@ test("the list view is still reachable and remembered", async ({ page }) => {
   await createAppViaApi(page, "Acme Corp", "Engineer");
 
   await page.goto("/app");
-  await page
-    .locator('[role="group"][aria-label="View"]')
-    .getByRole("button", { name: "List" })
-    .click();
+  await setView(page, "list");
   await expect(page.getByTestId("application-sections")).toBeVisible();
 
   // The choice survives a reload.
