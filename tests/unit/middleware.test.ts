@@ -58,6 +58,9 @@ describe("middleware", () => {
 
   it("keeps authenticated API responses out of the browser cache", () => {
     expect(run("/api/applications").headers.get("Cache-Control")).toBe("no-store");
+    // The agent's endpoint is the one route outside `/api/` that answers a POST
+    // with the user's own data.
+    expect(run("/ouija").headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("does not turn a typo into a redirect or a 500", () => {

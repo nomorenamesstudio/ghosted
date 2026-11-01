@@ -113,6 +113,27 @@
       "when": 1791987675328,
       "tag": "0015_huge_moonstone",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793458913411,
+      "tag": "0016_regular_gauntlet",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793470110197,
+      "tag": "0017_simple_millenium_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793508931518,
+      "tag": "0018_groovy_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

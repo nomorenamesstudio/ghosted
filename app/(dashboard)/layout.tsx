@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth/current-user";
 import { UserMenu } from "@/components/UserMenu";
 import { AppBrand } from "@/components/AppBrand";
 import { AppProviders } from "@/components/AppProviders";
+import { LiveRefresh } from "@/components/LiveRefresh";
 
 export default async function DashboardLayout({
   children,
@@ -15,6 +16,9 @@ export default async function DashboardLayout({
     // layout: the landing and legal pages are static and need neither, and used
     // to load both (plus a session request) for nothing.
     <AppProviders>
+      {/* Watches for writes this tab did not make — an agent through MCP — and
+          refreshes the board when there are some. Renders nothing. */}
+      <LiveRefresh />
       <div className="min-h-screen">
         {/* Same surface as the board columns (bg-card / dark:bg-muted/20): the
             header and the columns read as one white frame around the gray page. */}

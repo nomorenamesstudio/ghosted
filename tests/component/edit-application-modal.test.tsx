@@ -28,6 +28,7 @@ const app: ApplicationDetail = {
   company: "Acme Corp",
   role: "Frontend Engineer",
   url: null,
+  urlKey: null,
   companyWebsite: null,
   contactName: null,
   contactEmail: null,

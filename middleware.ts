@@ -46,7 +46,9 @@ export function middleware(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  if (pathname.startsWith("/api/")) {
+  // `/ouija` is the agent's API: a POST answering with the user's own data, so it
+  // gets the same rule as `/api/*` (and it is the one route outside `/api/`).
+  if (pathname.startsWith("/api/") || pathname === "/ouija") {
     response.headers.set("Cache-Control", "no-store");
   }
 

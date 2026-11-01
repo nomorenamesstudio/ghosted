@@ -109,6 +109,18 @@ export async function requireSessionForWrite(scope: string): Promise<string> {
     );
   }
   const userId = user.id;
+  assertWriteBudget(userId, scope);
+  return userId;
+}
+
+/**
+ * The write budget on its own, because a second kind of caller spends it: an
+ * MCP connection has no session to read, and an agent's writes are still the
+ * account's writes. Default 300 writes/hour, keyed by user id so it works
+ * behind NAT / spoofed IPs. Override via RATE_LIMIT_WRITES_MAX /
+ * RATE_LIMIT_WRITES_WINDOW_MINUTES.
+ */
+export function assertWriteBudget(userId: string, scope: string): void {
   const max = Number(process.env.RATE_LIMIT_WRITES_MAX ?? 300);
   const windowMinutes = Number(process.env.RATE_LIMIT_WRITES_WINDOW_MINUTES ?? 60);
   const rl = rateLimitAccount(userId, `write:${scope}`, {
@@ -116,14 +128,15 @@ export async function requireSessionForWrite(scope: string): Promise<string> {
     windowMs: windowMinutes * 60_000,
   });
   if (!rl.ok) {
+    // The wait travels with the refusal: an automation can back off for exactly
+    // as long as the window has left instead of guessing or retrying in a loop.
     throw new ApiError(
       429,
       "Too many requests, please try again later",
       "RATE_LIMITED",
-      undefined,
+      { retryAfterSeconds: rl.retryAfterSeconds, windowMinutes },
     );
   }
-  return userId;
 }
 
 /**

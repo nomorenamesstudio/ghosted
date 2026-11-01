@@ -49,6 +49,21 @@ export const patienceLevelEnum = pgEnum("patience_level", [
   "impatient",
 ]);
 
+/**
+ * What an agent connection may reach, narrowest first: `read` ⊂ `edit` ⊂
+ * `full`. The scope lives on the token, not on a per-call checkbox, so a
+ * connection paired read-only cannot be talked into a write by a prompt: the
+ * write tools are not registered on it at all (see lib/mcp/server.ts).
+ */
+export const agentScopeEnum = pgEnum("agent_scope", ["read", "edit", "full"]);
+
+/** Where a pairing is in the handshake: the agent has not claimed the code / has / the owner approved it. */
+export const agentPairingStateEnum = pgEnum("agent_pairing_state", [
+  "waiting",
+  "claimed",
+  "approved",
+]);
+
 export const users = pgTable(
   "users",
   {
@@ -157,6 +172,15 @@ export const applications = pgTable(
     role: text("role").notNull(),
     url: text("url"),
     /**
+     * The posting URL in comparable form (lib/utils/application-url.ts): host
+     * without `www.`, path without its trailing slash, tracking parameters
+     * dropped. Written on every create and on every URL edit, and the thing
+     * `find_or_create_application` matches on so a daily digest cannot file the
+     * same posting twice. Null for rows that have no URL, and for rows written
+     * before this column existed (they still match by company + role).
+     */
+    urlKey: text("url_key"),
+    /**
      * Employer's own domain, normalized on write (`stripe.com`), and only used
      * to resolve the company logo. It is the reliable answer when the job URL
      * is a board link, and it overrides every guess (see
@@ -181,7 +205,10 @@ export const applications = pgTable(
       .defaultNow()
       .notNull(),
   },
-  (t) => [index("applications_user_id_idx").on(t.userId)],
+  (t) => [
+    index("applications_user_id_idx").on(t.userId),
+    index("applications_user_url_key_idx").on(t.userId, t.urlKey),
+  ],
 );
 
 export const milestones = pgTable(
@@ -284,9 +311,91 @@ export const emailVerificationTokens = pgTable(
   (t) => [index("evt_user_id_idx").on(t.userId)],
 );
 
+/**
+ * One connected agent: the credential behind an MCP connection.
+ *
+ * The scope is the whole permission model — there is no per-call prompt and no
+ * tool that touches the account itself. Only the SHA-256 of the secret is
+ * stored; the secret is returned once, either by "Create a token" or by the
+ * handover that ends a pairing.
+ *
+ * Deliberately independent of `users.session_epoch`: a password change revokes
+ * sessions, not agents. Revoking an agent is its own explicit act in Settings →
+ * Connected agents, so a rotation of the password does not silently break an
+ * agent the user still wants.
+ */
+export const agentTokens = pgTable(
+  "agent_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** SHA-256 of the secret, hex. The secret itself is never at rest. */
+    secretHash: text("secret_hash").notNull().unique(),
+    scope: agentScopeEnum("scope").notNull().default("read"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    /** Written at most once a minute per token (see verifyAgentToken): a convenience, not an audit log. */
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+  },
+  (t) => [index("agent_tokens_user_id_idx").on(t.userId)],
+);
+
+/**
+ * A pairing in flight: the code the owner reads out, and the approval that turns
+ * it into a token.
+ *
+ * The code is all that travels through the conversation. It is dead until the
+ * owner approves, and dead ten minutes after it is created. The token is minted
+ * at the **first collection**, not at approval, so a pairing nobody comes back
+ * for leaves no orphan credential behind.
+ *
+ * `secret` holds the plaintext token while it can still be collected, because the
+ * handover is the one moment it must be returnable and only a hash is stored
+ * afterwards. Bounded by `expires_at` (ten minutes) and by the five-handover cap,
+ * and **deleted** the moment either runs out — an expired row that lingered with
+ * its secret in it was a live credential in a database that otherwise holds only
+ * hashes (review, 2026-11-01: finding 1).
+ *
+ * `claimed_from` / `claimed_agent` record who claimed the code, because the
+ * handover belongs to that connection: a second party holding the code used to
+ * collect the same token after approval (review, 2026-11-01: finding 2).
+ */
+export const agentPairings = pgTable(
+  "agent_pairings",
+  {
+    /** `XXXX-XXXX`, drawn from an alphabet without I/O/0/1: it gets read aloud. */
+    code: text("code").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    scope: agentScopeEnum("scope").notNull(),
+    state: agentPairingStateEnum("state").notNull().default("waiting"),
+    secret: text("secret"),
+    /** Collections so far. An agent whose scratch directory is wiped gets a few more. */
+    handovers: integer("handovers").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    claimedAt: timestamp("claimed_at", { withTimezone: true }),
+    /** The address the claim came from. Only this connection may collect the token. */
+    claimedFrom: text("claimed_from"),
+    /** The claimer's user agent, shown in the panel so the owner can recognise it. */
+    claimedAgent: text("claimed_agent"),
+  },
+  (t) => [index("agent_pairings_user_id_idx").on(t.userId)],
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   applications: many(applications),
   oauthAccounts: many(oauthAccounts),
+  agentTokens: many(agentTokens),
+  agentPairings: many(agentPairings),
 }));
 
 export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
@@ -331,6 +440,20 @@ export const emailVerificationTokensRelations = relations(
   }),
 );
 
+export const agentTokensRelations = relations(agentTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [agentTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const agentPairingsRelations = relations(agentPairings, ({ one }) => ({
+  user: one(users, {
+    fields: [agentPairings.userId],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type OAuthAccount = typeof oauthAccounts.$inferSelect;
@@ -345,3 +468,8 @@ export type PatienceLevel = (typeof patienceLevelEnum.enumValues)[number];
 export type Provider = (typeof providerEnum.enumValues)[number];
 export type CompanyLogo = typeof companyLogos.$inferSelect;
 export type LogoStatus = (typeof logoStatusEnum.enumValues)[number];
+export type AgentToken = typeof agentTokens.$inferSelect;
+export type NewAgentToken = typeof agentTokens.$inferInsert;
+export type AgentPairing = typeof agentPairings.$inferSelect;
+export type AgentScope = (typeof agentScopeEnum.enumValues)[number];
+export type AgentPairingState = (typeof agentPairingStateEnum.enumValues)[number];

@@ -6,6 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import {
   BadgeCheck,
   Database,
+  Monitor,
   Download,
   FaceAngry,
   FaceGrinning,
@@ -28,7 +29,9 @@ import {
   PATIENCE_LABELS,
   PATIENCE_LEVELS,
 } from "@/lib/utils/status";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme, type Theme } from "@/components/theme-provider";
+import type { AgentTokenSummary } from "@/lib/api";
+import { AgentAccessCard } from "@/components/AgentAccessCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ConnectedAccountsCard } from "@/components/ConnectedAccountsCard";
 import { Message, type Msg } from "@/components/FormMessage";
@@ -59,6 +62,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+/** The three appearance choices, in the order paddō settled on: device first. */
+const THEME_OPTIONS: {
+  value: Theme;
+  label: string;
+  Icon: LucideIcon;
+  hint: string;
+}[] = [
+  { value: "system", label: "System", Icon: Monitor, hint: "Follow the device" },
+  { value: "light", label: "Light", Icon: Sun, hint: "Paper, always" },
+  { value: "dark", label: "Dark", Icon: Moon, hint: "Night, always" },
+];
+
 /**
  * One face per patience level - the friendlier the face, the longer the app
  * waits before it is called ghosted.
@@ -78,6 +93,7 @@ export function SettingsForm({
   oauthProviders,
   linkedProviders,
   hasPassword,
+  agentTokens,
 }: {
   name: string;
   email: string;
@@ -96,6 +112,8 @@ export function SettingsForm({
   linkedProviders: OAuthProvider[];
   /** False for an account that signs in with a provider only — see PasswordCard. */
   hasPassword: boolean;
+  /** The MCP connections already paired, rendered so the card opens populated. */
+  agentTokens: AgentTokenSummary[];
 }) {
   const router = useRouter();
   const { update: updateSession } = useSession();
@@ -330,38 +348,43 @@ export function SettingsForm({
             Appearance
           </CardTitle>
           <CardDescription>
-            Night mode defaults to your system preference; the switch remembers
-            your choice.
+            System follows your device, which is usually what you want — dark at
+            night, paper in daylight. The choice is remembered on this device.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            {theme === "dark" ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-            {theme === "dark" ? "Light mode" : "Night mode"}
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={theme === "dark"}
-            aria-label="Toggle night mode"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className={[
-              "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
-              theme === "dark" ? "bg-primary" : "bg-input",
-            ].join(" ")}
-            data-testid="theme-switch"
+        <CardContent>
+          <div
+            role="radiogroup"
+            aria-label="Appearance"
+            className="flex flex-wrap gap-2"
           >
-            <span
-              className={[
-                "inline-block h-5 w-5 transform rounded-full bg-background shadow transition-transform",
-                theme === "dark" ? "translate-x-5" : "translate-x-0.5",
-              ].join(" ")}
-            />
-          </button>
+            {THEME_OPTIONS.map(({ value, label, Icon, hint }) => {
+              const active = theme === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setTheme(value)}
+                  className={[
+                    "flex flex-1 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors",
+                    active
+                      ? "border-primary bg-primary/5 text-foreground"
+                      : "text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                  ].join(" ")}
+                >
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium">{label}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {hint}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
 
@@ -507,6 +530,8 @@ export function SettingsForm({
         linkedProviders={linkedProviders}
         onConnect={(provider) => signIn(provider, { callbackUrl: "/settings" })}
       />
+
+      <AgentAccessCard tokens={agentTokens} />
 
       <Card>
         <CardHeader>

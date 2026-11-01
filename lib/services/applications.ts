@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, ilike, inArray, lte, ne, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { db } from "@/lib/db/client";
@@ -38,6 +38,7 @@ import type {
   UpdateApplicationInput,
   UpdateMilestoneInput,
 } from "@/lib/utils/validation";
+import { urlMatchKey } from "@/lib/utils/application-url";
 import { logoDomainCandidates } from "@/lib/utils/company-domain";
 import { logoIsKnownMissing, logoMissingFrom } from "@/lib/services/company-logos";
 
@@ -650,6 +651,251 @@ export async function listUsedRoles(
   return rows.map((r) => r.role).filter(Boolean);
 }
 
+/**
+ * Is this application already in the logbook?
+ *
+ * Written for the automation case: an email digest or an auto-applier runs the
+ * same finding twice, and the schema has no unique key to stop it, so the caller
+ * gets a lookup it can make before writing. The posting URL is the strongest
+ * identity — the same job, whatever the board calls it — and company + role is
+ * the fallback for the emails that carry no link. Archived rows count as
+ * matches: that application exists and the agent should reopen or update it,
+ * not file a second copy.
+ *
+ * `matches > 1` means the logbook already held duplicates, so the caller knows
+ * the answer is one of several rather than inventing a new one.
+ */
+export interface ApplicationMatch {
+  id: string;
+  matchedOn: "url" | "company+role";
+  matches: number;
+}
+
+export interface ApplicationCandidate {
+  id: string;
+  company: string;
+  role: string;
+  status: ApplicationStatus;
+  updatedAt: Date;
+}
+
+export interface ApplicationCandidates {
+  matches: ApplicationCandidate[];
+  /**
+   * `active` when one of them is still live (anything but rejected or archived),
+   * `closed` when every match was rejected or archived, `none` when nothing
+   * matched. The notice the UI shows and its default action both read this.
+   */
+  verdict: "none" | "active" | "closed";
+}
+
+/**
+ * Every row that looks like this application, newest first — what the UI needs to
+ * tell the user "this is already on your board" without guessing which one they
+ * meant. `findApplicationMatch` is the same query reduced to the best answer, for
+ * the agent's find-or-create.
+ */
+export async function findApplicationCandidates(
+  userId: string,
+  input: { company: string; role: string; url?: string | null },
+  tx: Tx = db,
+): Promise<ApplicationCandidates> {
+  const rows = await candidateRows(tx, userId, input);
+  if (rows.length === 0) return { matches: [], verdict: "none" };
+
+  const matches = rows.map((row) => ({
+    id: row.id,
+    company: row.company,
+    role: row.role,
+    status: row.status,
+    updatedAt: row.updatedAt,
+  }));
+  const live = matches.some(
+    (match) => match.status !== "rejected" && match.status !== "archived",
+  );
+  return { matches, verdict: live ? "active" : "closed" };
+}
+
+async function candidateRows(
+  tx: Tx,
+  userId: string,
+  input: { company: string; role: string; url?: string | null },
+) {
+  const company = input.company.trim().toLowerCase();
+  const role = input.role.trim().toLowerCase();
+  const key = urlMatchKey(input.url);
+  const url = input.url?.trim().toLowerCase() || "";
+
+  return tx
+    .select({
+      id: applications.id,
+      company: applications.company,
+      role: applications.role,
+      status: applications.status,
+      updatedAt: applications.updatedAt,
+      url: applications.url,
+      urlKey: applications.urlKey,
+    })
+    .from(applications)
+    .where(
+      and(
+        eq(applications.userId, userId),
+        or(
+          // `false` for the comparisons that do not apply, so one query serves
+          // every case.
+          key ? eq(applications.urlKey, key) : sql`false`,
+          // Rows written before the key column existed carry none, so the same
+          // URL as typed still counts as the same posting.
+          url ? sql`lower(btrim(${applications.url})) = ${url}` : sql`false`,
+          and(
+            sql`lower(btrim(${applications.company})) = ${company}`,
+            sql`lower(btrim(${applications.role})) = ${role}`,
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(applications.updatedAt))
+    .limit(10);
+}
+
+export async function findApplicationMatch(
+  userId: string,
+  input: { company: string; role: string; url?: string | null },
+  tx: Tx = db,
+): Promise<ApplicationMatch | null> {
+  const company = input.company.trim().toLowerCase();
+  const role = input.role.trim().toLowerCase();
+  const key = urlMatchKey(input.url);
+  const url = input.url?.trim().toLowerCase() || "";
+
+  const rows = await candidateRows(tx, userId, input);
+
+  const byKey = key ? rows.filter((row) => row.urlKey === key) : [];
+  if (byKey.length > 0) {
+    return { id: byKey[0].id, matchedOn: "url", matches: byKey.length };
+  }
+
+  const byUrl = url
+    ? rows.filter((row) => (row.url ?? "").trim().toLowerCase() === url)
+    : [];
+  if (byUrl.length > 0) {
+    return { id: byUrl[0].id, matchedOn: "url", matches: byUrl.length };
+  }
+
+  const byName = rows.filter(
+    (row) =>
+      row.company.trim().toLowerCase() === company &&
+      row.role.trim().toLowerCase() === role,
+  );
+  if (byName.length > 0) {
+    return { id: byName[0].id, matchedOn: "company+role", matches: byName.length };
+  }
+
+  return null;
+}
+
+export interface FindOrCreateResult {
+  application: ApplicationDetail;
+  created: boolean;
+  matchedOn: "url" | "company+role" | "none";
+  /** Rows that matched the same identity; more than one means the logbook already held duplicates. */
+  matches: number;
+}
+
+/**
+ * Find or file, atomically.
+ *
+ * The lookup and the insert share one transaction and one lock, keyed by the
+ * application's identity (its posting URL, or company + role when there is no
+ * URL). Without the lock two runs of the same digest both find nothing and both
+ * write; the lock makes the second wait, then see the first's row. That lock is
+ * the guarantee — a unique index would also forbid the user from genuinely
+ * filing the same posting twice, which is their call to make, not the schema's.
+ */
+export async function createApplicationIfAbsent(
+  userId: string,
+  input: CreateApplicationInput,
+  /**
+   * Runs immediately before the insert, inside the transaction, and only when
+   * there is something to insert — so a caller's write budget is spent on a
+   * write, and a refusal thrown here rolls the whole thing back instead of
+   * refusing after the row already landed.
+   */
+  beforeCreate?: () => void,
+): Promise<FindOrCreateResult> {
+  const identity =
+    urlMatchKey(input.url) ??
+    `${input.company.trim().toLowerCase()}|${input.role.trim().toLowerCase()}`;
+
+  const outcome = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`application:${userId}:${identity}`}))`,
+    );
+    const match = await findApplicationMatch(userId, input, tx);
+    if (match) {
+      return {
+        created: false as const,
+        id: match.id,
+        matchedOn: match.matchedOn,
+        matches: match.matches,
+      };
+    }
+    beforeCreate?.();
+    return {
+      created: true as const,
+      application: await createApplicationInTx(tx, userId, input),
+      matchedOn: "none" as const,
+      matches: 0,
+    };
+  });
+
+  if (outcome.created) {
+    return {
+      application: outcome.application,
+      created: true,
+      matchedOn: "none",
+      matches: 0,
+    };
+  }
+
+  const application = await getApplication(userId, outcome.id);
+  if (!application) throw new ApiError(404, "No such application", "NOT_FOUND");
+  return {
+    application,
+    created: false,
+    matchedOn: outcome.matchedOn,
+    matches: outcome.matches,
+  };
+}
+
+/**
+ * A value that changes whenever this account's board does.
+ *
+ * It exists so an open board can notice a write it did not make — an agent filing
+ * something through MCP — without polling the board itself: one indexed aggregate,
+ * and the client refetches only when the answer moved.
+ *
+ * It is a fingerprint of what the board *renders*, not just `updatedAt`: that
+ * clock is the silence signal, so a manual `rejected` or an archive deliberately
+ * leaves it where it was, and a revision built on it alone would miss exactly the
+ * writes an agent makes. Status, step count, favorite and the clock together cover
+ * everything a column shows; a new or removed row changes the aggregate itself.
+ */
+export async function applicationRevision(userId: string): Promise<string> {
+  const [row] = await db
+    .select({
+      revision: sql<string>`coalesce(md5(string_agg(
+        ${applications.id}::text || ':' || ${applications.status}::text || ':' ||
+        ${applications.totalSteps}::text || ':' || ${applications.isFavorite}::text || ':' ||
+        extract(epoch from ${applications.updatedAt})::text,
+        ',' order by ${applications.id}
+      )), 'empty')`,
+    })
+    .from(applications)
+    .where(eq(applications.userId, userId));
+  return row?.revision ?? "empty";
+}
+
 export async function countApplications(userId: string): Promise<number> {
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
@@ -658,7 +904,15 @@ export async function countApplications(userId: string): Promise<number> {
   return row?.count ?? 0;
 }
 
-export async function createApplication(
+/**
+ * The insert itself, inside a caller's transaction.
+ *
+ * Split out for one reason: `find_or_create_application` has to check for an
+ * existing row and insert in the **same** transaction, under one lock, or two
+ * concurrent runs of the same digest both find nothing and both write.
+ */
+async function createApplicationInTx(
+  tx: Tx,
   userId: string,
   input: CreateApplicationInput,
 ): Promise<ApplicationDetail> {
@@ -666,7 +920,7 @@ export async function createApplication(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  return db.transaction(async (tx) => {
+  {
     // The unverified-email ceiling is checked here, inside the transaction and
     // behind a lock on the account row, rather than in the route. Two reasons:
     // the rule then covers every write path (the importer was the one that
@@ -699,6 +953,7 @@ export async function createApplication(
         company: sanitizeText(input.company) ?? input.company,
         role: sanitizeText(input.role) ?? input.role,
         url: input.url || null,
+        urlKey: urlMatchKey(input.url),
         companyWebsite: input.companyWebsite ?? null,
         contactName: sanitizeText(input.contactName),
         contactEmail: sanitizeText(input.contactEmail),
@@ -733,7 +988,14 @@ export async function createApplication(
         new Set(),
       ),
     };
-  });
+  }
+}
+
+export async function createApplication(
+  userId: string,
+  input: CreateApplicationInput,
+): Promise<ApplicationDetail> {
+  return db.transaction((tx) => createApplicationInTx(tx, userId, input));
 }
 
 export async function updateApplication(
@@ -783,7 +1045,10 @@ export async function updateApplication(
     values.company = sanitizeText(input.company) ?? input.company;
   if (input.role !== undefined)
     values.role = sanitizeText(input.role) ?? input.role;
-  if (input.url !== undefined) values.url = input.url || null;
+  if (input.url !== undefined) {
+    values.url = input.url || null;
+    values.urlKey = urlMatchKey(input.url);
+  }
   if (input.companyWebsite !== undefined)
     values.companyWebsite = input.companyWebsite ?? null;
   if (input.contactName !== undefined)

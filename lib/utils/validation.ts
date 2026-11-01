@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  agentScopeEnum,
   applicationStatusEnum,
   milestoneStatusEnum,
 } from "@/lib/db/schema";
@@ -121,6 +122,22 @@ export const listApplicationsQuerySchema = z.object({
 });
 
 /**
+ * The duplicate pre-check the add form runs before it writes: a posting URL, or a
+ * company and role. Deliberately loose on the URL — a half-typed value should
+ * simply match nothing rather than turn into a form error.
+ */
+export const applicationMatchQuerySchema = z
+  .object({
+    company: z.string().trim().max(200).optional(),
+    role: z.string().trim().max(200).optional(),
+    url: z.string().trim().max(2000).optional(),
+  })
+  .refine(
+    (v) => Boolean(v.url) || Boolean(v.company && v.role),
+    { message: "Send a posting URL, or a company and a role" },
+  );
+
+/**
  * The board query: no status (it returns every section) and no page (it is
  * always the first one — later pages come from the per-status endpoint).
  */
@@ -231,6 +248,29 @@ export const resetPasswordSchema = z.object({
   token: z.string().trim().min(20, "Invalid reset token").max(300),
   password: passwordSchema,
 });
+
+/* ------------------------------------------------------------------ */
+/* Agent access (MCP)                                                   */
+/* ------------------------------------------------------------------ */
+
+/** What a pairing or a token may reach: see lib/services/agent-tokens.ts. */
+export const agentScopeSchema = z.enum(agentScopeEnum.enumValues);
+
+/** Pairing and mint take the same two things: a name the owner will recognise, and a scope. */
+export const agentAccessSchema = z.object({
+  name: z.string().trim().min(1, "Give it a name").max(60),
+  scope: agentScopeSchema,
+});
+
+/**
+ * The agent's side. Deliberately loose on shape — a code is forgiving about
+ * case and dashes — and bounded, because this route is unauthenticated.
+ */
+export const pairingClaimSchema = z.object({
+  code: z.string().trim().min(1, "Send the code from Settings").max(32),
+});
+
+export type AgentAccessInput = z.infer<typeof agentAccessSchema>;
 
 export type CreateApplicationInput = z.infer<typeof createApplicationSchema>;
 export type UpdateApplicationInput = z.infer<typeof updateApplicationSchema>;

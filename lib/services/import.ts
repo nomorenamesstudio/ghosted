@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db/client";
 import { applications, milestones, users } from "@/lib/db/schema";
+import { urlMatchKey } from "@/lib/utils/application-url";
 import { sanitizeText } from "@/lib/utils/sanitize";
 import {
   applicationAllowance,
@@ -233,6 +234,7 @@ export async function importUserData(
           company: sanitizeText(app.company) ?? app.company,
           role: sanitizeText(app.role) ?? app.role,
           url: app.url ?? null,
+          urlKey: urlMatchKey(app.url ?? null),
           companyWebsite: app.companyWebsite ?? null,
           contactName: sanitizeText(app.contactName),
           contactEmail: sanitizeText(app.contactEmail),

@@ -1,11 +1,23 @@
 import type {
+  AgentScope,
   Application,
   ApplicationStatus,
   Milestone,
 } from "@/lib/db/schema";
-import type { ApplicationSummary } from "@/lib/services/applications";
+import type {
+  ApplicationCandidates,
+  ApplicationSummary,
+} from "@/lib/services/applications";
+import type { AgentTokenSummary } from "@/lib/services/agent-tokens";
+import type { PendingPairing } from "@/lib/services/agent-pairings";
 import type { DisplayStatus } from "@/lib/utils/status";
 
+export type {
+  AgentScope,
+  AgentTokenSummary,
+  ApplicationCandidates,
+  PendingPairing,
+};
 export type { ApplicationStatus, DisplayStatus };
 
 /* ------------------------------------------------------------------ */
@@ -256,4 +268,80 @@ export function deleteMilestone(
 
 export function getStats(): Promise<{ data: DashboardStats }> {
   return request("/api/dashboard/stats");
+}
+
+/** Changes whenever this account's applications do: the open board's watchtower. */
+export function getApplicationsRevision(): Promise<{ data: { revision: string } }> {
+  return request("/api/applications/revision");
+}
+
+/** "Is this already on the board?" — the add form's pre-flight, never a gate. */
+export function matchApplications(input: {
+  company?: string;
+  role?: string;
+  url?: string | null;
+}): Promise<{ data: ApplicationCandidates }> {
+  const qs = new URLSearchParams();
+  if (input.company) qs.set("company", input.company);
+  if (input.role) qs.set("role", input.role);
+  if (input.url) qs.set("url", input.url);
+  return request<{ data: ApplicationCandidates }>(
+    `/api/applications/match?${qs.toString()}`,
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Connected agents (MCP)                                              */
+/* ------------------------------------------------------------------ */
+
+export interface AgentAccessInput {
+  name: string;
+  scope: AgentScope;
+}
+
+export function getAgentTokens(): Promise<{ data: AgentTokenSummary[] }> {
+  return request("/api/agent/tokens");
+}
+
+/** The secret comes back here and only here: it is stored as a hash. */
+export function mintAgentToken(
+  input: AgentAccessInput,
+): Promise<{ data: { token: AgentTokenSummary; secret: string } }> {
+  return request("/api/agent/tokens", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function revokeAgentToken(id: string): Promise<void> {
+  return request<void>(`/api/agent/tokens/${id}`, { method: "DELETE" });
+}
+
+export function getPairings(): Promise<{ data: PendingPairing[] }> {
+  return request("/api/agent/pair");
+}
+
+export function startPairing(
+  input: AgentAccessInput,
+): Promise<{ data: { code: string; expiresAt: string } }> {
+  return request("/api/agent/pair", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export function approvePairing(
+  code: string,
+): Promise<{ data: { code: string; state: string } }> {
+  return request(`/api/agent/pair/${encodeURIComponent(code)}/approve`, {
+    method: "POST",
+  });
+}
+
+export function denyPairing(
+  code: string,
+): Promise<{ data: { code: string; state: string } }> {
+  return request(`/api/agent/pair/${encodeURIComponent(code)}/deny`, {
+    method: "POST",
+  });
 }
