@@ -21,6 +21,7 @@
 ```
 app/
   page.tsx                # public landing page (/) - signed-in users → /app
+  ouija/route.ts          # the agent's MCP server (stateless, bearer token only)
   logos/[id]/route.ts     # company logo bytes (cacheable, outside /api)
   avatars/[hash]/route.ts # gravatar bytes (cacheable, outside /api)
   (auth)/                 # login, register, forgot/reset password, verify email
@@ -31,6 +32,7 @@ app/
     applications/[id]/milestones/  # POST (insert w/ reorder)
     milestones/[id]/      # PATCH / DELETE (reorder)
     dashboard/stats/      # GET
+    agent/                # pair (start/claim/approve/deny) + tokens (list/mint/revoke)
     auth/                 # [...nextauth], login, register, forgot/reset-password,
                           # verify-email, resend-verification, profile,
                           # change-password, account, export
@@ -41,6 +43,10 @@ components/
   KanbanBoard / KanbanColumn / KanbanCard / MoveToMenu / StepBackDialog
   use-application-section / use-application-move
   MilestoneTimeline / AddMilestoneModal / EditApplicationForm
+  AgentAccessCard         # Settings: pair an agent, mint a token, revoke a connection
+  LiveRefresh             # polls the board fingerprint and refetches when it moved
+  view-mode.ts            # board/list choice: one store, set by the user menu, read by the dashboard
+  theme-provider.tsx      # system / light / dark, resolved before first paint
   Dashboard / DonateBanner
 lib/
   auth.ts                 # Auth.js v5 config (JWT, bcrypt, Google/LinkedIn OAuth)
@@ -51,6 +57,10 @@ lib/
   services/applications.ts# transactional business logic (the core)
   services/company-logos.ts# logo cache-aside (DB + favicon services)
   services/gravatar.ts    # gravatar lookup, asked once at sign-in
+  services/agent-tokens.ts# MCP credentials: mint, verify, revoke; hashed at rest
+  services/agent-pairings.ts# the pairing handshake: code, claim, approve, handover
+  agent-scope.ts          # the three scopes and their words (client-safe: the card and the MCP instructions read the same strings)
+  mcp/server.ts           # the agent's tools, shaped by the token's scope
   utils/                  # progress, reorder, status, sanitize, validation,
                           # rate-limit, api error helpers, logger
 scripts/                  # create-test-db, seed, migrate-on-start
@@ -60,7 +70,7 @@ tests/
   component/              # RTL render tests
   e2e/                    # Playwright critical paths
 drizzle/                  # committed SQL migrations
-middleware.ts             # Cache-Control: no-store on all /api/*
+middleware.ts             # Cache-Control: no-store on all /api/* and /ouija
 ```
 
 ## Data Flow
@@ -99,6 +109,11 @@ middleware.ts             # Cache-Control: no-store on all /api/*
    impatient 7 days, default realistic) is shown as ghosted - a display
    overlay, not a stored status. `GHOSTED_AFTER_DAYS` remains only as the
    fallback for code without a user in hand.
+8. **Agents**: an MCP connection is one bearer token, bound to an account and a
+   scope. `/ouija` builds a server per request from that token (stateless: no
+   session, no stream) and the tools call the same services the HTTP routes do.
+   The token is minted in Settings, or handed over by a pairing — code, claim,
+   approve, then a collect that mints it.
 
 ## Key Decisions
 
@@ -272,6 +287,51 @@ middleware.ts             # Cache-Control: no-store on all /api/*
   mixes UK and US forms elsewhere. Exception: `docs/reviews/raw/*` are verbatim
   third-party review transcripts and stay exactly as received; the synthesized
   `docs/reviews/design-review-*.md` is ours and gets aligned.
+- **An agent's scope is a capability, not a check**: `lib/mcp/server.ts` registers
+  only the tools the token's scope includes, so a read-only connection has no
+  write tool to be talked into — there is no per-call guard that can be
+  forgotten, and no prompt that can widen the connection. The scope is fixed when
+  the pairing starts and changes only by pairing again (or minting a new token).
+- **The agent API is the app's own, not a second surface**: the tools call
+  `lib/services/applications.ts`, the same functions and the same Zod schemas the
+  HTTP routes call, and spend the same per-account write budget
+  (`assertWriteBudget`). `/ouija` is bearer-only — a session cookie cannot reach it —
+  so a cross-site request cannot drive the tools with the user's own cookies.
+- **There is no MCP tool for the account**: no email, password, session, export
+  or deletion, in any scope. That is structural rather than a filter —
+  `lib/mcp/` imports the applications service and nothing else — so the promise
+  cannot rot into "we remembered to check".
+- **A pairing is a database row, not process memory**: Next.js compiles each
+  route handler as its own entry, so a module-level `Map` shared between the
+  panel's route and the claim's route is not guaranteed to be the same object.
+  The token is minted at the *first collection* (not at approval), so an
+  approval nobody collects leaves no orphan credential; the plaintext secret
+  lives in that row for the ten-minute window it can still be collected, because
+  the handover is the one moment it must be returnable, and only a hash is kept
+  afterwards. The row is deleted the moment that window closes, by the claim that
+  finds it or the next pairing read — a residue there is a live token in a
+  database that otherwise holds hashes (`docs/reviews/security-review-agent-access-2026-11-01.md`,
+  finding 1).
+- **The code belongs to the connection that claimed it**: `claimed_from` is
+  recorded on the first claim and a handover from any other address is refused,
+  so a code that leaks (a screenshot, a logged chat, a shared clipboard) is not a
+  token for whoever read it. The panel shows the address and user agent, which is
+  the only point where a human can notice a claim that is not their agent. It is
+  a narrow check, not a complete one: it only sees what the deployment can see —
+  a proxy that forwards no client address makes every requester "unknown"
+  (review 2026-11-01, finding 2).
+- **Agent tokens are independent of session revocation**: a password change or
+  reset revokes every JWT session through `session_epoch`, but not a connected
+  agent — that is a separate, explicit act in Settings → Connected agents. The
+  alternative (silently breaking an agent on any credential change) trades a
+  visible revocation for an invisible one; the list is where an agent is cut off.
+
+- **Appearance and layout are settings, not toolbar controls**: the theme is
+  `system` / `light` / `dark` in Settings (System by default, resolved before first paint by
+  the root layout's inline script), and board/list lives in the account menu with its state
+  in `components/view-mode.ts` because the menu and the dashboard are siblings. Both are
+  remembered per device in `localStorage`, which is why the shell width and the theme are
+  painted by an inline script rather than an effect.
 
 ## Shared caches and their budgets
 

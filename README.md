@@ -35,10 +35,29 @@ section, and a stalled hunt became something I could see.
 | **One timeline per application** | Five rounds by default, extendable and reorderable. Finishing a round advances the status; rejected, archived and offer stay in your hands. |
 | **Everything exported** | JSON export any time, import into an existing account, and account deletion that actually deletes. |
 | **Search, filter, favorites** | Find by company or role, filter by status, pin the ones you care about, and undo an archive. |
-| **Night mode, keyboard, screen reader** | System theme or manual, usable without a mouse, readable at 200% zoom. The end-to-end suite runs axe on every page. |
+| **Theme, keyboard, screen reader** | Follows your device by default, or pin light or dark in Settings. Usable without a mouse, readable at 200% zoom. The end-to-end suite runs axe on every page, in both themes. |
+| **An agent you stay in charge of** | Ghosted serves an MCP server, so your own AI agent can read, edit, or (if you allow it) archive and reset. Scope is picked per pairing, and no scope reaches your account. |
 | **Your own instance** | One container and a Postgres. Two environment flags decide whether it is a solo instance or a family one. |
 
-![The whole board on a desktop: the app bar with search, filter, sort and the list/board switch, then every column populated — applied, interviewing, offers and ghosted — with cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
+![The whole board on a desktop: the app bar with search, sort and Add application, then every column populated — applied, interviewing, offers, ghosted and rejected — with cards showing company, role, the last round, how long ago it moved and a progress bar tinted by status](docs/assets/board.jpg)
+
+### One application, opened
+
+![The application page for a Senior Product Designer role at Jobber: the timeline runs Application (done, dated), Talent Team Interview, Portfolio Review, Functional Whiteboard Exercise, Cross-Functional Interview and Offer/Decision, with the Talent Team Interview step open in an editor showing its title, status, date and comment. Beside the timeline, a details card carries the status, the job posting URL, the company website, the contact and the notes.](docs/assets/detail.jpg)
+
+The board is the overview; this is what it keeps — everything a spreadsheet would lose.
+
+- **The timeline is the process itself** — one row per round, in order, dated where it
+  actually happened. This one was read off the posting: five rounds, each with its length in
+  the step's comment, instead of the five defaults every application starts with.
+- **The open step is the editor** — title, status (`pending`, `done`, `skipped`), date and a
+  comment. **Save & mark done** stamps the date and advances the status for you (applied →
+  interviewing → offer), so the board is never a separate thing you update. Rejected and
+  archived stay your call.
+- **The card on the right is the job** — posting URL, the employer's own site (where the
+  logo comes from), a contact, and notes with the salary band here.
+- **Add milestone** handles a process that grows — and an agent can write all of this from a
+  posting or an email over MCP.
 
 ## Quick start
 
@@ -83,6 +102,30 @@ environment reference, email options, backups and upgrades:
 One Postgres holds everything. Self-hosted, that database is yours; on the hosted
 instance it is mine, and it leaves with you as JSON.
 
+## Working with an agent
+
+Ghosted runs no model of its own, but it does serve an MCP server — at `/ouija`,
+because you are talking to the quiet ones — so the agent you already use can do
+the typing. Settings → **Agent access**: name it, pick a scope —
+read only, read and edit, or full access with the destructive tools — then **Pair
+an agent**. Ghosted prints a short code and a prompt; paste the prompt into your
+agent, approve it in Settings, and the token goes straight to the agent. It never
+passes through the chat log.
+
+```json
+{ "mcpServers": { "ghosted": { "type": "http", "url": "https://<host>/ouija",
+  "headers": { "Authorization": "Bearer ghosted_agt_…" } } } }
+```
+
+It is built to be dropped into a workflow you already run: an agent that reads your
+mailbox can file what it finds (`find_or_create_application` matches the posting URL,
+then company and role, so a repeated run updates instead of duplicating), move a
+timeline along, and leave the rest alone. Ghosted is the logbook, not the bot.
+
+What no scope can touch: your email, your password, your sessions, exporting and
+deleting the account. Connected agents are listed in Settings with their scope and
+last use, and revoking one cuts it off on its next request.
+
 ## Built with AI
 
 Ghosted is hand-written and AI-enhanced. The architecture, design and product
@@ -100,9 +143,10 @@ costs money and time, so charging rent on the logbook never made sense.
 
 ### Why is there no AI in Ghosted?
 
-The product writes nothing for you, applies to nothing for you and reads no
-mailbox. It knows only what you type into it. There is no model, no API key and no
-token bill at runtime.
+Ghosted ships no model, no API key and no token bill: it writes nothing for you,
+applies to nothing for you and reads no mailbox. It knows only what you type into
+it — or what the agent you chose to connect asks it to store, through the MCP
+server you pair with a scope.
 
 ### Can I self-host it?
 

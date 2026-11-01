@@ -15,5 +15,7 @@
 - [Security audit second-pass findings 2026-10-14](reviews/security-audit-2026-10-14-pass2-findings.md) - the four deferred units, hunted and independently verified: 7 rejected, 3 needs-validation, 0 confirmed
 - [Security audit third-pass findings 2026-10-14](reviews/security-audit-2026-10-14-pass3-findings.md) - the limiter map, the units bug in the sign-in cap and write throttle, the email-change revocation gap and the logged live tokens: 3 needs-validation, 7 rejected, 0 confirmed
 - [Releasing](RELEASING.md) - version bumps, tags, publishing an image
+- [Release notes: 1.5.0](releases/v1.5.0.md) - the MCP server, pairing over a code, three scopes, the automation-grade create, and the security review behind it
 - [Release notes: 1.0.0](releases/v1.0.0.md) - what the first release contains and what it promises
 - [What building this costs](COSTS.md) - tokens, the estimate, and the provider balance
+- [Security review: agent access (MCP) 2026-11-01](reviews/security-review-agent-access-2026-11-01.md) - the MCP endpoint, pairing and token scopes: two medium findings in the pairing handover, four smaller ones, sixteen attacks the code refused, and what was not covered

@@ -109,6 +109,22 @@ so the ghosted section, the "Updated …" labels and the progress bars all have
 something to show. Only the demo account is ever created by the script; any other
 email has to exist already, which is how a real dev login gets a testing profile.
 
+## Agent access (MCP)
+
+Nothing to install or configure: the app serves MCP itself at `/ouija`, so an
+instance needs no extra service, port or environment variable. Pair an agent in
+Settings → **Agent access** and paste the printed prompt; the same card's
+"Create a token instead" produces the config block for clients that only take
+one. Behind a reverse proxy, `/ouija` has to be forwarded exactly like `/api/*` —
+it is the same origin, and a proxy that only forwards `/` will answer 404 to the
+agent.
+
+Where a client keeps that block: Cursor `~/.cursor/mcp.json` (or
+`.cursor/mcp.json`), VS Code Copilot `.vscode/mcp.json`, Claude Code
+`claude mcp add --transport http ghosted <url> --header "Authorization: Bearer …"`.
+The endpoint is real HTTP, not a local command, so the agent does not need Node,
+the repo or a token on its own disk.
+
 ## Testing
 
 ```bash

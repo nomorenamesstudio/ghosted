@@ -2,6 +2,116 @@
 
 All notable changes, by date and type.
 
+## 1.5.0 — 2026-11-01
+
+### Feature
+
+- **Ghosted serves an MCP server, so your own agent can work on your applications.**
+  `POST /ouija` speaks MCP over HTTP, statelessly: a client needs the URL and a bearer
+  token, nothing installed next to it. (`/ouija` rather than `/mcp`: the planchette is the
+  agent, the ghost is Ghosted.) The tools cover applications, milestones and stats —
+  `list_applications`, `get_application`, `get_stats`, `get_guide`, then create/update, the
+  two milestone edits, reopen, and (full access only) archive, delete a milestone and reset
+  a timeline. Every write goes through the same schemas and services the UI uses and spends
+  the same per-account write budget.
+- **Pairing hands the token over without it passing through a chat log.** Settings → Agent
+  access prints a code (`XXXX-XXXX`, ten minutes) and a prompt; the agent claims the code,
+  the panel offers Approve / Deny, and the agent collects its token over its own
+  connection. Approval alone mints nothing — the token is created by the first collection,
+  so an approval nobody comes back for leaves no orphan credential.
+- **Three scopes, chosen when the pairing starts**: read only, read and edit, and full
+  access with the destructive tools. The scope decides which tools are registered on the
+  connection, so a read-only agent has no write tool to be talked into. No scope reaches
+  the account itself — there is no email, password, session, export or deletion tool,
+  because `lib/mcp/` imports no service that could express one.
+- **Connected agents are listed and revocable** in Settings, with their scope and last
+  use. Only the SHA-256 of a secret is stored; it is shown once and cannot be read back.
+  Tokens are independent of session revocation — a password change revokes sessions, not
+  agents — so cutting one off is the explicit act of revoking it there.
+- **The agent is given a guide to the app, not just tool descriptions.** What an
+  application and a milestone are, which statuses the timeline derives and which are the
+  user's terminal decisions, that `displayStatus` (with the patience window) is what to
+  report, what moves `updatedAt`, how pagination and the write budget behave, and which
+  actions need confirmation. It rides in the MCP `instructions` at `initialize` and is
+  callable as `get_guide` for clients that never show instructions, from one constant so
+  the two cannot drift.
+- **The guide says how to record an outcome, not just how to edit.** When the hiring
+  process is known from the posting or the email, the timeline is made to match its
+  stages instead of keeping the five defaults; a rejection is written as the comment of
+  the step it happened at (latest done step, or the first one) alongside the rejected
+  status; and once an offer closes the process, the steps that never happened or were
+  marked skipped are removed — with the user told what was dropped.
+- **The MCP surface is built for the automation that already exists around a job hunt.**
+  `find_or_create_application` is an idempotent create: it matches by posting URL first,
+  then company + role (case-insensitive, archived rows included) and reports `created`,
+  `matchedOn` and `matches`, so an email digest or an auto-applier that runs the same
+  finding twice updates the row instead of filing a duplicate. The URL match is on a
+  normalized key (`applications.url_key`, migration `0018`): `http` vs `https`, `www.`, a
+  trailing slash, a fragment and `utm_*`/`gclid`/`gh_src` tracking do not fabricate a
+  second application, while the parameters that identify a posting are kept. The lookup
+  and insert share one transaction under a Postgres advisory lock, so concurrent runs
+  serialise instead of both writing. A spent write budget now carries its wait
+  (`retryAfterSeconds`, surfaced to the agent as "Retry in N seconds"), so a batch backs
+  off for exactly as long as the window has left instead of looping.
+- **Filing the same posting twice is now a question, not a surprise.** The add form asks
+  `GET /api/applications/match` before it writes (posting URL first, then company + role,
+  on the same normalized key) and, when something matches, replaces the submit button with
+  a notice: open the row you already have, or file a second one anyway. The wording
+  follows the existing row's status — a live match reads as "already on your board", a
+  rejected or archived one as a reapplication, which is a real thing people do. It never
+  blocks. The same check lives inside the agent's `create_application`: a match returns
+  `created: false` with the row and writes nothing, and `force: true` is the agent's
+  equivalent of the human's second press.
+- **An open board notices what an agent did to it.** The dashboard polls a tiny
+  `GET /api/applications/revision` fingerprint every 15 seconds (and on window focus,
+  never while the tab is hidden) and refetches the board, a detail page and the stats only
+  when it moved — so a row an agent filed through MCP appears without a reload, and a
+  quiet tab costs one cheap query. The fingerprint covers status, step count, favorite and
+  the silence clock, because a manual rejection or an archive deliberately does not move
+  `updated_at`. Nothing is announced: the cards just arrive.
+
+### Changed
+
+- **Appearance is a setting with three answers, not a switch in the user menu.** Settings
+  → Appearance offers System, Light and Dark (paddō's arrangement), System is the default,
+  and the choice is remembered per device. The night-mode toggle is gone from the user
+  menu, so one place decides how the app looks. The pre-paint script in the root layout
+  understands the third value now: a stored `system` used to paint light on a dark desktop
+  for one frame.
+- **Board or list moved into the user menu**, where the account's other preferences live,
+  and out of the toolbar — which gets the width back. The stored choice and the shell
+  width behave exactly as before.
+- **The landing says MCP shipped, not "coming soon"**, and its FAQ answers how a paired
+  agent works and what it can reach.
+- **README**: the application page joins the board as a second screenshot, with what is
+  what on it.
+
+### Fix
+
+- **A pairing hands its token to the connection that claimed it, not to whoever holds the
+  code.** The claim records the address it came from, a collection from any other address
+  answers `409 CLAIMED_ELSEWHERE` and never returns a token, and the panel prints the
+  address and user agent so a claim that is not your agent is visible before you approve.
+  Previously a code read out of a chat log was enough to collect the same token after
+  approval.
+- **An expired pairing row is deleted, with the plaintext token it was holding.** Pruning
+  only ran when Settings was opened, so a row nobody read again kept a working bearer
+  token indefinitely — in a database that otherwise stores only hashes.
+- **`POST /ouija` is rate limited per address** (300 requests/minute, before the token
+  lookup), like the public claim route already was.
+- **An agent cannot write while the account still has to choose its own password.** The
+  MCP write guard now enforces the same rule as `requireSessionForWrite`; reads still work.
+- **`update_application` refuses `status: "archived"` in the handler as well as in the
+  tool schema**, so `edit` cannot archive through a field the app schema would accept.
+- **Revoking a token also drops its last-used marker** instead of leaving it in memory.
+- **The Next dev badge is off**, so it can stop appearing in every screenshot:
+  `devIndicators: false` in `next.config.mjs`. It only renders on a dev server, which is
+  exactly where the README captures come from.
+
+Full security review of the agent surface, including the sixteen attacks it refused and
+the two limits that remain:
+[docs/reviews/security-review-agent-access-2026-11-01.md](reviews/security-review-agent-access-2026-11-01.md).
+
 ## Unreleased — 2026-10-23
 
 ### Changed

@@ -87,9 +87,6 @@ const FEATURES: {
   span: string;
   /** Two-column tile on sm and up: bigger padding and a bigger heading. */
   wide?: boolean;
-  /** Footer note, prefixed with the repo mark, for tiles that are not released
-   *  yet. */
-  soon?: boolean;
   /** Footer link where the work already exists — the repo the tile is about. */
   link?: { href: string; label: string };
 }[] = [
@@ -117,9 +114,8 @@ const FEATURES: {
   {
     icon: Plug,
     title: "MCP integration",
-    body: "Your own agent can do the filing — log an application, tick off a step, add a note — while you get on with the applying.",
+    body: "Pair your own agent and it can do the filing — log an application from a posting, tick off a step, add a note — with read, edit or full access, and never a way into your account.",
     span: "",
-    soon: true,
   },
   {
     icon: ShieldCheck,
@@ -801,12 +797,6 @@ export function Landing() {
                         <GithubMark className="h-3.5 w-3.5" />
                         {f.link.label}
                       </a>
-                    )}
-                    {f.soon && (
-                      <span className="mt-4 inline-flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
-                        <GithubMark className="h-3.5 w-3.5" />
-                        coming soon
-                      </span>
                     )}
                   </div>
                 </CardContent>

@@ -1,6 +1,6 @@
 {
   "name": "ghosted",
-  "version": "1.4.3",
+  "version": "1.5.0",
   "packageManager": "pnpm@10.12.1",
   "private": true,
   "license": "MIT",
@@ -23,6 +23,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "@radix-ui/react-avatar": "^1.2.6",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",

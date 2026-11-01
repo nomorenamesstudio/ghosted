@@ -26,7 +26,7 @@
   check, so they apply to `/auth/callback/credentials` as well, and they do not
   depend on any request header.
 - API responses are never cached: `Cache-Control: no-store` is applied to
-  all `/api/*` responses (middleware).
+  all `/api/*` responses and to `/ouija` (middleware).
 
 ## Applications
 
@@ -59,6 +59,26 @@ domain or a full URL, and is stored normalized (`acme.com`); `""` or `null`
 clears it. It only feeds the company-logo lookup, where it overrides every
 guess. `PATCH /applications/:id` takes the same fields.
 Response: `201` with the created application + milestones.
+
+### GET /applications/revision
+
+A fingerprint of the account's board, for an open tab to detect writes it did not
+make (an agent through MCP): `{ data: { revision: "…" } }`. It hashes the id,
+status, step count, favorite flag and `updated_at` of every application, so a new
+row, an archive, a manual rejection or a finished milestone all move it — not just
+the silence clock, which deliberately stays put for some of those. Polled by
+`components/LiveRefresh.tsx` every 15 s (and on window focus); the client refetches
+`applications`, `application` and `stats` only when the value moves.
+
+### GET /applications/match
+
+"Is this already on the board?" — the read the add form makes before it writes.
+Query: `url`, or `company` + `role`. Returns
+`{ data: { matches: [{ id, company, role, status, updatedAt }], verdict } }`,
+where `verdict` is `none`, `active` (a live row matched — anything but rejected or
+archived) or `closed` (every match was rejected or archived). It never blocks a
+write: a reapplication after a rejection is a real thing, so the form shows the
+notice and lets the user file a second row.
 
 ### GET /applications/:id
 
@@ -176,6 +196,127 @@ steps (which lands it back at `applied`). Used by the kanban board when a card
 is dragged back from Interviewing to Applied and the user chooses to reset.
 Returns `{ data: application, milestones: [...] }`; `404` for another user's
 application.
+
+## Agent access (MCP)
+
+Ghosted serves its own MCP server at `POST /ouija` (streamable HTTP, stateless), so
+an agent needs a URL and a bearer token — nothing is installed next to it and no
+version has to be kept in step. The name is the joke: an MCP client is the
+planchette, Ghosted is what went quiet. Settings → Agent access hands over the
+token.
+
+```json
+{ "mcpServers": { "ghosted": { "type": "http", "url": "https://<host>/ouija",
+  "headers": { "Authorization": "Bearer ghosted_agt_…" } } } }
+```
+
+Auth is the bearer token only: a browser session cannot reach `/ouija`, so a
+cross-site request cannot drive the tools with the user's cookies. A minted token
+is stored as its SHA-256 and shown once. A *pairing* is different: while a code
+can still be collected, the pairing row holds the token in plaintext so the
+handover can return it, and the row is deleted the moment it expires — by the
+claim that finds it, or by the next pairing read. Revoking a token takes effect on
+the next request. Tokens are deliberately independent of session revocation — a
+password change revokes sessions, not agents; Connected agents is where an agent
+is cut off. `/ouija` is throttled per address (300 requests/minute); the claim
+route keeps its own, tighter one.
+
+### Scopes
+
+A scope is not a check inside a tool handler: the tools outside it are never
+registered on that connection, so a prompt cannot talk a read-only agent into a
+write. There is no tool for the account itself — no email, password, session,
+export or deletion — in any scope.
+
+| Scope | Tools |
+| --- | --- |
+| `read` | `list_applications`, `get_application`, `get_stats`, `get_guide` |
+| `edit` | read + `create_application`, `find_or_create_application`, `update_application`, `add_milestone`, `update_milestone`, `reopen_application` |
+| `full` | edit + `archive_application`, `delete_milestone`, `reset_timeline` (the destructive three) |
+
+**Neither create tool files a duplicate blind.** `create_application` runs the same
+check as the add form before it writes: when something matches it returns
+`{ created: false, duplicateOf, matchedOn, matches, message }` and writes nothing —
+the caller reports it, updates that row, or calls again with `force: true` if the
+user wants a second one (the second press on the notice). A rejected or archived
+match is described as a legitimate reapplication rather than an error.
+
+**For automation.** A mailbox digest or an auto-applier runs the same finding more
+than once, so `find_or_create_application` is the write path for repeatable jobs:
+it matches the posting URL first, then company + role (case-insensitive, archived
+rows included) and answers `{ created, matchedOn, matches, application }`.
+
+The URL comparison is on a normalized key (`applications.url_key`,
+`lib/utils/application-url.ts`): `http`/`https`, `www.`, a trailing slash, the
+fragment and tracking parameters (`utm_*`, `gclid`, `gh_src`, …) are noise, while
+the parameters that identify the posting are kept and sorted. Rows written before
+the column existed carry no key and still match on an identical URL or on company +
+role. The lookup and the insert run in **one transaction under a Postgres advisory
+lock keyed by the application's identity**, so two simultaneous runs cannot both
+find nothing and both write; the lock, not a unique index, is the guarantee —
+a constraint would also forbid a user from filing the same posting twice, which is
+their call to make. When the write budget is spent the error carries the wait —
+`retryAfterSeconds`, and an `Agent` gets "Retry in N seconds" — so a job backs off
+for exactly as long as the window has left. The budget itself is the account's
+(`RATE_LIMIT_WRITES_MAX`, 300 writes/hour by default, and the knob an operator
+raises for a one-off backfill).
+
+**The guide.** A connection is handed a guide to the app itself, not just tool
+descriptions: what an application and a milestone are, which statuses are derived
+from the timeline and which are the user's terminal decisions, that `displayStatus`
+is the one to report, what moves `updatedAt`, how pagination and the write budget
+behave, and which actions need confirmation. It also carries the recording rules —
+lay out a hiring process the employer actually described, put a rejection in the
+comment of the step it happened at, and clear the steps that never happened once an
+offer closes the timeline. It is the server's `instructions` at
+`initialize` and also callable as `get_guide`, for clients that never surface
+instructions — one constant, so the two cannot drift.
+
+`edit` may set a status (`applied`, `interviewing`, `offer`, `rejected`,
+`ghosted`) but not `archived`: archiving is the destructive act and lives in
+`archive_application`. Every write goes through the same Zod schemas and service
+functions as the HTTP routes, and spends the same per-account write budget
+(`RATE_LIMIT_WRITES_MAX`, default 300/hour).
+
+### Pairing
+
+The token never has to travel through a chat log. Settings starts a pairing and
+prints a code (`XXXX-XXXX`, ten minutes); the code is the only thing that goes
+into the conversation.
+
+1. Agent: `POST /pair/claim {"code"}` → `202 {"state":"claimed"}`. The claim is
+   bound to the address that made it: any *other* connection presenting the same
+   code is answered `409 CLAIMED_ELSEWHERE` and never receives a token, before or
+   after approval.
+2. The Settings panel sees the claim — with the address and user agent it came
+   from — and offers **Approve** / **Deny**. Approving a claim from somewhere you
+   do not recognise is approving that stranger's agent.
+3. Approval mints nothing on its own: the token is created on the **first
+   collection**, with the name and scope chosen when the pairing started, so an
+   approval nobody comes back for leaves no orphan credential.
+4. Collection repeats while the code lives (up to five handovers of the *same*
+   token), because an agent whose scratch directory is wiped between commands
+   would otherwise lose it for good.
+5. Before approval the claim returns no token at all, and after approval only the
+   claiming connection can collect it. An unknown, expired and spent code all
+   answer `404`.
+
+A pairing is a row in Postgres, not in the server's memory, because Next.js route
+handlers are separately compiled entries: a `Map` shared between the panel's route
+and the claim's route is not guaranteed to be one object. Expired pairings are
+deleted on the next read of either route.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| POST | `/ouija` | bearer only | MCP streamable HTTP: `initialize`, `tools/list`, `tools/call`. `GET`/`DELETE` answer `405` — stateless, no stream, no session. Rate limited per address (300/min) |
+| GET | `/api/agent/pair` | session | pairings still waiting on this account, with their state |
+| POST | `/api/agent/pair` | session | start a pairing: `{ name, scope }` → `{ code, expiresAt }` |
+| POST | `/api/agent/pair/claim` | none | the agent's side: `{ code }` → `202 { state:"claimed" }` until approved, then `{ state: "approved", token }`; `409` from any other address; `404` for unknown/expired/spent (rate limited per address) |
+| POST | `/api/agent/pair/:code/approve` | session | approve: the claim can collect from now on |
+| POST | `/api/agent/pair/:code/deny` | session | drop the pairing; the claim can never collect |
+| GET | `/api/agent/tokens` | session | connected agents, without secrets or hashes |
+| POST | `/api/agent/tokens` | session | mint a token directly: `{ name, scope }` → `{ token, secret }`, the secret shown once |
+| DELETE | `/api/agent/tokens/:id` | session | revoke |
 
 ## Auth
 

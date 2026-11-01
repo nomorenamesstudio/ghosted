@@ -32,7 +32,11 @@ export const LANDING_FAQ: FaqEntry[] = [
   },
   {
     q: "Why is there no AI in Ghosted?",
-    a: "Ghosted writes nothing for you, applies to nothing for you and reads no mailbox. It knows only what you type into it. The app was built with AI assistance and says so openly, but the product ships with no model, no API key and no token bill.",
+    a: "Ghosted ships no model, no API key and no token bill: it writes nothing for you, applies to nothing for you and reads no mailbox. It knows only what you type into it — or what an agent you chose to connect asks it to store, through the MCP server you pair with a scope.",
+  },
+  {
+    q: "Can my own agent use Ghosted?",
+    a: "Yes, over MCP. Settings gives you a code, your agent claims it, you approve it in the app, and the token goes straight to the agent instead of through a chat log. You pick what it can reach — read only, read and edit, or full access with the destructive tools — and no scope can touch your email, password or account deletion.",
   },
   {
     q: "How does Ghosted decide an application went quiet?",

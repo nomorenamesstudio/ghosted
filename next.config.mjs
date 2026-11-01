@@ -45,6 +45,16 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  /**
+   * No Next badge in the corner while developing.
+   *
+   * It is harmless in a browser and poison in a screenshot: it sits bottom-left,
+   * so it lands in every README and release capture taken from the dev server, and
+   * it says "this is a Next app in dev mode" rather than anything about the
+   * product. It never renders in a production build — which is exactly why it kept
+   * surviving review: the images are captured from dev.
+   */
+  devIndicators: false,
   images: {
     /**
      * WebP only, and no remote patterns, on purpose.
