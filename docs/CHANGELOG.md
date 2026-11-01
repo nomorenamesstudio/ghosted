@@ -2,6 +2,14 @@
 
 All notable changes, by date and type.
 
+## 1.5.1 — 2026-11-01
+
+### Fix
+- **Zod is 4.6.7, which closes a high-severity advisory.** `pnpm audit --prod`
+  flagged Zod <4.6.6 as able to exhaust memory validating oversized input, and that
+  audit is a blocking CI job — so 1.5.0's pipeline went red on the dependency check,
+  not on a test. The lockfile is the only change beyond the version.
+
 ## 1.5.0 — 2026-11-01
 
 ### Feature

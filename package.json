@@ -1,6 +1,6 @@
 {
   "name": "ghosted",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "packageManager": "pnpm@10.12.1",
   "private": true,
   "license": "MIT",
@@ -47,7 +47,7 @@
     "resend": "^6.22.1",
     "tailwind-merge": "^3.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^4.4.3"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
