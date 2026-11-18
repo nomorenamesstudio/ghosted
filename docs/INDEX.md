@@ -4,6 +4,7 @@
 - [Architecture](ARCHITECTURE.md) - tech stack, data flow, key decisions
 - [Setup](SETUP.md) - install, environment, run commands, testing, CI/CD
 - [Self-hosting](SELFHOST.md) - run your own copy: compose, deployment shapes, email, backups, upgrades
+- [Using an agent](MCP.md) - connect your own AI agent over MCP: pairing, scopes, what it can't touch
 - [Changelog](CHANGELOG.md) - what changed, by date and type
 - [The story](STORY.md) - why Ghosted exists, in the author's words
 - [Design review 2026-09-24](reviews/design-review-2026-09-24.md) - external review, verified findings, action plan

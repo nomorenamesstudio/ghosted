@@ -2,6 +2,14 @@
 
 All notable changes, by date and type.
 
+## Unreleased
+
+### Docs
+- **The README is written for people now.** It leads with what Ghosted does and how
+  to run your own, the FAQ answers what a visitor actually asks, and the model list
+  and "Built with AI" section are gone. Connecting an agent moved to its own page,
+  [docs/MCP.md](MCP.md); the developer quick start sits under Contributing.
+
 ## 1.5.1 — 2026-11-01
 
 ### Fix
