@@ -4,6 +4,17 @@ All notable changes, by date and type.
 
 ## Unreleased
 
+### Fix
+- **The production dependency audit is clean again.** New advisories had turned the
+  CI audit red: seven in `hono` and `@hono/node-server`, which the MCP SDK pulls in,
+  and one high-severity `picomatch` ReDoS with no patched release. `hono` is 4.13.19
+  and `@hono/node-server` 2.1.9 now, both inside the SDK's own ranges. `picomatch`
+  only reached the production tree because `tailwindcss-animate` — a Tailwind build
+  plugin, while Tailwind itself was already a dev dependency — sat in `dependencies`;
+  it's a dev dependency now. The lockfile update also moved vite's bundler
+  (`rolldown` 1.2.5 → 1.2.19, test tooling only). Gate: typecheck, lint, 496 unit and
+  integration tests, a production build and 54 end-to-end tests with axe, all green.
+
 ### Docs
 - **The README is written for people now.** It leads with what Ghosted does and how
   to run your own, the FAQ answers what a visitor actually asks, and the model list
