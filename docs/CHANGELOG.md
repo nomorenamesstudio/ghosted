@@ -2,7 +2,7 @@
 
 All notable changes, by date and type.
 
-## Unreleased
+## 1.5.2 — 2026-11-19
 
 ### Fix
 - **The production dependency audit is clean again.** New advisories had turned the
